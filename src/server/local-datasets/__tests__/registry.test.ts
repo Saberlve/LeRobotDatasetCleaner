@@ -33,6 +33,12 @@ describe("local dataset registry", () => {
     expect(buildLocalRepoId("/tmp/datasets/demo_box", "")).toBe("local/demo_box");
   });
 
+  test("buildLocalRepoId rejects invalid dataset basenames when alias is empty", () => {
+    expect(() => buildLocalRepoId("/tmp/datasets/demo box", "")).toThrow(
+      "Dataset basename is not a valid local alias; provide a valid alias explicitly",
+    );
+  });
+
   test("buildLocalRepoId rejects aliases that do not fit the supported route shape", () => {
     expect(() => buildLocalRepoId("/tmp/demo", "foo/bar")).toThrow(
       "Local dataset alias must be a single path segment",
