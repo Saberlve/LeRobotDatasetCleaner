@@ -15,7 +15,6 @@
     "validate": "npm run type-check && npm run lint && npm run format:check && npm run test"
   },
   "dependencies": {
-    "@mujoco/mujoco": "^3.7.0",
     "@next/swc-linux-x64-gnu": "^15.3.5",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
