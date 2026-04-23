@@ -56,6 +56,16 @@ describe("buildEpisodeSelectionPlan", () => {
     ).toThrow("Total episodes must be a positive integer");
   });
 
+  test("rejects invalid export modes", () => {
+    expect(() =>
+      buildEpisodeSelectionPlan({
+        totalEpisodes: 3,
+        flaggedEpisodeIds: [1],
+        mode: "all" as never,
+      }),
+    ).toThrow("Export mode must be either flagged or unflagged");
+  });
+
   test("rejects empty flagged export", () => {
     expect(() =>
       buildEpisodeSelectionPlan({

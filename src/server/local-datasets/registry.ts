@@ -48,7 +48,15 @@ export function buildLocalRepoId(datasetPath: string, customAlias: string): stri
     return `local/${alias}`;
   }
 
-  return `local/${path.basename(path.resolve(datasetPath))}`;
+  try {
+    return `local/${normalizeAlias(path.basename(path.resolve(datasetPath)))}`;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error("Dataset basename is not a valid local alias; provide a valid alias explicitly");
+    }
+
+    throw error;
+  }
 }
 
 export function buildExportRepoId(

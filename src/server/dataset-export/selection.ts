@@ -14,6 +14,10 @@ export function buildEpisodeSelectionPlan(input: {
   flaggedEpisodeIds: number[];
   mode: ExportMode;
 }): EpisodeSelectionPlan {
+  if (input.mode !== "flagged" && input.mode !== "unflagged") {
+    throw new Error("Export mode must be either flagged or unflagged");
+  }
+
   if (!Number.isInteger(input.totalEpisodes) || input.totalEpisodes <= 0) {
     throw new Error("Total episodes must be a positive integer");
   }
