@@ -20,8 +20,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@mujoco/mujoco": ["./src/vendor/mujoco-mujoco.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
