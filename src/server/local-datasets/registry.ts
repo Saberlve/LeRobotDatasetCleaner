@@ -55,6 +55,10 @@ export function buildExportRepoId(
   customAlias: string,
   mode: ExportMode,
 ): string {
+  if (!sourceRepoId.startsWith("local/")) {
+    throw new Error("Export repo id source must be a local dataset repo id");
+  }
+
   const alias = customAlias.trim() || defaultExportAlias(sourceRepoId, mode);
   return buildLocalRepoId(alias, alias);
 }
