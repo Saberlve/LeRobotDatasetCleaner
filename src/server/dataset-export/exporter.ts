@@ -45,7 +45,7 @@ export async function exportFilteredDataset(input: {
 
   return {
     repoId: entry.repoId,
-    path: input.outputPath,
+    path: entry.path,
     mode: input.mode,
     totalEpisodes: selection.newTotalEpisodes,
     entryRoute: `/${entry.repoId}/episode_0`,
