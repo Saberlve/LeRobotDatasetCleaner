@@ -17,6 +17,18 @@ describe("pickDirectory", () => {
     expect(result.error).toMatch("无法打开本地文件夹选择窗口");
     expect(result.error).toMatch("tk unavailable");
   });
+
+  test("returns actionable message when tkinter module is missing", async () => {
+    const result = await pickDirectory({
+      createProcess: vi.fn().mockRejectedValue(
+        new Error("Traceback ... ModuleNotFoundError: No module named 'tkinter'"),
+      ),
+    });
+
+    expect(result.path).toBeNull();
+    expect(result.error).toContain("缺少 tkinter");
+    expect(result.error).toContain("/mnt/d/straighten_the_box");
+  });
 });
 
 describe("local dataset api routes", () => {

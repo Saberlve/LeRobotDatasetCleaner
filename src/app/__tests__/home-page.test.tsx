@@ -1,6 +1,6 @@
-import React from "react";
 import { describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import React from "react";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -12,11 +12,12 @@ vi.mock("next/navigation", () => ({
 import Home from "@/app/page";
 
 describe("home page", () => {
-  test("renders chinese landing page sections", () => {
+  test("renders original search hero plus local import section", () => {
     const html = renderToStaticMarkup(<Home />);
 
-    expect(html).toContain("LeRobot 数据集可视化工具");
-    expect(html).toContain("远程数据集");
+    expect(html).toContain("LeRobot");
+    expect(html).toContain("Visualizer");
+    expect(html).toContain("打开数据集");
     expect(html).toContain("本地数据集");
     expect(html).toContain("选择本地文件夹");
   });
