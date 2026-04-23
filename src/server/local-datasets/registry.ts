@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { defaultExportAlias, type ExportMode } from "@/server/dataset-export/selection";
+
 export type LocalDatasetSummary = {
   path: string;
   version: string;
@@ -46,6 +48,15 @@ export function buildLocalRepoId(datasetPath: string, customAlias: string): stri
   }
 
   return `local/${path.basename(path.resolve(datasetPath))}`;
+}
+
+export function buildExportRepoId(
+  sourceRepoId: string,
+  customAlias: string,
+  mode: ExportMode,
+): string {
+  const alias = customAlias.trim() || defaultExportAlias(sourceRepoId, mode);
+  return buildLocalRepoId(alias, alias);
 }
 
 function isFinitePositiveNumber(value: unknown): value is number {
