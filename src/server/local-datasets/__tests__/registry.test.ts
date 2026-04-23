@@ -124,6 +124,25 @@ describe("local dataset registry", () => {
     );
   });
 
+  test("validateLocalDatasetPath rejects fractional total episode counts", async () => {
+    const datasetRoot = path.join(tempRoot, "dataset-fractional-episodes");
+    await fs.mkdir(path.join(datasetRoot, "meta"), { recursive: true });
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "info.json"),
+      JSON.stringify({
+        codebase_version: "v2.1",
+        total_episodes: 3.5,
+        fps: 30,
+        robot_type: "Acone",
+      }),
+      "utf8",
+    );
+
+    await expect(validateLocalDatasetPath(datasetRoot)).rejects.toThrow(
+      "Local dataset metadata is invalid",
+    );
+  });
+
   test("loadLocalDatasetRegistry rejects corrupted registry JSON", async () => {
     await fs.writeFile(process.env.LOCAL_DATASET_REGISTRY_PATH!, "{", "utf8");
 
@@ -134,6 +153,48 @@ describe("local dataset registry", () => {
     await fs.writeFile(
       process.env.LOCAL_DATASET_REGISTRY_PATH!,
       JSON.stringify([{ repoId: "local/demo" }]),
+      "utf8",
+    );
+
+    await expect(loadLocalDatasetRegistry()).rejects.toThrow("Local dataset registry is invalid");
+  });
+
+  test("loadLocalDatasetRegistry rejects invalid local repo id shapes", async () => {
+    await fs.writeFile(
+      process.env.LOCAL_DATASET_REGISTRY_PATH!,
+      JSON.stringify([
+        {
+          repoId: "demo_box",
+          path: "/tmp/demo_box",
+          displayName: "demo_box",
+          version: "v3.0",
+          totalEpisodes: 3,
+          fps: 30,
+          robotType: "SO101",
+          lastOpenedAt: "2026-04-23T00:00:00.000Z",
+        },
+      ]),
+      "utf8",
+    );
+
+    await expect(loadLocalDatasetRegistry()).rejects.toThrow("Local dataset registry is invalid");
+  });
+
+  test("loadLocalDatasetRegistry rejects mismatched display names", async () => {
+    await fs.writeFile(
+      process.env.LOCAL_DATASET_REGISTRY_PATH!,
+      JSON.stringify([
+        {
+          repoId: "local/demo_box",
+          path: "/tmp/demo_box",
+          displayName: "wrong_name",
+          version: "v3.0",
+          totalEpisodes: 3,
+          fps: 30,
+          robotType: "SO101",
+          lastOpenedAt: "2026-04-23T00:00:00.000Z",
+        },
+      ]),
       "utf8",
     );
 
