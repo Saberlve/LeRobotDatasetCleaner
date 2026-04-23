@@ -41,8 +41,13 @@ export default function G1MujocoReplay({
         }
 
         const orderedColumns = extractOrderedG1StateColumns(firstRow);
-        buildG1QposFrame(firstRow, orderedColumns);
-        await Promise.resolve();
+        const qpos = buildG1QposFrame(firstRow, orderedColumns);
+
+        const mujocoModuleName = ["@mujoco", "mujoco"].join("/");
+        const loadMujocoModule = await import(mujocoModuleName);
+        const loadMujoco = loadMujocoModule.default;
+        const mujoco = await loadMujoco();
+        mujoco.mj_forward?.({}, { qpos });
 
         if (!cancelled) {
           setStatus("ready");
