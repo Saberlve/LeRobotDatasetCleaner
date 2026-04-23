@@ -19,16 +19,35 @@ async function assertOutputPathDoesNotExist(outputPath: string): Promise<void> {
   throw new Error("输出目录已存在");
 }
 
+function resolveEpisodeDataPath(datasetPath: string, dataFile: string): string {
+  if (path.isAbsolute(dataFile)) {
+    throw new Error("Episode data_file must stay within the dataset root");
+  }
+
+  const datasetRoot = path.resolve(datasetPath);
+  const resolvedPath = path.resolve(datasetRoot, dataFile);
+  const relativePath = path.relative(datasetRoot, resolvedPath);
+
+  if (
+    relativePath === "" ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new Error("Episode data_file must stay within the dataset root");
+  }
+
+  return resolvedPath;
+}
+
 export async function writeFilteredDataset(input: {
   inspection: DatasetExportInspection;
   selection: EpisodeSelectionPlan;
   outputPath: string;
 }): Promise<void> {
   await assertOutputPathDoesNotExist(input.outputPath);
-  await fs.mkdir(path.join(input.outputPath, "meta"), { recursive: true });
-  await fs.mkdir(path.join(input.outputPath, "data"), { recursive: true });
 
-  const rewrittenEpisodes = await Promise.all(
+  const preparedEpisodes = await Promise.all(
     input.selection.keptEpisodeIds.map(async (sourceEpisodeId) => {
       const episode = input.inspection.episodes.find(
         (item) => item.episodeIndex === sourceEpisodeId,
@@ -39,33 +58,37 @@ export async function writeFilteredDataset(input: {
 
       const nextEpisodeIndex = input.selection.episodeIdMap[sourceEpisodeId];
       const nextDataFile = `data/episode_${String(nextEpisodeIndex).padStart(6, "0")}.json`;
-      const sourceDataPath = path.join(input.inspection.datasetPath, episode.dataFile);
-      const outputDataPath = path.join(input.outputPath, nextDataFile);
+      const sourceDataPath = resolveEpisodeDataPath(input.inspection.datasetPath, episode.dataFile);
       const rawEpisodeData = await fs.readFile(sourceDataPath, "utf8");
       const parsedEpisodeData = JSON.parse(rawEpisodeData) as Record<string, unknown>;
 
-      await fs.writeFile(
-        outputDataPath,
-        JSON.stringify(
-          {
-            ...parsedEpisodeData,
-            episode_index: nextEpisodeIndex,
-            source_episode_index: sourceEpisodeId,
-          },
-          null,
-          2,
-        ),
-        "utf8",
-      );
-
       return {
-        ...episode.raw,
-        episode_index: nextEpisodeIndex,
-        data_file: nextDataFile,
-        source_episode_index: sourceEpisodeId,
+        outputDataPath: path.join(input.outputPath, nextDataFile),
+        outputData: {
+          ...parsedEpisodeData,
+          episode_index: nextEpisodeIndex,
+          source_episode_index: sourceEpisodeId,
+        },
+        rewrittenEpisode: {
+          ...episode.raw,
+          episode_index: nextEpisodeIndex,
+          data_file: nextDataFile,
+          source_episode_index: sourceEpisodeId,
+        },
       };
     }),
   );
+
+  await fs.mkdir(path.join(input.outputPath, "meta"), { recursive: true });
+  await fs.mkdir(path.join(input.outputPath, "data"), { recursive: true });
+
+  await Promise.all(
+    preparedEpisodes.map(({ outputDataPath, outputData }) =>
+      fs.writeFile(outputDataPath, JSON.stringify(outputData, null, 2), "utf8"),
+    ),
+  );
+
+  const rewrittenEpisodes = preparedEpisodes.map(({ rewrittenEpisode }) => rewrittenEpisode);
 
   await fs.writeFile(
     path.join(input.outputPath, "meta", "episodes.jsonl"),
