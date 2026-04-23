@@ -95,9 +95,6 @@ export function LocalDatasetCard() {
           Local
         </p>
         <h2 className="text-2xl font-semibold text-white">本地数据集</h2>
-        <p className="text-sm leading-6 text-slate-300">
-          选择本机 LeRobot 数据目录，注册后直接跳转到对应的可视化页面。
-        </p>
       </div>
 
       <div className="mt-6 space-y-3">
@@ -145,9 +142,11 @@ export function LocalDatasetCard() {
           {isSubmitting ? "正在导入并打开..." : "导入并打开"}
         </button>
 
-        <div className="rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-300">
-          {summary || error || "支持 v2.0 / v2.1 / v3.0，本地目录需要包含 meta/info.json。"}
-        </div>
+        {summary || error ? (
+          <div className="rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-slate-300">
+            {summary || error}
+          </div>
+        ) : null}
       </div>
 
       <RecentLocalDatasets />

@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "path": "/mnt/d/straighten_the_box",
+    "version": "v2.1",
+    "totalEpisodes": 80,
+    "fps": 30,
+    "robotType": "g1",
+    "repoId": "local/straighten_the_box",
+    "displayName": "straighten_the_box",
+    "lastOpenedAt": "2026-04-23T05:50:22.349Z"
+  }
+]
