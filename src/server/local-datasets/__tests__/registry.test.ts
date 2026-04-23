@@ -65,6 +65,12 @@ describe("local dataset registry", () => {
     );
   });
 
+  test("buildExportRepoId rejects aliases that resolve to the source repo id", () => {
+    expect(() => buildExportRepoId("local/demo_box", "demo_box", "flagged")).toThrow(
+      "Export repo id must differ from the source repo id",
+    );
+  });
+
   test("validateLocalDatasetPath reads v2.1 info", async () => {
     const datasetRoot = path.join(tempRoot, "dataset");
     await fs.mkdir(path.join(datasetRoot, "meta"), { recursive: true });
