@@ -86,6 +86,10 @@ function isFinitePositiveNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+function isFinitePositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && isFinitePositiveNumber(value);
+}
+
 function assertValidRegistryEntry(
   value: unknown,
   index: number,
@@ -100,12 +104,20 @@ function assertValidRegistryEntry(
     typeof entry.path === "string" &&
     typeof entry.displayName === "string" &&
     typeof entry.version === "string" &&
-    isFinitePositiveNumber(entry.totalEpisodes) &&
+    isFinitePositiveInteger(entry.totalEpisodes) &&
     isFinitePositiveNumber(entry.fps) &&
     (entry.robotType === null || typeof entry.robotType === "string") &&
     typeof entry.lastOpenedAt === "string";
 
   if (!hasValidShape) {
+    throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
+  }
+
+  if (!LOCAL_REPO_ID_PATTERN.test(entry.repoId)) {
+    throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
+  }
+
+  if (entry.displayName !== entry.repoId.replace(/^local\//, "")) {
     throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
   }
 }
@@ -163,7 +175,7 @@ export async function validateLocalDatasetPath(
   }
 
   if (
-    !isFinitePositiveNumber(info.total_episodes) ||
+    !isFinitePositiveInteger(info.total_episodes) ||
     !isFinitePositiveNumber(info.fps)
   ) {
     throw new Error("Local dataset metadata is invalid");
