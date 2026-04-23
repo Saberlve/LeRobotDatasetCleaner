@@ -141,6 +141,58 @@ describe("exportFilteredDataset", () => {
         alias: "demo_v21_bad_data_file",
       }),
     ).rejects.toThrow("Episode data_file must stay within the dataset root");
+    await expect(fs.access(outputPath)).rejects.toThrow();
+  });
+
+  test("cleans up the written output when registration fails afterward", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_registry_failure");
+    await fs.writeFile(process.env.LOCAL_DATASET_REGISTRY_PATH!, "{", "utf8");
+
+    await expect(
+      exportFilteredDataset({
+        repoId: "local/demo_v21",
+        datasetPath: datasetRoot,
+        flaggedEpisodeIds: [1],
+        mode: "unflagged",
+        outputPath,
+        alias: "demo_v21_registry_failure",
+      }),
+    ).rejects.toThrow("Local dataset registry is malformed");
+    await expect(fs.access(outputPath)).rejects.toThrow();
+  });
+
+  test("rejects symlinked episode payloads that escape the dataset root", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_symlink_escape");
+    const outsidePayload = path.join(tempRoot, "outside-episode.json");
+    await fs.writeFile(
+      outsidePayload,
+      JSON.stringify({ episode_index: 999, frames: [{ timestamp: 0, action: "escape" }] }, null, 2),
+      "utf8",
+    );
+
+    try {
+      await fs.rm(path.join(datasetRoot, "data", "episode_000000.json"));
+      await fs.symlink(outsidePayload, path.join(datasetRoot, "data", "episode_000000.json"));
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPERM" || code === "EACCES" || code === "ENOSYS") {
+        return;
+      }
+
+      throw error;
+    }
+
+    await expect(
+      exportFilteredDataset({
+        repoId: "local/demo_v21",
+        datasetPath: datasetRoot,
+        flaggedEpisodeIds: [1],
+        mode: "unflagged",
+        outputPath,
+        alias: "demo_v21_symlink_escape",
+      }),
+    ).rejects.toThrow("Episode data_file must stay within the dataset root");
+    await expect(fs.access(outputPath)).rejects.toThrow();
   });
 
   test("rejects exporting into an existing directory", async () => {

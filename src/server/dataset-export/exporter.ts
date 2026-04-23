@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+
 import {
   buildEpisodeSelectionPlan,
   type ExportMode,
@@ -30,10 +32,16 @@ export async function exportFilteredDataset(input: {
     outputPath: input.outputPath,
   });
 
-  const entry = await registerLocalDataset({
-    datasetPath: input.outputPath,
-    alias: exportAlias,
-  });
+  let entry;
+  try {
+    entry = await registerLocalDataset({
+      datasetPath: input.outputPath,
+      alias: exportAlias,
+    });
+  } catch (error) {
+    await fs.rm(input.outputPath, { recursive: true, force: true });
+    throw error;
+  }
 
   return {
     repoId: entry.repoId,
