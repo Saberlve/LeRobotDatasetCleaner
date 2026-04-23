@@ -2,35 +2,35 @@
 
 ## Package manager
 
-Always use **bun** (`bun install`, `bun dev`, `bun run build`, `bun test`). Never use npm or yarn.
+Always use **npm** (`npm install`, `npm run dev`, `npm run build`, `npm test`).
 
 ## Post-process — run after every code change
 
 After making any code changes, always run these commands in order and fix any errors before finishing:
 
 ```
-bun run format        # auto-fix formatting (prettier)
-bun run type-check    # TypeScript: app + test files
-bun run lint          # ESLint (next lint)
-bun test              # unit tests
+npm run format        # auto-fix formatting (prettier)
+npm run type-check    # TypeScript: app + test files
+npm run lint          # ESLint (next lint)
+npm test              # unit tests
 ```
 
 Or run them all at once (format first, then the full validate suite):
 
 ```
-bun run format && bun run validate
+npm run format && npm run validate
 ```
 
-`bun run validate` runs: type-check → lint → format:check → test
+`npm run validate` runs: type-check → lint → format:check → test
 
 ## Key scripts
 
 ```
-bun dev              # Next.js dev server
-bun test             # Run all unit tests (bun:test)
-bun run type-check   # tsc --noEmit (app) + tsc -p tsconfig.test.json --noEmit (tests)
-bun run lint         # next lint
-bun run validate     # type-check + lint + format:check
+npm run dev          # Next.js dev server
+npm test             # Run all unit tests (Vitest)
+npm run type-check   # tsc --noEmit (app) + tsc -p tsconfig.test.json --noEmit (tests)
+npm run lint         # next lint
+npm run validate     # type-check + lint + format:check
 ```
 
 ## Architecture
@@ -94,11 +94,10 @@ Series keys use `" | "` as delimiter (e.g. `observation.state | 0`).
 ## Testing
 
 - Test files live in `**/__tests__/` directories alongside source
-- Uses `bun:test` (built-in, no extra install)
+- Uses `vitest`
 - BigInt literals (`42n`) require `tsconfig.test.json` (target ES2020) — test files are excluded from `tsconfig.json`
-- `@types/bun` is installed as a devDependency for `bun:test` type resolution
 - Mocking fetch: `globalThis.fetch = mock(() => Promise.resolve(new Response(...))) as unknown as typeof fetch`
-- CI: `.github/workflows/test.yml` runs `bun test` on push/PR to main
+- CI should run `npm test` on push/PR to main
 
 ## URL structure
 

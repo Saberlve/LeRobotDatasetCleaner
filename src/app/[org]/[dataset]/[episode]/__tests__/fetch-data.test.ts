@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { computeColumnMinMax } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import type { ChartRow } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 
