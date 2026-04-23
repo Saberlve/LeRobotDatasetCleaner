@@ -4,22 +4,26 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import G1MujocoReplay from "@/components/g1-mujoco-replay";
 
-vi.mock("@mujoco/mujoco", () => ({
-  default: vi.fn(async () => ({
-    FS: {
-      mkdirTree: vi.fn(),
-      writeFile: vi.fn(),
-    },
-    MjModel: {
-      from_xml_string: vi.fn(() => ({ ngeom: 0, nq: 36, delete: vi.fn() })),
-    },
-    MjData: vi.fn(() => ({
-      qpos: new Float64Array(36),
-      delete: vi.fn(),
+vi.mock(
+  "@mujoco/mujoco",
+  () => ({
+    default: vi.fn(async () => ({
+      FS: {
+        mkdirTree: vi.fn(),
+        writeFile: vi.fn(),
+      },
+      MjModel: {
+        from_xml_string: vi.fn(() => ({ ngeom: 0, nq: 36, delete: vi.fn() })),
+      },
+      MjData: vi.fn(() => ({
+        qpos: new Float64Array(36),
+        delete: vi.fn(),
+      })),
+      mj_forward: vi.fn(),
     })),
-    mj_forward: vi.fn(),
-  })),
-}));
+  }),
+  { virtual: true },
+);
 
 describe("G1MujocoReplay", () => {
   test("renders loading then ready state for a valid G1 trajectory", async () => {
