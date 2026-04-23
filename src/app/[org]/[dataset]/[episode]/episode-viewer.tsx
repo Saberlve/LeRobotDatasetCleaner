@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
   useState,
   useEffect,
   useRef,
@@ -19,7 +19,8 @@ import Sidebar from "@/components/side-nav";
 import StatsPanel from "@/components/stats-panel";
 import OverviewPanel from "@/components/overview-panel";
 import Loading from "@/components/loading-component";
-import { hasURDFSupport } from "@/lib/so101-robot";
+import LocalDoctorPanel from "@/components/local-doctor-panel";
+import { isG1Robot } from "@/lib/so101-robot";
 import {
   getAdjacentEpisodesVideoInfo,
   computeColumnMinMax,
@@ -34,9 +35,10 @@ import {
   type CrossEpisodeVarianceData,
 } from "./fetch-data";
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
+import { isLocalDatasetRepoId } from "@/utils/localDatasets";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
 
-const URDFViewer = lazy(() => import("@/components/urdf-viewer"));
+const G1MujocoReplay = lazy(() => import("@/components/g1-mujoco-replay"));
 const ActionInsightsPanel = lazy(
   () => import("@/components/action-insights-panel"),
 );
@@ -49,7 +51,7 @@ type ActiveTab =
   | "insights"
   | "filtering"
   | "doctor"
-  | "urdf";
+  | "replay";
 
 export default function EpisodeViewer({
   org,
@@ -139,6 +141,7 @@ function EpisodeViewerInner({
 
   const [videosReady, setVideosReady] = useState(!videosInfo.length);
   const [chartsReady, setChartsReady] = useState(false);
+  const isLocalDataset = isLocalDatasetRepoId(datasetInfo.repoId);
 
   const loadStartRef = useRef(performance.now());
 
@@ -189,17 +192,6 @@ function EpisodeViewerInner({
     setCrossEpData(null);
   }, [datasetInfo.repoId]);
 
-  // Eagerly load the URDFViewer bundle + warm the STL geometry cache while
-  // the user is on the Episodes tab, so the 3D Replay tab opens faster.
-  useEffect(() => {
-    if (
-      hasURDFSupport(datasetInfo.robot_type) &&
-      datasetInfo.codebase_version >= "v3.0"
-    ) {
-      void import("@/components/urdf-viewer");
-    }
-  }, [datasetInfo.robot_type, datasetInfo.codebase_version]);
-
   // Hydrate UI state from sessionStorage after mount (avoids SSR/client mismatch)
   useEffect(() => {
     const stored = sessionStorage.getItem("activeTab");
@@ -211,7 +203,7 @@ function EpisodeViewerInner({
         "frames",
         "insights",
         "filtering",
-        "urdf",
+        "replay",
       ].includes(stored)
     ) {
       setActiveTab(stored as ActiveTab);
@@ -334,12 +326,6 @@ function EpisodeViewerInner({
   // Use context for time sync
   const { currentTime, setCurrentTime, setIsPlaying, isPlaying } = useTime();
 
-  // URDFViewer episode changer and play toggle — populated by URDFViewer on mount
-  const urdfChangerRef = useRef<((ep: number) => void) | undefined>(undefined);
-  const urdfPlayToggleRef = useRef<(() => void) | undefined>(undefined);
-  const [urdfEpisode, setUrdfEpisode] = useState(episodeId);
-  useEffect(() => setUrdfEpisode(episodeId), [episodeId]);
-
   // Pagination state
   const pageSize = 100;
   const [currentPage, setCurrentPage] = useState(1);
@@ -398,21 +384,20 @@ function EpisodeViewerInner({
 
       if (key === " ") {
         e.preventDefault();
-        if (activeTab === "urdf") {
-          urdfPlayToggleRef.current?.();
+        if (activeTab === "replay") {
+          setIsPlaying((prev: boolean) => !prev);
         } else {
           setIsPlaying((prev: boolean) => !prev);
         }
       } else if (key === "ArrowDown" || key === "ArrowUp") {
         e.preventDefault();
-        if (activeTab === "urdf") {
-          const nextEp =
-            key === "ArrowDown" ? urdfEpisode + 1 : urdfEpisode - 1;
+        if (activeTab === "replay") {
+          const nextEpisodeId =
+            key === "ArrowDown" ? episodeId + 1 : episodeId - 1;
           const lowest = episodes[0];
           const highest = episodes[episodes.length - 1];
-          if (nextEp >= lowest && nextEp <= highest) {
-            setUrdfEpisode(nextEp);
-            urdfChangerRef.current?.(nextEp);
+          if (nextEpisodeId >= lowest && nextEpisodeId <= highest) {
+            router.push(`./episode_${nextEpisodeId}`);
           }
         } else {
           const nextEpisodeId =
@@ -428,7 +413,7 @@ function EpisodeViewerInner({
         }
       }
     },
-    [activeTab, episodeId, episodes, router, setIsPlaying, urdfEpisode],
+    [activeTab, episodeId, episodes, router, setIsPlaying],
   );
 
   // Initialize based on URL time parameter
@@ -563,18 +548,18 @@ function EpisodeViewerInner({
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
         </button>
-        {hasURDFSupport(datasetInfo.robot_type) &&
+        {isG1Robot(datasetInfo.robot_type) &&
           datasetInfo.codebase_version >= "v3.0" && (
             <button
               className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
-                activeTab === "urdf"
+                activeTab === "replay"
                   ? "text-orange-400"
                   : "text-slate-400 hover:text-slate-200"
               }`}
-              onClick={() => handleTabChange("urdf")}
+              onClick={() => handleTabChange("replay")}
             >
-              3D Replay
-              {activeTab === "urdf" && (
+              Replay
+              {activeTab === "replay" && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
               )}
             </button>
@@ -583,12 +568,12 @@ function EpisodeViewerInner({
 
       {/* Body: sidebar + content */}
       <div className="flex flex-1 min-h-0">
-        {/* Sidebar — on Episodes and 3D Replay tabs */}
-        {(activeTab === "episodes" || activeTab === "urdf") && (
+        {/* Sidebar — on Episodes and Replay tabs */}
+        {(activeTab === "episodes" || activeTab === "replay") && (
           <Sidebar
             datasetInfo={datasetInfo}
             paginatedEpisodes={paginatedEpisodes}
-            episodeId={activeTab === "urdf" ? urdfEpisode : episodeId}
+            episodeId={episodeId}
             totalPages={totalPages}
             currentPage={currentPage}
             prevPage={prevPage}
@@ -596,10 +581,9 @@ function EpisodeViewerInner({
             showFlaggedOnly={sidebarFlaggedOnly}
             onShowFlaggedOnlyChange={setSidebarFlaggedOnly}
             onEpisodeSelect={
-              activeTab === "urdf"
+              activeTab === "replay"
                 ? (ep) => {
-                    setUrdfEpisode(ep);
-                    urdfChangerRef.current?.(ep);
+                    router.push(`./episode_${ep}`);
                   }
                 : undefined
             }
@@ -728,46 +712,53 @@ function EpisodeViewerInner({
             </Suspense>
           )}
 
-          {activeTab === "doctor" && (
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between px-1 pb-2 text-xs text-slate-400">
-                <span>
-                  Dataset quality diagnostics &mdash; powered by{" "}
+          {activeTab === "doctor" &&
+            (isLocalDataset ? (
+              <LocalDoctorPanel
+                crossEpisodeData={crossEpData}
+                crossEpisodeLoading={insightsLoading}
+                episodeLengthStats={episodeLengthStats}
+                statsLoading={statsLoading}
+              />
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between px-1 pb-2 text-xs text-slate-400">
+                  <span>
+                    Dataset quality diagnostics &mdash; powered by{" "}
+                    <a
+                      href="https://github.com/jashshah999/lerobot-doctor"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-slate-200"
+                    >
+                      lerobot-doctor
+                    </a>
+                  </span>
                   <a
-                    href="https://github.com/jashshah999/lerobot-doctor"
+                    href={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-slate-200"
                   >
-                    lerobot-doctor
+                    Open in new tab
                   </a>
-                </span>
-                <a
-                  href={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-slate-200"
-                >
-                  Open in new tab
-                </a>
+                </div>
+                <iframe
+                  src={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
+                  title="lerobot-doctor"
+                  className="flex-1 w-full rounded border border-slate-700 bg-white"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                />
               </div>
-              <iframe
-                src={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
-                title="lerobot-doctor"
-                className="flex-1 w-full rounded border border-slate-700 bg-white"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              />
-            </div>
-          )}
+            ))}
 
-          {activeTab === "urdf" && (
+          {activeTab === "replay" && (
             <Suspense fallback={<Loading />}>
-              <URDFViewer
-                data={data}
-                org={org}
-                dataset={dataset}
-                episodeChangerRef={urdfChangerRef}
-                playToggleRef={urdfPlayToggleRef}
+              <G1MujocoReplay
+                datasetInfo={datasetInfo}
+                episodeId={episodeId}
+                initialChartData={data.flatChartData}
+                fallbackData={data}
               />
             </Suspense>
           )}
