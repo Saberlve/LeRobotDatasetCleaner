@@ -11,6 +11,38 @@ export type DatasetExportInspection = {
   }>;
 };
 
+function assertValidEpisodeRecord(
+  raw: Record<string, unknown>,
+  seenEpisodeIndexes: Set<number>,
+): {
+  episodeIndex: number;
+  dataFile: string;
+  raw: Record<string, unknown>;
+} {
+  const episodeIndex = raw.episode_index;
+  const dataFile = raw.data_file;
+
+  if (typeof episodeIndex !== "number" || !Number.isInteger(episodeIndex) || episodeIndex < 0) {
+    throw new Error("Episode metadata is invalid: episode_index must be a non-negative integer");
+  }
+
+  if (typeof dataFile !== "string" || !dataFile.trim()) {
+    throw new Error("Episode metadata is invalid: data_file must be a non-empty string");
+  }
+
+  if (seenEpisodeIndexes.has(episodeIndex)) {
+    throw new Error("Episode metadata is invalid: duplicate episode_index");
+  }
+
+  seenEpisodeIndexes.add(episodeIndex);
+
+  return {
+    episodeIndex,
+    dataFile,
+    raw,
+  };
+}
+
 export async function inspectExportableDataset(
   datasetPath: string,
 ): Promise<DatasetExportInspection> {
@@ -18,16 +50,13 @@ export async function inspectExportableDataset(
     await fs.readFile(path.join(datasetPath, "meta", "info.json"), "utf8"),
   ) as Record<string, unknown>;
 
+  const seenEpisodeIndexes = new Set<number>();
   const episodes = (await fs.readFile(path.join(datasetPath, "meta", "episodes.jsonl"), "utf8"))
     .trim()
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line) as Record<string, unknown>)
-    .map((raw) => ({
-      episodeIndex: Number(raw.episode_index),
-      dataFile: String(raw.data_file),
-      raw,
-    }));
+    .map((raw) => assertValidEpisodeRecord(raw, seenEpisodeIndexes));
 
   return { datasetPath, info, episodes };
 }

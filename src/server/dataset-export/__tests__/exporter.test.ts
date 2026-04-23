@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -161,6 +161,35 @@ describe("exportFilteredDataset", () => {
     await expect(fs.access(outputPath)).rejects.toThrow();
   });
 
+  test("cleans up partial output when writing fails after temp directory creation", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_partial_write_failure");
+    const originalWriteFile = fs.writeFile.bind(fs);
+    const writeFileSpy = vi
+      .spyOn(fs, "writeFile")
+      .mockImplementation(async (...args: Parameters<typeof fs.writeFile>) => {
+        const filePath = typeof args[0] === "string" ? args[0] : String(args[0]);
+        if (filePath.endsWith(path.join("meta", "info.json"))) {
+          throw new Error("simulated write failure");
+        }
+
+        return originalWriteFile(...args);
+      });
+
+    await expect(
+      exportFilteredDataset({
+        repoId: "local/demo_v21",
+        datasetPath: datasetRoot,
+        flaggedEpisodeIds: [1],
+        mode: "unflagged",
+        outputPath,
+        alias: "demo_v21_partial_write_failure",
+      }),
+    ).rejects.toThrow("simulated write failure");
+
+    writeFileSpy.mockRestore();
+    await expect(fs.access(outputPath)).rejects.toThrow();
+  });
+
   test("rejects symlinked episode payloads that escape the dataset root", async () => {
     const outputPath = path.join(tempRoot, "demo_v21_symlink_escape");
     const outsidePayload = path.join(tempRoot, "outside-episode.json");
@@ -192,6 +221,70 @@ describe("exportFilteredDataset", () => {
         alias: "demo_v21_symlink_escape",
       }),
     ).rejects.toThrow("Episode data_file must stay within the dataset root");
+    await expect(fs.access(outputPath)).rejects.toThrow();
+  });
+
+  test("rejects duplicate episode metadata entries", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_duplicate_episode");
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "episodes.jsonl"),
+      [
+        JSON.stringify({
+          episode_index: 0,
+          tasks: ["pick"],
+          data_file: "data/episode_000000.json",
+        }),
+        JSON.stringify({
+          episode_index: 0,
+          tasks: ["pick-again"],
+          data_file: "data/episode_000001.json",
+        }),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+
+    await expect(
+      exportFilteredDataset({
+        repoId: "local/demo_v21",
+        datasetPath: datasetRoot,
+        flaggedEpisodeIds: [1],
+        mode: "unflagged",
+        outputPath,
+        alias: "demo_v21_duplicate_episode",
+      }),
+    ).rejects.toThrow("Episode metadata is invalid: duplicate episode_index");
+    await expect(fs.access(outputPath)).rejects.toThrow();
+  });
+
+  test("rejects malformed episode metadata data_file values", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_bad_episode_shape");
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "episodes.jsonl"),
+      [
+        JSON.stringify({
+          episode_index: 0,
+          tasks: ["pick"],
+          data_file: "",
+        }),
+        JSON.stringify({
+          episode_index: 1,
+          tasks: ["pick"],
+          data_file: "data/episode_000001.json",
+        }),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+
+    await expect(
+      exportFilteredDataset({
+        repoId: "local/demo_v21",
+        datasetPath: datasetRoot,
+        flaggedEpisodeIds: [1],
+        mode: "unflagged",
+        outputPath,
+        alias: "demo_v21_bad_episode_shape",
+      }),
+    ).rejects.toThrow("Episode metadata is invalid: data_file must be a non-empty string");
     await expect(fs.access(outputPath)).rejects.toThrow();
   });
 
