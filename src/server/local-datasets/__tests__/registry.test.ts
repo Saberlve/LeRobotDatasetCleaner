@@ -59,6 +59,12 @@ describe("local dataset registry", () => {
     );
   });
 
+  test("buildExportRepoId rejects invalid export modes", () => {
+    expect(() => buildExportRepoId("local/demo_box", "", "all" as never)).toThrow(
+      "Export mode must be either flagged or unflagged",
+    );
+  });
+
   test("buildExportRepoId rejects non-local source repo ids", () => {
     expect(() => buildExportRepoId("org/dataset", "", "flagged")).toThrow(
       "Export repo id source must be a local dataset repo id",
