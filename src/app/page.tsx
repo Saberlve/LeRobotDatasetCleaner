@@ -194,10 +194,6 @@ function HomeInner() {
             Visualizer
           </h1>
 
-          <p className="mt-4 max-w-2xl text-base text-white/70 md:text-lg">
-            保留原有远程数据集搜索入口，同时增加中文说明和本地 LeRobot 数据文件夹导入能力。
-          </p>
-
           <form
             onSubmit={handleSubmit}
             className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
@@ -322,9 +318,6 @@ function HomeInner() {
               <h2 className="mt-2 text-2xl font-semibold text-white">
                 本地数据集导入
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                这里是新增能力，不替换原有首页搜索流程。若当前环境无法弹出文件夹选择窗口，直接粘贴绝对路径也可以导入。
-              </p>
             </div>
 
             <LocalDatasetCard />
