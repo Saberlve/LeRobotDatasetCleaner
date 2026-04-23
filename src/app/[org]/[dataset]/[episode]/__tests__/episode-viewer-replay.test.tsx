@@ -7,11 +7,12 @@ import EpisodeViewer from "@/app/[org]/[dataset]/[episode]/episode-viewer";
 const mocks = vi.hoisted(() => ({
   getAdjacentEpisodesVideoInfo: vi.fn(async () => []),
   getEpisodeDataSafe: vi.fn(),
+  routerPush: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: mocks.routerPush,
   }),
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -81,9 +82,22 @@ describe("EpisodeViewer replay tab", () => {
   test("shows Replay for G1 datasets and hides legacy labels", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    expect(await screen.findByRole("button", { name: "Replay" })).toBeTruthy();
+    expect((await screen.findByRole("button", { name: "Replay" })).textContent).toBe(
+      "Replay",
+    );
     expect(screen.queryByRole("button", { name: "3D Replay" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sim Replay" })).toBeNull();
+  });
+
+  test("routes ArrowDown from replay to the next episode", async () => {
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    const replayButton = await screen.findByRole("button", { name: "Replay" });
+    replayButton.click();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+
+    expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1");
   });
 
   test("does not show Replay for non-G1 datasets", async () => {
@@ -94,7 +108,7 @@ describe("EpisodeViewer replay tab", () => {
 
     render(<EpisodeViewer org="local" dataset="demo_aloha" episodeId={0} />);
 
-    expect(await screen.findByTestId("sidebar")).toBeTruthy();
+    expect(await screen.findByTestId("sidebar")).toBeDefined();
     expect(screen.queryByRole("button", { name: "Replay" })).toBeNull();
   });
 });
