@@ -20,6 +20,7 @@ export type LocalDatasetRegistryEntry = LocalDatasetSummary & {
 const DEFAULT_REGISTRY_PATH = path.resolve(process.cwd(), "data/local_datasets_registry.json");
 const SUPPORTED_VERSIONS = new Set(["v2.0", "v2.1", "v3.0"]);
 const LOCAL_ALIAS_PATTERN = /^[A-Za-z0-9._-]+$/;
+const LOCAL_REPO_ID_PATTERN = /^local\/[A-Za-z0-9._-]+$/;
 
 function getRegistryPath(): string {
   return process.env.LOCAL_DATASET_REGISTRY_PATH
@@ -55,7 +56,7 @@ export function buildExportRepoId(
   customAlias: string,
   mode: ExportMode,
 ): string {
-  if (!sourceRepoId.startsWith("local/")) {
+  if (!LOCAL_REPO_ID_PATTERN.test(sourceRepoId)) {
     throw new Error("Export repo id source must be a local dataset repo id");
   }
 

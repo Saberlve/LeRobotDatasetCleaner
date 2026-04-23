@@ -46,6 +46,16 @@ describe("buildEpisodeSelectionPlan", () => {
     ).toThrow("Flagged episode id 3 is out of range");
   });
 
+  test("rejects malformed total episode counts", () => {
+    expect(() =>
+      buildEpisodeSelectionPlan({
+        totalEpisodes: 3.7,
+        flaggedEpisodeIds: [1],
+        mode: "flagged",
+      }),
+    ).toThrow("Total episodes must be a positive integer");
+  });
+
   test("rejects empty flagged export", () => {
     expect(() =>
       buildEpisodeSelectionPlan({

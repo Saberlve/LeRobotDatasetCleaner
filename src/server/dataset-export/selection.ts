@@ -14,6 +14,10 @@ export function buildEpisodeSelectionPlan(input: {
   flaggedEpisodeIds: number[];
   mode: ExportMode;
 }): EpisodeSelectionPlan {
+  if (!Number.isInteger(input.totalEpisodes) || input.totalEpisodes <= 0) {
+    throw new Error("Total episodes must be a positive integer");
+  }
+
   const sourceEpisodeIds = Array.from({ length: input.totalEpisodes }, (_, index) => index);
   const flaggedEpisodeIds = [...new Set(input.flaggedEpisodeIds)].sort((a, b) => a - b);
 
