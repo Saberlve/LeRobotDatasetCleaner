@@ -14,7 +14,7 @@ type G1MujocoReplayProps = {
   datasetInfo: { robot_type: string | null; fps: number };
   episodeId: number;
   initialChartData: ChartRow[];
-  fallbackData?: unknown;
+  fallbackData?: React.ComponentProps<typeof URDFViewer>["data"];
 };
 
 type ReplayStatus = "loading" | "ready" | "error";
@@ -31,6 +31,13 @@ export default function G1MujocoReplay({
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
+    setStatus("loading");
+    setError(null);
+    setFrame(0);
+    setPlaying(false);
+  }, [initialChartData]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function init() {
@@ -43,8 +50,8 @@ export default function G1MujocoReplay({
         const orderedColumns = extractOrderedG1StateColumns(firstRow);
         const qpos = buildG1QposFrame(firstRow, orderedColumns);
 
-        const mujocoModuleName = ["@mujoco", "mujoco"].join("/");
-        const loadMujocoModule = await import(mujocoModuleName);
+        const MUJOCO_MODULE = "@mujoco/mujoco";
+        const loadMujocoModule = await import(MUJOCO_MODULE);
         const loadMujoco = loadMujocoModule.default;
         const mujoco = await loadMujoco();
         mujoco.mj_forward?.({}, { qpos });
@@ -60,8 +67,6 @@ export default function G1MujocoReplay({
       }
     }
 
-    setStatus("loading");
-    setError(null);
     void init();
 
     return () => {
@@ -85,7 +90,7 @@ export default function G1MujocoReplay({
 
   if (status === "error") {
     if (fallbackData) {
-      return <URDFViewer data={fallbackData as never} />;
+      return <URDFViewer data={fallbackData} />;
     }
 
     return <div className="p-6 text-red-400">Replay unavailable: {error}</div>;
