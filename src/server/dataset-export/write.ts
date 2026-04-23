@@ -19,7 +19,7 @@ async function assertOutputPathDoesNotExist(outputPath: string): Promise<void> {
   throw new Error("输出目录已存在");
 }
 
-function resolveEpisodeDataPath(datasetPath: string, dataFile: string): string {
+async function resolveEpisodeDataPath(datasetPath: string, dataFile: string): Promise<string> {
   if (path.isAbsolute(dataFile)) {
     throw new Error("Episode data_file must stay within the dataset root");
   }
@@ -33,6 +33,19 @@ function resolveEpisodeDataPath(datasetPath: string, dataFile: string): string {
     relativePath === ".." ||
     relativePath.startsWith(`..${path.sep}`) ||
     path.isAbsolute(relativePath)
+  ) {
+    throw new Error("Episode data_file must stay within the dataset root");
+  }
+
+  const realDatasetRoot = await fs.realpath(datasetRoot);
+  const realResolvedPath = await fs.realpath(resolvedPath);
+  const realRelativePath = path.relative(realDatasetRoot, realResolvedPath);
+
+  if (
+    realRelativePath === "" ||
+    realRelativePath === ".." ||
+    realRelativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(realRelativePath)
   ) {
     throw new Error("Episode data_file must stay within the dataset root");
   }
@@ -58,7 +71,10 @@ export async function writeFilteredDataset(input: {
 
       const nextEpisodeIndex = input.selection.episodeIdMap[sourceEpisodeId];
       const nextDataFile = `data/episode_${String(nextEpisodeIndex).padStart(6, "0")}.json`;
-      const sourceDataPath = resolveEpisodeDataPath(input.inspection.datasetPath, episode.dataFile);
+      const sourceDataPath = await resolveEpisodeDataPath(
+        input.inspection.datasetPath,
+        episode.dataFile,
+      );
       const rawEpisodeData = await fs.readFile(sourceDataPath, "utf8");
       const parsedEpisodeData = JSON.parse(rawEpisodeData) as Record<string, unknown>;
 
