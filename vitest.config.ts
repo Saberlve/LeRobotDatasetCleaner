@@ -5,10 +5,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "@mujoco/mujoco": path.resolve(
-        __dirname,
-        "src/vendor/mujoco-mujoco.ts",
-      ),
     },
   },
   test: {
