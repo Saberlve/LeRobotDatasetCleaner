@@ -31,7 +31,7 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 - **Overview Panel:** At-a-glance summary of dataset metadata, camera info, and episode details.
 - **Statistics Panel:** Dataset-level statistics including episode count, total recording time, frames-per-second, and an episode-length histogram.
 - **Action Insights Panel:** Data-driven analysis tools to guide training configuration — includes autocorrelation, state-action alignment, speed distribution, and cross-episode variance heatmap.
-- **Filtering Panel:** Identify and flag problematic episodes (low movement, jerky motion, outlier length) for removal. Exports flagged episode IDs as a ready-to-run LeRobot CLI command.
+- **Filtering Panel:** Identify and flag problematic episodes (low movement, jerky motion, outlier length) for removal. Supports in-app export of `flagged` or `unflagged` local dataset subsets into a new LeRobot-format dataset directory, and still exposes flagged episode IDs as a ready-to-run LeRobot CLI command.
 - **3D URDF Viewer:** Visualize robot joint poses frame-by-frame in an interactive 3D scene, with end-effector trail rendering. Supports SO-100, SO-101, and OpenArm bimanual robots.
 - **Efficient Data Loading:** Uses parquet and JSON loading for large dataset support, with pagination, chunking, and lazy-loaded panels for fast initial load.
 - **Responsive UI:** Built with React, Next.js, and Tailwind CSS for a fast, modern user experience.
@@ -51,6 +51,13 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 ### Prerequisites
 
 This project uses `npm`.
+
+For local folder picking on Ubuntu/WSL, install:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3-tk
+```
 
 ### Installation
 
@@ -81,6 +88,13 @@ The landing page is now in Chinese and exposes two entry flows:
 - Remote Hugging Face dataset search/open
 - Local folder import using the existing `/api/local-datasets/*` routes
 
+To export a filtered local dataset:
+
+1. Open a local dataset in the visualizer.
+2. Flag episodes in the Filtering panel.
+3. Choose `flagged` or `unflagged`, enter an output directory, and run export.
+4. Open the exported dataset from the success link shown in the Filtering panel.
+
 You can start editing the page by modifying `src/app/page.tsx` or other files in the `src/` directory. The app supports hot-reloading for rapid development.
 
 ### Local v2.1 Dataset Launcher
@@ -98,6 +112,7 @@ Default behavior:
 - `DATASET_ROOT=/mnt/d/pickXtimes_v21_filtered`
 - `PORT=3000`
 - `LOCAL_DATASET_BASE_URL=http://127.0.0.1:$PORT`
+- `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL=http://127.0.0.1:$PORT`
 
 The script now performs these startup checks automatically:
 
@@ -111,6 +126,15 @@ Examples:
 PORT=3001 ./run_local_v21.sh
 DATASET_ROOT=/mnt/d/straighten_the_box ./run_local_v21.sh
 DATASET_ALIAS=local/straighten_the_box DATASET_ROOT=/mnt/d/straighten_the_box ./run_local_v21.sh
+```
+
+If this project is running on `3001` while another web app is using `3000`, make sure both local dataset base URLs point to `3001`:
+
+```bash
+PORT=3001 \
+LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 \
+NEXT_PUBLIC_LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 \
+./run_local_v21.sh
 ```
 
 After startup, open:
@@ -153,6 +177,9 @@ npm run format
 ### Environment Variables
 
 - `DATASET_URL`: (optional) Base URL for dataset hosting (defaults to HuggingFace Datasets).
+- `LOCAL_DATASET_BASE_URL`: (optional) Server-side base URL for local dataset asset requests.
+- `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL`: (optional) Client-side base URL for local dataset asset requests.
+- `LOCAL_LEROBOT_DATASETS_JSON`: (optional) JSON object mapping local repo ids to dataset roots.
 
 ## Docker Deployment
 
