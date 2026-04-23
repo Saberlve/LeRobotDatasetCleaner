@@ -61,7 +61,13 @@ export function buildExportRepoId(
   }
 
   const alias = customAlias.trim() || defaultExportAlias(sourceRepoId, mode);
-  return buildLocalRepoId(alias, alias);
+  const exportRepoId = buildLocalRepoId(alias, alias);
+
+  if (exportRepoId === sourceRepoId) {
+    throw new Error("Export repo id must differ from the source repo id");
+  }
+
+  return exportRepoId;
 }
 
 function isFinitePositiveNumber(value: unknown): value is number {
