@@ -64,6 +64,10 @@ export function buildExportRepoId(
   customAlias: string,
   mode: ExportMode,
 ): string {
+  if (mode !== "flagged" && mode !== "unflagged") {
+    throw new Error("Export mode must be either flagged or unflagged");
+  }
+
   if (!LOCAL_REPO_ID_PATTERN.test(sourceRepoId)) {
     throw new Error("Export repo id source must be a local dataset repo id");
   }
