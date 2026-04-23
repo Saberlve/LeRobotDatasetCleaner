@@ -24,12 +24,14 @@ function loadEnvLocalDatasetRoots(): Record<string, string> {
     );
   }
 
-  return Object.fromEntries(
-    Object.entries(parsed).filter(
-      ([repoId, datasetPath]) =>
-        typeof repoId === "string" && typeof datasetPath === "string",
-    ),
-  );
+  const result: Record<string, string> = {};
+  for (const [repoId, datasetPath] of Object.entries(parsed)) {
+    if (typeof datasetPath === "string") {
+      result[repoId] = datasetPath;
+    }
+  }
+
+  return result;
 }
 
 async function resolveLocalDatasetRoot(repoId: string): Promise<string | null> {
