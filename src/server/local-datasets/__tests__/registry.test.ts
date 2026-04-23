@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  buildExportRepoId,
   buildLocalRepoId,
   loadLocalDatasetRegistry,
   registerLocalDataset,
@@ -38,6 +39,23 @@ describe("local dataset registry", () => {
     );
     expect(() => buildLocalRepoId("/tmp/demo", "local/foo/bar")).toThrow(
       "Local dataset alias must be a single path segment",
+    );
+  });
+
+  test("buildExportRepoId falls back to the default local export alias", () => {
+    expect(buildExportRepoId("local/demo_box", "", "flagged")).toBe("local/demo_box_flagged");
+    expect(buildExportRepoId("local/demo_box", "", "unflagged")).toBe("local/demo_box_unflagged");
+  });
+
+  test("buildExportRepoId normalizes a custom export alias", () => {
+    expect(buildExportRepoId("local/demo_box", " local/custom_export ", "flagged")).toBe(
+      "local/custom_export",
+    );
+  });
+
+  test("buildExportRepoId rejects non-local source repo ids", () => {
+    expect(() => buildExportRepoId("org/dataset", "", "flagged")).toThrow(
+      "Export repo id source must be a local dataset repo id",
     );
   });
 
