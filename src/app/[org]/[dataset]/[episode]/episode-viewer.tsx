@@ -384,36 +384,22 @@ function EpisodeViewerInner({
 
       if (key === " ") {
         e.preventDefault();
-        if (activeTab === "replay") {
-          setIsPlaying((prev: boolean) => !prev);
-        } else {
-          setIsPlaying((prev: boolean) => !prev);
-        }
+        setIsPlaying((prev: boolean) => !prev);
       } else if (key === "ArrowDown" || key === "ArrowUp") {
         e.preventDefault();
-        if (activeTab === "replay") {
-          const nextEpisodeId =
-            key === "ArrowDown" ? episodeId + 1 : episodeId - 1;
-          const lowest = episodes[0];
-          const highest = episodes[episodes.length - 1];
-          if (nextEpisodeId >= lowest && nextEpisodeId <= highest) {
-            router.push(`./episode_${nextEpisodeId}`);
-          }
-        } else {
-          const nextEpisodeId =
-            key === "ArrowDown" ? episodeId + 1 : episodeId - 1;
-          const lowestEpisodeId = episodes[0];
-          const highestEpisodeId = episodes[episodes.length - 1];
-          if (
-            nextEpisodeId >= lowestEpisodeId &&
-            nextEpisodeId <= highestEpisodeId
-          ) {
-            router.push(`./episode_${nextEpisodeId}`);
-          }
+        const nextEpisodeId =
+          key === "ArrowDown" ? episodeId + 1 : episodeId - 1;
+        const lowestEpisodeId = episodes[0];
+        const highestEpisodeId = episodes[episodes.length - 1];
+        if (
+          nextEpisodeId >= lowestEpisodeId &&
+          nextEpisodeId <= highestEpisodeId
+        ) {
+          router.push(`./episode_${nextEpisodeId}`);
         }
       }
     },
-    [activeTab, episodeId, episodes, router, setIsPlaying],
+    [episodeId, episodes, router, setIsPlaying],
   );
 
   // Initialize based on URL time parameter
