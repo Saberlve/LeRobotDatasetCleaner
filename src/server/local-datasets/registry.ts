@@ -113,11 +113,14 @@ function assertValidRegistryEntry(
     throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
   }
 
-  if (!LOCAL_REPO_ID_PATTERN.test(entry.repoId)) {
+  const typedEntry = entry as LocalDatasetRegistryEntry;
+  const { repoId, displayName } = typedEntry;
+
+  if (!LOCAL_REPO_ID_PATTERN.test(repoId)) {
     throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
   }
 
-  if (entry.displayName !== entry.repoId.replace(/^local\//, "")) {
+  if (displayName !== repoId.replace(/^local\//, "")) {
     throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
   }
 }
