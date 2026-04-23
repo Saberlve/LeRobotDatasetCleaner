@@ -50,47 +50,104 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 
 ### Prerequisites
 
-This project uses [Bun](https://bun.sh) as its package manager. If you don't have it installed:
-
-```bash
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
-```
+This project uses `npm`.
 
 ### Installation
 
 Install dependencies:
 
 ```bash
-bun install
+npm install --no-package-lock
 ```
+
+If the app exits immediately or prints that Next.js dependencies are missing/corrupted, reinstall dependencies before retrying. A healthy install must include:
+
+- `node_modules/next/package.json`
+- a non-empty `node_modules/next/dist/bin/next`
+- a loadable `@next/swc-linux-x64-gnu` native module
 
 ### Development
 
 Run the development server:
 
 ```bash
-bun dev
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+The landing page is now in Chinese and exposes two entry flows:
+
+- Remote Hugging Face dataset search/open
+- Local folder import using the existing `/api/local-datasets/*` routes
+
 You can start editing the page by modifying `src/app/page.tsx` or other files in the `src/` directory. The app supports hot-reloading for rapid development.
+
+### Local v2.1 Dataset Launcher
+
+For local LeRobot v2.1 datasets, use the helper script:
+
+```bash
+cd /root/code/data_clean/lerobot-dataset-visualizer
+./run_local_v21.sh
+```
+
+Default behavior:
+
+- `DATASET_ALIAS=local/pickXtimes_v21_filtered`
+- `DATASET_ROOT=/mnt/d/pickXtimes_v21_filtered`
+- `PORT=3000`
+- `LOCAL_DATASET_BASE_URL=http://127.0.0.1:$PORT`
+
+The script now performs these startup checks automatically:
+
+- If the default port is already occupied, it picks the next free port unless you explicitly set `PORT`.
+- If Next.js dependencies are missing or corrupted, it reruns installation and then validates that the local `next` entrypoint is usable before starting.
+
+Examples:
+
+```bash
+./run_local_v21.sh
+PORT=3001 ./run_local_v21.sh
+DATASET_ROOT=/mnt/d/straighten_the_box ./run_local_v21.sh
+DATASET_ALIAS=local/straighten_the_box DATASET_ROOT=/mnt/d/straighten_the_box ./run_local_v21.sh
+```
+
+After startup, open:
+
+```text
+http://127.0.0.1:<PORT>/<DATASET_ALIAS>/episode_0
+```
+
+For example, if `3000` is occupied, the script may start on `3001` and print:
+
+```text
+▲ Next.js 15.3.6
+- Local: http://localhost:3001
+✓ Ready in 2.2s
+```
+
+### Troubleshooting
+
+- Immediate exit with no UI: reinstall dependencies with `npm install --no-package-lock`.
+- `Next.js dependencies are missing or corrupted.`: the local `next` install is broken; reinstall dependencies.
+- `PORT 3000 is already in use`: either stop the conflicting service or rerun with another explicit port, for example `PORT=3001 ./run_local_v21.sh`.
+- Native SWC crash during startup: reinstall dependencies so `@next/swc-linux-x64-gnu` is restored correctly.
 
 ### Other Commands
 
 ```bash
 # Build for production
-bun run build
+npm run build
 
 # Start production server
-bun start
+npm run start
 
 # Run linter
-bun run lint
+npm run lint
 
 # Format code
-bun run format
+npm run format
 ```
 
 ### Environment Variables
@@ -99,7 +156,7 @@ bun run format
 
 ## Docker Deployment
 
-This application can be deployed using Docker with bun for optimal performance and self-contained builds.
+This application can be deployed using Docker with npm.
 
 ### Build the Docker image
 

@@ -2,6 +2,8 @@
  * Utility functions for checking dataset version compatibility
  */
 
+import { buildLocalDatasetUrl, isLocalDatasetRepoId } from "./localDatasets";
+
 const DATASET_URL =
   process.env.DATASET_URL || "https://huggingface.co/datasets";
 
@@ -73,7 +75,9 @@ export async function getDatasetInfo(repoId: string): Promise<DatasetInfo> {
   console.log(`[perf] getDatasetInfo cache MISS for ${repoId} — fetching`);
 
   try {
-    const testUrl = `${DATASET_URL}/${repoId}/resolve/main/meta/info.json`;
+    const testUrl = isLocalDatasetRepoId(repoId)
+      ? buildLocalDatasetUrl(repoId, "meta/info.json")
+      : `${DATASET_URL}/${repoId}/resolve/main/meta/info.json`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -149,5 +153,8 @@ export function buildVersionedUrl(
   version: string,
   path: string,
 ): string {
+  if (isLocalDatasetRepoId(repoId)) {
+    return buildLocalDatasetUrl(repoId, path);
+  }
   return `${DATASET_URL}/${repoId}/resolve/main/${path}`;
 }

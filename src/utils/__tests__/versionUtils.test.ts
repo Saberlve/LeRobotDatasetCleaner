@@ -1,4 +1,8 @@
-import { describe, expect, test, mock, afterEach } from "bun:test";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { isLocalDatasetRepoId } from "@/utils/localDatasets";
 import { buildVersionedUrl } from "@/utils/versionUtils";
 
 // ---------------------------------------------------------------------------
@@ -55,6 +59,140 @@ describe("buildVersionedUrl", () => {
       "https://huggingface.co/datasets/myorg/mydataset/resolve/main/meta/info.json",
     );
   });
+
+  test("builds URL for configured local dataset assets", () => {
+    const previous = process.env.LOCAL_LEROBOT_DATASETS_JSON;
+    const previousBaseUrl = process.env.LOCAL_DATASET_BASE_URL;
+    process.env.LOCAL_LEROBOT_DATASETS_JSON = JSON.stringify({
+      "local/pickXtimes_v21_filtered": "/mnt/d/pickXtimes_v21_filtered",
+    });
+    process.env.LOCAL_DATASET_BASE_URL = "http://127.0.0.1:3000";
+
+    try {
+      const url = buildVersionedUrl(
+        "local/pickXtimes_v21_filtered",
+        "v2.1",
+        "meta/info.json",
+      );
+      expect(url).toBe(
+        "http://127.0.0.1:3000/api/local-datasets/local/pickXtimes_v21_filtered/meta/info.json",
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.LOCAL_LEROBOT_DATASETS_JSON;
+      } else {
+        process.env.LOCAL_LEROBOT_DATASETS_JSON = previous;
+      }
+      if (previousBaseUrl === undefined) {
+        delete process.env.LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.LOCAL_DATASET_BASE_URL = previousBaseUrl;
+      }
+    }
+  });
+
+  test("builds local dataset url from persistent registry when env is empty", async () => {
+    const previousEnvRegistry = process.env.LOCAL_LEROBOT_DATASETS_JSON;
+    const previousRegistryPath = process.env.LOCAL_DATASET_REGISTRY_PATH;
+    const previousBaseUrl = process.env.LOCAL_DATASET_BASE_URL;
+    const tempDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), "visualizer-registry-"),
+    );
+    const registryPath = path.join(tempDir, "registry.json");
+
+    delete process.env.LOCAL_LEROBOT_DATASETS_JSON;
+    process.env.LOCAL_DATASET_REGISTRY_PATH = registryPath;
+    process.env.LOCAL_DATASET_BASE_URL = "http://127.0.0.1:3000";
+    await fs.writeFile(
+      registryPath,
+      JSON.stringify([
+        {
+          repoId: "local/straighten_box",
+          path: "/mnt/d/straighten_the_box",
+          displayName: "straighten_box",
+          version: "v2.1",
+          totalEpisodes: 4,
+          fps: 30,
+          robotType: "Acone",
+          lastOpenedAt: "2026-04-23T00:00:00.000Z",
+        },
+      ]),
+      "utf8",
+    );
+
+    try {
+      const url = buildVersionedUrl(
+        "local/straighten_box",
+        "v2.1",
+        "meta/info.json",
+      );
+      expect(url).toBe(
+        "http://127.0.0.1:3000/api/local-datasets/local/straighten_box/meta/info.json",
+      );
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+      if (previousEnvRegistry === undefined) {
+        delete process.env.LOCAL_LEROBOT_DATASETS_JSON;
+      } else {
+        process.env.LOCAL_LEROBOT_DATASETS_JSON = previousEnvRegistry;
+      }
+      if (previousRegistryPath === undefined) {
+        delete process.env.LOCAL_DATASET_REGISTRY_PATH;
+      } else {
+        process.env.LOCAL_DATASET_REGISTRY_PATH = previousRegistryPath;
+      }
+      if (previousBaseUrl === undefined) {
+        delete process.env.LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.LOCAL_DATASET_BASE_URL = previousBaseUrl;
+      }
+    }
+  });
+
+  test("ignores env registry entries with non-absolute dataset paths", () => {
+    expect(isLocalDatasetRepoId("local/relative_dataset")).toBe(true);
+  });
+
+  test("local dataset detection only matches single-segment local repo ids", () => {
+    expect(isLocalDatasetRepoId("local/straighten_box")).toBe(true);
+    expect(isLocalDatasetRepoId("local/foo/bar")).toBe(false);
+    expect(isLocalDatasetRepoId("lerobot/pusht")).toBe(false);
+  });
+
+  test("remote dataset urls still resolve when local registry is malformed", async () => {
+    const previousEnvRegistry = process.env.LOCAL_LEROBOT_DATASETS_JSON;
+    const previousRegistryPath = process.env.LOCAL_DATASET_REGISTRY_PATH;
+    const tempDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), "visualizer-registry-"),
+    );
+    const registryPath = path.join(tempDir, "registry.json");
+
+    delete process.env.LOCAL_LEROBOT_DATASETS_JSON;
+    process.env.LOCAL_DATASET_REGISTRY_PATH = registryPath;
+    await fs.writeFile(registryPath, "{not-json", "utf8");
+
+    try {
+      expect(
+        buildVersionedUrl("lerobot/pusht", "v2.1", "meta/info.json"),
+      ).toBe("https://huggingface.co/datasets/lerobot/pusht/resolve/main/meta/info.json");
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+      if (previousEnvRegistry === undefined) {
+        delete process.env.LOCAL_LEROBOT_DATASETS_JSON;
+      } else {
+        process.env.LOCAL_LEROBOT_DATASETS_JSON = previousEnvRegistry;
+      }
+      if (previousRegistryPath === undefined) {
+        delete process.env.LOCAL_DATASET_REGISTRY_PATH;
+      } else {
+        process.env.LOCAL_DATASET_REGISTRY_PATH = previousRegistryPath;
+      }
+    }
+  });
+
+  test("does not match prototype keys as local dataset repo ids", () => {
+    expect(isLocalDatasetRepoId("toString")).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -101,7 +239,7 @@ describe("getDatasetVersionAndInfo", () => {
       },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(infoV20), { status: 200 })),
     ) as unknown as typeof fetch;
 
@@ -139,7 +277,7 @@ describe("getDatasetVersionAndInfo", () => {
       },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(infoV21), { status: 200 })),
     ) as unknown as typeof fetch;
 
@@ -176,7 +314,7 @@ describe("getDatasetVersionAndInfo", () => {
       },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(infoV30), { status: 200 })),
     ) as unknown as typeof fetch;
 
@@ -194,7 +332,7 @@ describe("getDatasetVersionAndInfo", () => {
       features: { dummy: { dtype: "float32", shape: [1], names: null } },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify(infoUnsupported), { status: 200 }),
       ),
@@ -207,7 +345,7 @@ describe("getDatasetVersionAndInfo", () => {
   });
 
   test("throws when info.json has no features field", async () => {
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ codebase_version: "v3.0" }), {
           status: 200,
@@ -220,7 +358,7 @@ describe("getDatasetVersionAndInfo", () => {
   });
 
   test("throws when fetch fails (network error)", async () => {
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response("Not Found", { status: 404 })),
     ) as unknown as typeof fetch;
 

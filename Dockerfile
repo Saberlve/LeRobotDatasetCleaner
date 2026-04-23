@@ -1,19 +1,19 @@
-FROM oven/bun:1 AS base
+FROM node:20-bookworm-slim AS base
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lock* ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN npm ci
 
 # Copy the rest of the application
 COPY . .
 
 # Build the application
-RUN bun run build
+RUN npm run build
 
 # Expose port 7860
 EXPOSE 7860
@@ -22,4 +22,4 @@ EXPOSE 7860
 ENV PORT=7860
 
 # Start the application
-CMD ["bun", "start"]
+CMD ["npm", "run", "start"]
