@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
 import type {
   CrossEpisodeVarianceData,
@@ -232,6 +233,225 @@ interface FilteringPanelProps {
   onViewFlaggedEpisodes?: () => void;
 }
 
+type ExportMode = "flagged" | "unflagged";
+
+type FilteringExportState = {
+  isLocalRepo: boolean;
+  disableForMode: boolean;
+  disabled: boolean;
+  reason: string | null;
+};
+
+export function getFilteringExportState(input: {
+  repoId: string;
+  mode: ExportMode;
+  flaggedCount: number;
+  totalEpisodes: number | null;
+  outputPath: string;
+  submitting: boolean;
+}): FilteringExportState {
+  const isLocalRepo = input.repoId.startsWith("local/");
+  const disableForMode =
+    input.mode === "flagged"
+      ? input.flaggedCount === 0
+      : input.totalEpisodes != null && input.flaggedCount >= input.totalEpisodes;
+
+  let reason: string | null = null;
+  if (!isLocalRepo) {
+    reason = "Only local datasets can be exported.";
+  } else if (input.mode === "flagged" && input.flaggedCount === 0) {
+    reason = "Flag at least one episode before exporting flagged data.";
+  } else if (
+    input.mode === "unflagged" &&
+    input.totalEpisodes != null &&
+    input.flaggedCount >= input.totalEpisodes
+  ) {
+    reason = "All episodes are flagged, so there is no unflagged subset to export.";
+  } else if (!input.outputPath.trim()) {
+    reason = "Choose an output directory before exporting.";
+  }
+
+  return {
+    isLocalRepo,
+    disableForMode,
+    disabled: !isLocalRepo || disableForMode || !input.outputPath.trim() || input.submitting,
+    reason,
+  };
+}
+
+function defaultExportAlias(repoId: string, mode: ExportMode): string {
+  return `${repoId.replace(/^local\//, "")}_${mode}`;
+}
+
+function FlaggedExportCard({
+  repoId,
+  totalEpisodes,
+}: {
+  repoId: string;
+  totalEpisodes: number | null;
+}) {
+  const { flagged, count } = useFlaggedEpisodes();
+  const flaggedIds = useMemo(() => [...flagged].sort((a, b) => a - b), [flagged]);
+  const [mode, setMode] = useState<ExportMode>("flagged");
+  const [outputPath, setOutputPath] = useState("");
+  const [alias, setAlias] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<null | {
+    entryRoute: string;
+    repoId: string;
+    totalEpisodes: number;
+    path: string;
+  }>(null);
+
+  const exportState = getFilteringExportState({
+    repoId,
+    mode,
+    flaggedCount: count,
+    totalEpisodes,
+    outputPath,
+    submitting,
+  });
+
+  const aliasPlaceholder = defaultExportAlias(repoId, mode);
+
+  const handleExport = useCallback(async () => {
+    if (exportState.disabled) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const response = await fetch("/api/local-datasets/export", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          repoId,
+          flaggedEpisodeIds: flaggedIds,
+          mode,
+          outputPath,
+          alias: alias.trim(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        entryRoute?: string;
+        repoId?: string;
+        totalEpisodes?: number;
+        path?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Dataset export failed.");
+      }
+
+      setResult({
+        entryRoute: payload.entryRoute ?? "",
+        repoId: payload.repoId ?? "",
+        totalEpisodes: payload.totalEpisodes ?? 0,
+        path: payload.path ?? "",
+      });
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : "Dataset export failed.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [alias, exportState.disabled, flaggedIds, mode, outputPath, repoId]);
+
+  return (
+    <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700/60 space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-slate-200">Export Dataset</h3>
+        <p className="text-xs text-slate-400">
+          Export the flagged or unflagged episode subset into a new local
+          dataset directory while preserving the source dataset.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-1.5">
+          <span className="text-xs text-slate-400">Export mode</span>
+          <select
+            aria-label="导出模式"
+            value={mode}
+            onChange={(event) => setMode(event.target.value as ExportMode)}
+            className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200"
+          >
+            <option value="flagged">flagged</option>
+            <option value="unflagged">unflagged</option>
+          </select>
+        </label>
+
+        <label className="space-y-1.5">
+          <span className="text-xs text-slate-400">Alias</span>
+          <input
+            aria-label="导出别名"
+            value={alias}
+            onChange={(event) => setAlias(event.target.value)}
+            placeholder={aliasPlaceholder}
+            className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
+          />
+        </label>
+      </div>
+
+      <label className="space-y-1.5 block">
+        <span className="text-xs text-slate-400">Output directory</span>
+        <input
+          aria-label="输出目录"
+          value={outputPath}
+          onChange={(event) => setOutputPath(event.target.value)}
+          placeholder="/tmp/demo_unflagged"
+          className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
+        />
+      </label>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-slate-400">
+          {exportState.reason ?? `Ready to export ${mode} episodes.`}
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exportState.disabled}
+          className="rounded-md bg-orange-500 px-3 py-2 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+        >
+          {submitting ? "Exporting..." : "导出数据集"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-200 space-y-2">
+          <div>
+            Exported <span className="font-semibold">{result.repoId}</span> with{" "}
+            {result.totalEpisodes} episode
+            {result.totalEpisodes === 1 ? "" : "s"}.
+          </div>
+          <div className="text-emerald-100/80">{result.path}</div>
+          <Link
+            href={result.entryRoute}
+            className="inline-flex rounded-md bg-emerald-400/20 px-2.5 py-1.5 text-emerald-100 hover:bg-emerald-400/30"
+          >
+            打开导出结果
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FlaggedIdsCopyBar({
   repoId,
   onViewEpisodes,
@@ -357,6 +577,11 @@ function FilteringPanel({
   flatChartData,
   onViewFlaggedEpisodes,
 }: FilteringPanelProps) {
+  const totalEpisodes =
+    episodeLengthStats?.allEpisodeLengths?.length ??
+    crossEpisodeData?.numEpisodes ??
+    null;
+
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-8">
       <div>
@@ -371,6 +596,8 @@ function FilteringPanel({
         repoId={repoId}
         onViewEpisodes={onViewFlaggedEpisodes}
       />
+
+      <FlaggedExportCard repoId={repoId} totalEpisodes={totalEpisodes} />
 
       {episodeLengthStats?.allEpisodeLengths && (
         <EpisodeLengthFilter episodes={episodeLengthStats.allEpisodeLengths} />
