@@ -1,13 +1,13 @@
 [
   {
-    "path": "/mnt/d/share/straighten0_the_box_filtered",
+    "path": "/mnt/d/share/pick_X_times_filterd_twice",
     "version": "v2.1",
-    "totalEpisodes": 55,
+    "totalEpisodes": 37,
     "fps": 30,
-    "robotType": "g1",
-    "repoId": "local/straighten0_the_box_filtered",
-    "displayName": "straighten0_the_box_filtered",
-    "lastOpenedAt": "2026-04-24T08:44:34.894Z"
+    "robotType": "Acone",
+    "repoId": "local/pick_X_times_filterd_twice",
+    "displayName": "pick_X_times_filterd_twice",
+    "lastOpenedAt": "2026-04-24T09:10:15.794Z"
   },
   {
     "path": "/mnt/d/pickXtimes_v21_filtered",

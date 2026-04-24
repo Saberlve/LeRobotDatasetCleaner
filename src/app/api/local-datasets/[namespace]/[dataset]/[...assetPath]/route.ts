@@ -1,7 +1,6 @@
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { Readable } from "node:stream";
 
 import { NextResponse } from "next/server";
 
@@ -118,6 +117,70 @@ function parseByteRange(
   return { start, end: Math.min(end, fileSize - 1) };
 }
 
+function createAbortableFileStream(
+  filePath: string,
+  options: { start?: number; end?: number; signal: AbortSignal },
+): ReadableStream<Uint8Array> {
+  let closed = false;
+  let stream: ReturnType<typeof createReadStream> | null = null;
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        stream?.destroy();
+      };
+
+      if (options.signal.aborted) {
+        close();
+        return;
+      }
+
+      stream = createReadStream(filePath, {
+        start: options.start,
+        end: options.end,
+      });
+
+      options.signal.addEventListener("abort", close, { once: true });
+
+      stream.on("data", (chunk) => {
+        if (closed) return;
+        try {
+          const bytes = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+          controller.enqueue(new Uint8Array(bytes));
+        } catch {
+          close();
+        }
+      });
+
+      stream.on("end", () => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // The client may have navigated away and closed the controller first.
+        }
+      });
+
+      stream.on("error", (error) => {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.error(error);
+        } catch {
+          // Ignore errors emitted after the client has already cancelled.
+        }
+      });
+    },
+    cancel() {
+      closed = true;
+      stream?.destroy();
+    },
+  });
+}
+
 export async function GET(request: Request, { params }: RouteParams) {
   const { namespace, dataset, assetPath } = await params;
   const resolved = await resolveAssetPath(namespace, dataset, assetPath);
@@ -147,8 +210,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
 
       const { start, end } = byteRange;
-      const stream = createReadStream(resolved.filePath, { start, end });
-      return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
+      const stream = createAbortableFileStream(resolved.filePath, {
+        start,
+        end,
+        signal: request.signal,
+      });
+      return new NextResponse(stream, {
         status: 206,
         headers: {
           ...headers,
