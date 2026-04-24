@@ -27,7 +27,9 @@ export function filterEpisodeIdsByModeKeepingCurrent({
   mode: EpisodeFilterMode;
   currentEpisode: number;
 }): number[] {
-  const filteredEpisodes = new Set(filterEpisodeIdsByMode(episodes, flagged, mode));
+  const filteredEpisodes = new Set(
+    filterEpisodeIdsByMode(episodes, flagged, mode),
+  );
   if (episodes.includes(currentEpisode)) {
     filteredEpisodes.add(currentEpisode);
   }
