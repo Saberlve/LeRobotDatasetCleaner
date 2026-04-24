@@ -18,7 +18,10 @@ describe("exportFilteredDataset", () => {
       datasetRoot,
       { recursive: true },
     );
-    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(tempRoot, "registry.json");
+    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(
+      tempRoot,
+      "registry.json",
+    );
   });
 
   afterEach(async () => {
@@ -42,10 +45,16 @@ describe("exportFilteredDataset", () => {
       await fs.readFile(path.join(outputPath, "meta", "info.json"), "utf8"),
     );
     const exportedEpisodeZero = JSON.parse(
-      await fs.readFile(path.join(outputPath, "data", "episode_000000.json"), "utf8"),
+      await fs.readFile(
+        path.join(outputPath, "data", "episode_000000.json"),
+        "utf8",
+      ),
     );
     const exportedEpisodeOne = JSON.parse(
-      await fs.readFile(path.join(outputPath, "data", "episode_000001.json"), "utf8"),
+      await fs.readFile(
+        path.join(outputPath, "data", "episode_000001.json"),
+        "utf8",
+      ),
     );
     const exportedEpisodes = (
       await fs.readFile(path.join(outputPath, "meta", "episodes.jsonl"), "utf8")
@@ -69,10 +78,14 @@ describe("exportFilteredDataset", () => {
       source_episode_index: 2,
     });
     expect(
-      exportedEpisodes.map((entry: { episode_index: number }) => entry.episode_index),
+      exportedEpisodes.map(
+        (entry: { episode_index: number }) => entry.episode_index,
+      ),
     ).toEqual([0, 1]);
     expect(
-      exportedEpisodes.map((entry: { source_episode_index: number }) => entry.source_episode_index),
+      exportedEpisodes.map(
+        (entry: { source_episode_index: number }) => entry.source_episode_index,
+      ),
     ).toEqual([0, 2]);
     expect(registryEntries).toEqual([
       expect.objectContaining({
@@ -167,7 +180,8 @@ describe("exportFilteredDataset", () => {
     const writeFileSpy = vi
       .spyOn(fs, "writeFile")
       .mockImplementation(async (...args: Parameters<typeof fs.writeFile>) => {
-        const filePath = typeof args[0] === "string" ? args[0] : String(args[0]);
+        const filePath =
+          typeof args[0] === "string" ? args[0] : String(args[0]);
         if (filePath.endsWith(path.join("meta", "info.json"))) {
           throw new Error("simulated write failure");
         }
@@ -195,13 +209,20 @@ describe("exportFilteredDataset", () => {
     const outsidePayload = path.join(tempRoot, "outside-episode.json");
     await fs.writeFile(
       outsidePayload,
-      JSON.stringify({ episode_index: 999, frames: [{ timestamp: 0, action: "escape" }] }, null, 2),
+      JSON.stringify(
+        { episode_index: 999, frames: [{ timestamp: 0, action: "escape" }] },
+        null,
+        2,
+      ),
       "utf8",
     );
 
     try {
       await fs.rm(path.join(datasetRoot, "data", "episode_000000.json"));
-      await fs.symlink(outsidePayload, path.join(datasetRoot, "data", "episode_000000.json"));
+      await fs.symlink(
+        outsidePayload,
+        path.join(datasetRoot, "data", "episode_000000.json"),
+      );
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === "EPERM" || code === "EACCES" || code === "ENOSYS") {
@@ -284,7 +305,9 @@ describe("exportFilteredDataset", () => {
         outputPath,
         alias: "demo_v21_bad_episode_shape",
       }),
-    ).rejects.toThrow("Episode metadata is invalid: data_file must be a non-empty string");
+    ).rejects.toThrow(
+      "Episode metadata is invalid: data_file must be a non-empty string",
+    );
     await expect(fs.access(outputPath)).rejects.toThrow();
   });
 

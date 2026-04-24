@@ -16,7 +16,10 @@ describe("local dataset registry", () => {
 
   beforeEach(async () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "visualizer-local-"));
-    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(tempRoot, "registry.json");
+    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(
+      tempRoot,
+      "registry.json",
+    );
   });
 
   afterEach(async () => {
@@ -25,12 +28,18 @@ describe("local dataset registry", () => {
   });
 
   test("buildLocalRepoId normalizes custom aliases", () => {
-    expect(buildLocalRepoId("/tmp/demo", "straighten_box")).toBe("local/straighten_box");
-    expect(buildLocalRepoId("/tmp/demo", "local/existing")).toBe("local/existing");
+    expect(buildLocalRepoId("/tmp/demo", "straighten_box")).toBe(
+      "local/straighten_box",
+    );
+    expect(buildLocalRepoId("/tmp/demo", "local/existing")).toBe(
+      "local/existing",
+    );
   });
 
   test("buildLocalRepoId falls back to dataset basename when alias is empty", () => {
-    expect(buildLocalRepoId("/tmp/datasets/demo_box", "")).toBe("local/demo_box");
+    expect(buildLocalRepoId("/tmp/datasets/demo_box", "")).toBe(
+      "local/demo_box",
+    );
   });
 
   test("buildLocalRepoId rejects invalid dataset basenames when alias is empty", () => {
@@ -49,20 +58,24 @@ describe("local dataset registry", () => {
   });
 
   test("buildExportRepoId falls back to the default local export alias", () => {
-    expect(buildExportRepoId("local/demo_box", "", "flagged")).toBe("local/demo_box_flagged");
-    expect(buildExportRepoId("local/demo_box", "", "unflagged")).toBe("local/demo_box_unflagged");
+    expect(buildExportRepoId("local/demo_box", "", "flagged")).toBe(
+      "local/demo_box_flagged",
+    );
+    expect(buildExportRepoId("local/demo_box", "", "unflagged")).toBe(
+      "local/demo_box_unflagged",
+    );
   });
 
   test("buildExportRepoId normalizes a custom export alias", () => {
-    expect(buildExportRepoId("local/demo_box", " local/custom_export ", "flagged")).toBe(
-      "local/custom_export",
-    );
+    expect(
+      buildExportRepoId("local/demo_box", " local/custom_export ", "flagged"),
+    ).toBe("local/custom_export");
   });
 
   test("buildExportRepoId rejects invalid export modes", () => {
-    expect(() => buildExportRepoId("local/demo_box", "", "all" as never)).toThrow(
-      "Export mode must be either flagged or unflagged",
-    );
+    expect(() =>
+      buildExportRepoId("local/demo_box", "", "all" as never),
+    ).toThrow("Export mode must be either flagged or unflagged");
   });
 
   test("buildExportRepoId rejects non-local source repo ids", () => {
@@ -78,9 +91,9 @@ describe("local dataset registry", () => {
   });
 
   test("buildExportRepoId rejects aliases that resolve to the source repo id", () => {
-    expect(() => buildExportRepoId("local/demo_box", "demo_box", "flagged")).toThrow(
-      "Export repo id must differ from the source repo id",
-    );
+    expect(() =>
+      buildExportRepoId("local/demo_box", "demo_box", "flagged"),
+    ).toThrow("Export repo id must differ from the source repo id");
   });
 
   test("validateLocalDatasetPath reads v2.1 info", async () => {
@@ -146,7 +159,9 @@ describe("local dataset registry", () => {
   test("loadLocalDatasetRegistry rejects corrupted registry JSON", async () => {
     await fs.writeFile(process.env.LOCAL_DATASET_REGISTRY_PATH!, "{", "utf8");
 
-    await expect(loadLocalDatasetRegistry()).rejects.toThrow("Local dataset registry is malformed");
+    await expect(loadLocalDatasetRegistry()).rejects.toThrow(
+      "Local dataset registry is malformed",
+    );
   });
 
   test("loadLocalDatasetRegistry rejects invalid registry entry shapes", async () => {
@@ -156,7 +171,9 @@ describe("local dataset registry", () => {
       "utf8",
     );
 
-    await expect(loadLocalDatasetRegistry()).rejects.toThrow("Local dataset registry is invalid");
+    await expect(loadLocalDatasetRegistry()).rejects.toThrow(
+      "Local dataset registry is invalid",
+    );
   });
 
   test("loadLocalDatasetRegistry rejects invalid local repo id shapes", async () => {
@@ -177,7 +194,9 @@ describe("local dataset registry", () => {
       "utf8",
     );
 
-    await expect(loadLocalDatasetRegistry()).rejects.toThrow("Local dataset registry is invalid");
+    await expect(loadLocalDatasetRegistry()).rejects.toThrow(
+      "Local dataset registry is invalid",
+    );
   });
 
   test("loadLocalDatasetRegistry rejects mismatched display names", async () => {
@@ -198,7 +217,9 @@ describe("local dataset registry", () => {
       "utf8",
     );
 
-    await expect(loadLocalDatasetRegistry()).rejects.toThrow("Local dataset registry is invalid");
+    await expect(loadLocalDatasetRegistry()).rejects.toThrow(
+      "Local dataset registry is invalid",
+    );
   });
 
   test("registerLocalDataset does not overwrite corrupted registry data", async () => {
@@ -219,7 +240,9 @@ describe("local dataset registry", () => {
     await expect(
       registerLocalDataset({ datasetPath: datasetRoot, alias: "demo_box" }),
     ).rejects.toThrow("Local dataset registry is malformed");
-    await expect(fs.readFile(process.env.LOCAL_DATASET_REGISTRY_PATH!, "utf8")).resolves.toBe("{");
+    await expect(
+      fs.readFile(process.env.LOCAL_DATASET_REGISTRY_PATH!, "utf8"),
+    ).resolves.toBe("{");
   });
 
   test("registerLocalDataset persists latest entry", async () => {
@@ -236,7 +259,10 @@ describe("local dataset registry", () => {
       "utf8",
     );
 
-    const entry = await registerLocalDataset({ datasetPath: datasetRoot, alias: "demo_box" });
+    const entry = await registerLocalDataset({
+      datasetPath: datasetRoot,
+      alias: "demo_box",
+    });
     const all = await loadLocalDatasetRegistry();
 
     expect(entry.repoId).toBe("local/demo_box");

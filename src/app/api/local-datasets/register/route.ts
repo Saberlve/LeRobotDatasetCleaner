@@ -8,7 +8,9 @@ function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function parseRegisterPayload(request: Request): Promise<{ path: string; alias: string }> {
+async function parseRegisterPayload(
+  request: Request,
+): Promise<{ path: string; alias: string }> {
   let payload: unknown;
 
   try {

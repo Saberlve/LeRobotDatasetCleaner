@@ -13,7 +13,9 @@ export function RemoteDatasetCard() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [status, setStatus] = useState("输入 Hugging Face 数据集 ID 后可直接打开。");
+  const [status, setStatus] = useState(
+    "输入 Hugging Face 数据集 ID 后可直接打开。",
+  );
 
   useEffect(() => {
     if (!query.trim()) {
@@ -78,7 +80,10 @@ export function RemoteDatasetCard() {
           openDataset(query);
         }}
       >
-        <label className="block text-sm text-slate-200" htmlFor="remote-dataset-input">
+        <label
+          className="block text-sm text-slate-200"
+          htmlFor="remote-dataset-input"
+        >
           数据集 ID
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">

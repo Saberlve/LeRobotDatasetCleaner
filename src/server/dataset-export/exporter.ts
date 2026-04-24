@@ -29,11 +29,17 @@ export async function exportFilteredDataset(input: {
     throw new Error("输出目录不能为空。");
   }
 
-  const exportRepoId = buildExportRepoId(input.repoId, input.alias ?? "", input.mode);
+  const exportRepoId = buildExportRepoId(
+    input.repoId,
+    input.alias ?? "",
+    input.mode,
+  );
   const exportAlias = exportRepoId.replace(/^local\//, "");
   const datasetPath =
     input.datasetPath ??
-    (await loadLocalDatasetRegistry()).find((entry) => entry.repoId === input.repoId)?.path;
+    (await loadLocalDatasetRegistry()).find(
+      (entry) => entry.repoId === input.repoId,
+    )?.path;
 
   if (!datasetPath) {
     throw new Error(`找不到本地数据集: ${input.repoId}`);

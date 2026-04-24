@@ -31,7 +31,10 @@ export function LocalDatasetCard() {
       const response = await fetch("/api/local-datasets/pick-directory", {
         method: "POST",
       });
-      const payload = (await response.json()) as { path?: string | null; error?: string };
+      const payload = (await response.json()) as {
+        path?: string | null;
+        error?: string;
+      };
 
       if (!response.ok || !payload.path) {
         throw new Error(payload.error ?? "无法选择本地文件夹");
@@ -39,7 +42,9 @@ export function LocalDatasetCard() {
 
       setSelectedPath(payload.path);
     } catch (pickError) {
-      setError(pickError instanceof Error ? pickError.message : "无法选择本地文件夹");
+      setError(
+        pickError instanceof Error ? pickError.message : "无法选择本地文件夹",
+      );
     } finally {
       setIsPicking(false);
     }
@@ -82,7 +87,11 @@ export function LocalDatasetCard() {
       );
       router.push(payload.entryRoute);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "本地数据集导入失败");
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "本地数据集导入失败",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +117,10 @@ export function LocalDatasetCard() {
         </button>
 
         <div className="space-y-2">
-          <label className="block text-sm text-slate-200" htmlFor="local-dataset-path">
+          <label
+            className="block text-sm text-slate-200"
+            htmlFor="local-dataset-path"
+          >
             已选择路径
           </label>
           <input
@@ -121,7 +133,10 @@ export function LocalDatasetCard() {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm text-slate-200" htmlFor="local-dataset-alias">
+          <label
+            className="block text-sm text-slate-200"
+            htmlFor="local-dataset-alias"
+          >
             可选别名
           </label>
           <input

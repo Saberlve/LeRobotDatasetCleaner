@@ -33,6 +33,7 @@
 ### Task 1: Persistent Local Dataset Registry
 
 **Files:**
+
 - Create: `src/server/local-datasets/registry.ts`
 - Create: `src/server/local-datasets/__tests__/registry.test.ts`
 - Create: `data/local_datasets_registry.json`
@@ -57,7 +58,10 @@ describe("local dataset registry", () => {
 
   beforeEach(async () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "visualizer-local-"));
-    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(tempRoot, "registry.json");
+    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(
+      tempRoot,
+      "registry.json",
+    );
   });
 
   afterEach(async () => {
@@ -66,8 +70,12 @@ describe("local dataset registry", () => {
   });
 
   test("buildLocalRepoId normalizes custom aliases", () => {
-    expect(buildLocalRepoId("/tmp/demo", "straighten_box")).toBe("local/straighten_box");
-    expect(buildLocalRepoId("/tmp/demo", "local/existing")).toBe("local/existing");
+    expect(buildLocalRepoId("/tmp/demo", "straighten_box")).toBe(
+      "local/straighten_box",
+    );
+    expect(buildLocalRepoId("/tmp/demo", "local/existing")).toBe(
+      "local/existing",
+    );
   });
 
   test("validateLocalDatasetPath reads v2.1 info", async () => {
@@ -103,7 +111,10 @@ describe("local dataset registry", () => {
       "utf8",
     );
 
-    const entry = await registerLocalDataset({ datasetPath: datasetRoot, alias: "demo_box" });
+    const entry = await registerLocalDataset({
+      datasetPath: datasetRoot,
+      alias: "demo_box",
+    });
     const all = await loadLocalDatasetRegistry();
 
     expect(entry.repoId).toBe("local/demo_box");
@@ -139,7 +150,10 @@ export type LocalDatasetRegistryEntry = LocalDatasetSummary & {
   lastOpenedAt: string;
 };
 
-const DEFAULT_REGISTRY_PATH = path.resolve(process.cwd(), "data/local_datasets_registry.json");
+const DEFAULT_REGISTRY_PATH = path.resolve(
+  process.cwd(),
+  "data/local_datasets_registry.json",
+);
 const SUPPORTED_VERSIONS = new Set(["v2.0", "v2.1", "v3.0"]);
 
 function getRegistryPath() {
@@ -154,7 +168,9 @@ export function buildLocalRepoId(datasetPath: string, customAlias: string) {
   return `local/${path.basename(path.resolve(datasetPath))}`;
 }
 
-export async function loadLocalDatasetRegistry(): Promise<LocalDatasetRegistryEntry[]> {
+export async function loadLocalDatasetRegistry(): Promise<
+  LocalDatasetRegistryEntry[]
+> {
   const registryPath = getRegistryPath();
   try {
     const raw = await fs.readFile(registryPath, "utf8");
@@ -171,13 +187,18 @@ async function saveLocalDatasetRegistry(entries: LocalDatasetRegistryEntry[]) {
   await fs.writeFile(registryPath, JSON.stringify(entries, null, 2), "utf8");
 }
 
-export async function validateLocalDatasetPath(datasetPath: string): Promise<LocalDatasetSummary> {
+export async function validateLocalDatasetPath(
+  datasetPath: string,
+): Promise<LocalDatasetSummary> {
   const absolutePath = path.resolve(datasetPath);
   const infoPath = path.join(absolutePath, "meta", "info.json");
   const raw = await fs.readFile(infoPath, "utf8");
   const info = JSON.parse(raw) as Record<string, unknown>;
   const version = String(info.codebase_version ?? "").trim();
-  if (!SUPPORTED_VERSIONS.has(version)) throw new Error(`Unsupported local dataset version: ${version || "unknown"}`);
+  if (!SUPPORTED_VERSIONS.has(version))
+    throw new Error(
+      `Unsupported local dataset version: ${version || "unknown"}`,
+    );
 
   return {
     path: absolutePath,
@@ -188,7 +209,10 @@ export async function validateLocalDatasetPath(datasetPath: string): Promise<Loc
   };
 }
 
-export async function registerLocalDataset(input: { datasetPath: string; alias: string }) {
+export async function registerLocalDataset(input: {
+  datasetPath: string;
+  alias: string;
+}) {
   const summary = await validateLocalDatasetPath(input.datasetPath);
   const repoId = buildLocalRepoId(summary.path, input.alias);
   const entry: LocalDatasetRegistryEntry = {
@@ -198,7 +222,12 @@ export async function registerLocalDataset(input: { datasetPath: string; alias: 
     lastOpenedAt: new Date().toISOString(),
   };
   const existing = await loadLocalDatasetRegistry();
-  const next = [entry, ...existing.filter((item) => item.repoId !== entry.repoId && item.path !== entry.path)];
+  const next = [
+    entry,
+    ...existing.filter(
+      (item) => item.repoId !== entry.repoId && item.path !== entry.path,
+    ),
+  ];
   await saveLocalDatasetRegistry(next);
   return entry;
 }
@@ -220,6 +249,7 @@ git commit -m "feat: add persistent local dataset registry"
 ### Task 2: Picker And Registration APIs
 
 **Files:**
+
 - Create: `src/server/local-datasets/picker.ts`
 - Create: `src/server/local-datasets/__tests__/picker.test.ts`
 - Create: `src/app/api/local-datasets/registry/route.ts`
@@ -252,11 +282,14 @@ import { POST as registerRoute } from "@/app/api/local-datasets/register/route";
 
 describe("local dataset register api", () => {
   test("returns repoId and entryRoute", async () => {
-    const request = new Request("http://localhost/api/local-datasets/register", {
-      method: "POST",
-      body: JSON.stringify({ path: "/tmp/demo", alias: "demo_box" }),
-      headers: { "content-type": "application/json" },
-    });
+    const request = new Request(
+      "http://localhost/api/local-datasets/register",
+      {
+        method: "POST",
+        body: JSON.stringify({ path: "/tmp/demo", alias: "demo_box" }),
+        headers: { "content-type": "application/json" },
+      },
+    );
 
     const response = await registerRoute(request);
     expect(response.status).toBe(200);
@@ -292,9 +325,14 @@ export async function pickDirectory(deps = { createProcess: execFileAsync }) {
     ].join(";");
     const { stdout } = await deps.createProcess("python3", ["-c", script]);
     const selected = stdout.trim();
-    return selected ? { path: selected, error: null } : { path: null, error: null };
+    return selected
+      ? { path: selected, error: null }
+      : { path: null, error: null };
   } catch {
-    return { path: null, error: "无法打开本地文件夹选择窗口，当前环境可能不支持 GUI。" };
+    return {
+      path: null,
+      error: "无法打开本地文件夹选择窗口，当前环境可能不支持 GUI。",
+    };
   }
 }
 ```
@@ -363,6 +401,7 @@ git commit -m "feat: add local dataset picker and register APIs"
 ### Task 3: Extend Existing Local Dataset Resolution
 
 **Files:**
+
 - Modify: `src/utils/localDatasets.ts`
 - Modify: `src/utils/__tests__/versionUtils.test.ts`
 
@@ -389,7 +428,11 @@ test("builds local dataset url from persistent registry when env is empty", asyn
     "utf8",
   );
 
-  const url = buildVersionedUrl("local/straighten_box", "v2.1", "meta/info.json");
+  const url = buildVersionedUrl(
+    "local/straighten_box",
+    "v2.1",
+    "meta/info.json",
+  );
   expect(url).toBe(
     "http://127.0.0.1:3000/api/local-datasets/local/straighten_box/meta/info.json",
   );
@@ -409,7 +452,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const LOCAL_DATASETS_ENV = "LOCAL_LEROBOT_DATASETS_JSON";
-const DEFAULT_REGISTRY_PATH = path.resolve(process.cwd(), "data/local_datasets_registry.json");
+const DEFAULT_REGISTRY_PATH = path.resolve(
+  process.cwd(),
+  "data/local_datasets_registry.json",
+);
 
 type RegistryEntry = {
   repoId: string;
@@ -454,6 +500,7 @@ git commit -m "feat: support persistent local dataset resolution"
 ### Task 4: Chinese Home Page With Local Import UI
 
 **Files:**
+
 - Create: `src/components/home/remote-dataset-card.tsx`
 - Create: `src/components/home/local-dataset-card.tsx`
 - Create: `src/components/home/recent-local-datasets.tsx`
@@ -513,7 +560,8 @@ function HomeInner() {
         <header className="space-y-3 text-center">
           <h1 className="text-4xl font-bold">LeRobot 数据集可视化工具</h1>
           <p className="text-base text-white/70">
-            支持远程 Hugging Face 数据集浏览，也支持本地 LeRobot 数据文件夹导入。
+            支持远程 Hugging Face 数据集浏览，也支持本地 LeRobot
+            数据文件夹导入。
           </p>
         </header>
         <section className="grid gap-6 lg:grid-cols-2">
@@ -551,7 +599,9 @@ export function LocalDatasetCard() {
 
   async function handlePickDirectory() {
     setError("");
-    const response = await fetch("/api/local-datasets/pick-directory", { method: "POST" });
+    const response = await fetch("/api/local-datasets/pick-directory", {
+      method: "POST",
+    });
     const payload = await response.json();
     if (!response.ok) {
       setError(payload.error ?? "无法选择本地文件夹");
@@ -579,14 +629,33 @@ export function LocalDatasetCard() {
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
       <h2 className="text-2xl font-semibold">本地数据集</h2>
-      <p className="mt-2 text-sm text-white/65">选择本地 LeRobot 数据文件夹并进入可视化页面。</p>
+      <p className="mt-2 text-sm text-white/65">
+        选择本地 LeRobot 数据文件夹并进入可视化页面。
+      </p>
       <div className="mt-4 flex flex-col gap-3">
-        <button onClick={handlePickDirectory} className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white">
+        <button
+          onClick={handlePickDirectory}
+          className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white"
+        >
           选择本地文件夹
         </button>
-        <input value={selectedPath} readOnly placeholder="已选择的本地路径将显示在这里" className="rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-sm" />
-        <input value={alias} onChange={(event) => setAlias(event.target.value)} placeholder="可选别名，例如 straighten_the_box" className="rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-sm" />
-        <button onClick={handleRegister} disabled={!selectedPath} className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+        <input
+          value={selectedPath}
+          readOnly
+          placeholder="已选择的本地路径将显示在这里"
+          className="rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-sm"
+        />
+        <input
+          value={alias}
+          onChange={(event) => setAlias(event.target.value)}
+          placeholder="可选别名，例如 straighten_the_box"
+          className="rounded-md border border-white/10 bg-slate-900 px-3 py-2 text-sm"
+        />
+        <button
+          onClick={handleRegister}
+          disabled={!selectedPath}
+          className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
           进入可视化
         </button>
         {summary ? <p className="text-sm text-emerald-300">{summary}</p> : null}

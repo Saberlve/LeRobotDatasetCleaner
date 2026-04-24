@@ -1,7 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { defaultExportAlias, type ExportMode } from "@/server/dataset-export/selection";
+import {
+  defaultExportAlias,
+  type ExportMode,
+} from "@/server/dataset-export/selection";
 
 export type LocalDatasetSummary = {
   path: string;
@@ -17,7 +20,10 @@ export type LocalDatasetRegistryEntry = LocalDatasetSummary & {
   lastOpenedAt: string;
 };
 
-const DEFAULT_REGISTRY_PATH = path.resolve(process.cwd(), "data/local_datasets_registry.json");
+const DEFAULT_REGISTRY_PATH = path.resolve(
+  process.cwd(),
+  "data/local_datasets_registry.json",
+);
 const SUPPORTED_VERSIONS = new Set(["v2.0", "v2.1", "v3.0"]);
 const LOCAL_ALIAS_PATTERN = /^[A-Za-z0-9._-]+$/;
 const LOCAL_REPO_ID_PATTERN = /^local\/[A-Za-z0-9._-]+$/;
@@ -32,7 +38,9 @@ function normalizeAlias(customAlias: string): string | null {
   const alias = customAlias.trim();
   if (!alias) return null;
 
-  const normalized = alias.startsWith("local/") ? alias.slice("local/".length) : alias;
+  const normalized = alias.startsWith("local/")
+    ? alias.slice("local/".length)
+    : alias;
   if (!normalized || !LOCAL_ALIAS_PATTERN.test(normalized)) {
     throw new Error(
       "Local dataset alias must be a single path segment containing letters, numbers, dot, underscore, or hyphen",
@@ -42,7 +50,10 @@ function normalizeAlias(customAlias: string): string | null {
   return normalized;
 }
 
-export function buildLocalRepoId(datasetPath: string, customAlias: string): string {
+export function buildLocalRepoId(
+  datasetPath: string,
+  customAlias: string,
+): string {
   const alias = normalizeAlias(customAlias);
   if (alias) {
     return `local/${alias}`;
@@ -52,7 +63,9 @@ export function buildLocalRepoId(datasetPath: string, customAlias: string): stri
     return `local/${normalizeAlias(path.basename(path.resolve(datasetPath)))}`;
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error("Dataset basename is not a valid local alias; provide a valid alias explicitly");
+      throw new Error(
+        "Dataset basename is not a valid local alias; provide a valid alias explicitly",
+      );
     }
 
     throw error;
@@ -95,7 +108,9 @@ function assertValidRegistryEntry(
   index: number,
 ): asserts value is LocalDatasetRegistryEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`Local dataset registry is invalid: entry ${index} must be an object`);
+    throw new Error(
+      `Local dataset registry is invalid: entry ${index} must be an object`,
+    );
   }
 
   const entry = value as Record<string, unknown>;
@@ -110,22 +125,30 @@ function assertValidRegistryEntry(
     typeof entry.lastOpenedAt === "string";
 
   if (!hasValidShape) {
-    throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
+    throw new Error(
+      `Local dataset registry is invalid: entry ${index} has an invalid shape`,
+    );
   }
 
   const typedEntry = entry as LocalDatasetRegistryEntry;
   const { repoId, displayName } = typedEntry;
 
   if (!LOCAL_REPO_ID_PATTERN.test(repoId)) {
-    throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
+    throw new Error(
+      `Local dataset registry is invalid: entry ${index} has an invalid shape`,
+    );
   }
 
   if (displayName !== repoId.replace(/^local\//, "")) {
-    throw new Error(`Local dataset registry is invalid: entry ${index} has an invalid shape`);
+    throw new Error(
+      `Local dataset registry is invalid: entry ${index} has an invalid shape`,
+    );
   }
 }
 
-export async function loadLocalDatasetRegistry(): Promise<LocalDatasetRegistryEntry[]> {
+export async function loadLocalDatasetRegistry(): Promise<
+  LocalDatasetRegistryEntry[]
+> {
   const registryPath = getRegistryPath();
 
   try {
@@ -158,7 +181,9 @@ export async function loadLocalDatasetRegistry(): Promise<LocalDatasetRegistryEn
   }
 }
 
-async function saveLocalDatasetRegistry(entries: LocalDatasetRegistryEntry[]): Promise<void> {
+async function saveLocalDatasetRegistry(
+  entries: LocalDatasetRegistryEntry[],
+): Promise<void> {
   const registryPath = getRegistryPath();
   await fs.mkdir(path.dirname(registryPath), { recursive: true });
   await fs.writeFile(registryPath, JSON.stringify(entries, null, 2), "utf8");
@@ -174,7 +199,9 @@ export async function validateLocalDatasetPath(
   const version = String(info.codebase_version ?? "").trim();
 
   if (!SUPPORTED_VERSIONS.has(version)) {
-    throw new Error(`Unsupported local dataset version: ${version || "unknown"}`);
+    throw new Error(
+      `Unsupported local dataset version: ${version || "unknown"}`,
+    );
   }
 
   if (
@@ -209,7 +236,9 @@ export async function registerLocalDataset(input: {
   const existing = await loadLocalDatasetRegistry();
   const next = [
     entry,
-    ...existing.filter((item) => item.repoId !== entry.repoId && item.path !== entry.path),
+    ...existing.filter(
+      (item) => item.repoId !== entry.repoId && item.path !== entry.path,
+    ),
   ];
 
   await saveLocalDatasetRegistry(next);

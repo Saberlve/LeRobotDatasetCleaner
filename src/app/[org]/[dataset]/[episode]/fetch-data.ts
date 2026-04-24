@@ -105,6 +105,70 @@ type ColumnDef = {
   value: string[];
 };
 
+type V2ColumnInput = {
+  key: string;
+  length: number;
+  names: DatasetMetadata["features"][string]["names"];
+};
+
+function normalizeFeatureNames(names: unknown): string[] | null {
+  let columnNames = names;
+  while (
+    typeof columnNames === "object" &&
+    columnNames !== null &&
+    !Array.isArray(columnNames)
+  ) {
+    columnNames = Object.values(columnNames)[0];
+  }
+
+  return Array.isArray(columnNames)
+    ? columnNames.map((name) => String(name))
+    : null;
+}
+
+function inferVectorLengthFromRows(
+  rows: Record<string, unknown>[],
+  key: string,
+): number {
+  for (const row of rows) {
+    const raw = row[key];
+    if (Array.isArray(raw)) return raw.length;
+
+    const dottedMaxIndex = Object.keys(row)
+      .filter((rowKey) => rowKey.startsWith(`${key}.`))
+      .map((rowKey) => Number.parseInt(rowKey.slice(key.length + 1), 10))
+      .filter((index) => Number.isInteger(index) && index >= 0)
+      .reduce((max, index) => Math.max(max, index), -1);
+    if (dottedMaxIndex >= 0) return dottedMaxIndex + 1;
+  }
+
+  return 0;
+}
+
+export function buildV2ColumnDefinitions(
+  columns: V2ColumnInput[],
+  rows: Record<string, unknown>[],
+): ColumnDef[] {
+  return columns.flatMap(({ key, length, names }) => {
+    const inferredLength =
+      length > 0 ? length : inferVectorLengthFromRows(rows, key);
+    if (inferredLength <= 0) return [];
+
+    const normalizedNames = normalizeFeatureNames(names);
+    const value =
+      normalizedNames && normalizedNames.length > 0
+        ? normalizedNames
+            .slice(0, inferredLength)
+            .map((name) => `${key}${SERIES_NAME_DELIMITER}${name}`)
+        : Array.from(
+            { length: inferredLength },
+            (_, i) => `${key}${SERIES_NAME_DELIMITER}${i}`,
+          );
+
+    return [{ key, value }];
+  });
+}
+
 function parsePositiveIntEnv(
   value: string | undefined,
   fallback: number,
@@ -488,32 +552,13 @@ async function getEpisodeDataV2(
       ([, value]) =>
         ["float32", "int32"].includes(value.dtype) && value.shape.length === 1,
     )
-    .map(([key, { shape }]) => ({ key, length: shape[0] }));
+    .map(([key, { shape, names }]) => ({ key, length: shape[0], names }));
 
   // Exclude specific columns
   const excludedColumns = EXCLUDED_COLUMNS.V2 as readonly string[];
   const filteredColumns = columnNames.filter(
     (column) => !excludedColumns.includes(column.key),
   );
-  const columns: ColumnDef[] = filteredColumns.map(({ key }) => {
-    let column_names: unknown = info.features[key].names;
-    while (typeof column_names === "object" && column_names !== null) {
-      if (Array.isArray(column_names)) break;
-      column_names = Object.values(column_names)[0];
-    }
-    return {
-      key,
-      value: Array.isArray(column_names)
-        ? column_names.map(
-            (name: string) => `${key}${SERIES_NAME_DELIMITER}${name}`,
-          )
-        : Array.from(
-            { length: columnNames.find((c) => c.key === key)?.length ?? 1 },
-            (_, i) => `${key}${CHART_CONFIG.SERIES_NAME_DELIMITER}${i}`,
-          ),
-    };
-  });
-
   const parquetUrl = buildVersionedUrl(
     repoId,
     version,
@@ -536,6 +581,7 @@ async function getEpisodeDataV2(
     ]),
   );
   const allData = await readParquetAsObjects(arrayBuffer, parquetColumns);
+  const columns = buildV2ColumnDefinitions(filteredColumns, allData);
 
   // Extract task from language_instruction fields, task field, or tasks.jsonl
   let task: string | undefined;
@@ -1650,6 +1696,58 @@ export type CrossEpisodeVarianceData = {
   aggAlignment: AggAlignment | null;
 };
 
+export function getPositiveVectorDim(shape: number[]): number {
+  for (const dim of shape) {
+    if (Number.isInteger(dim) && dim > 0) {
+      return dim;
+    }
+  }
+  return 0;
+}
+
+export function extractFeatureVector(
+  row: Record<string, unknown>,
+  featureKey: string,
+  fallbackDim = 0,
+): number[] {
+  const raw = row[featureKey];
+  if (Array.isArray(raw)) {
+    return raw.map((value) => Number(value) || 0);
+  }
+
+  if (
+    typeof raw === "number" ||
+    typeof raw === "string" ||
+    typeof raw === "bigint"
+  ) {
+    return [Number(raw) || 0];
+  }
+
+  const dottedValues = Object.entries(row)
+    .filter(([key]) => key.startsWith(`${featureKey}.`))
+    .map(([key, value]) => ({
+      index: Number.parseInt(key.slice(featureKey.length + 1), 10),
+      value,
+    }))
+    .filter((entry) => Number.isInteger(entry.index) && entry.index >= 0)
+    .sort((a, b) => a.index - b.index);
+
+  if (dottedValues.length > 0) {
+    return dottedValues.map((entry) => Number(entry.value) || 0);
+  }
+
+  if (fallbackDim > 0) {
+    const vector: number[] = [];
+    for (let dim = 0; dim < fallbackDim; dim++) {
+      const value = row[`${featureKey}.${dim}`] ?? row[String(dim)];
+      vector.push(typeof value === "number" ? value : Number(value) || 0);
+    }
+    return vector;
+  }
+
+  return [];
+}
+
 export async function loadCrossEpisodeActionVariance(
   repoId: string,
   version: string,
@@ -1673,25 +1771,30 @@ export async function loadCrossEpisodeActionVariance(
   }
 
   const [actionKey, actionMeta] = actionEntry;
-  const actionDim = actionMeta.shape[0];
+  let actionDim = getPositiveVectorDim(actionMeta.shape);
 
   let names: unknown = actionMeta.names;
   while (typeof names === "object" && names !== null && !Array.isArray(names)) {
     names = Object.values(names)[0];
   }
-  const actionNames = Array.isArray(names)
-    ? (names as string[]).map((n) => `${actionKey}${SERIES_NAME_DELIMITER}${n}`)
-    : Array.from(
-        { length: actionDim },
-        (_, i) => `${actionKey}${SERIES_NAME_DELIMITER}${i}`,
-      );
+  const rawActionNames = Array.isArray(names)
+    ? (names as string[]).map(
+        (name) => `${actionKey}${SERIES_NAME_DELIMITER}${name}`,
+      )
+    : null;
+  let actionNames =
+    rawActionNames?.slice(0, actionDim) ??
+    Array.from(
+      { length: actionDim },
+      (_, i) => `${actionKey}${SERIES_NAME_DELIMITER}${i}`,
+    );
 
   // State feature for alignment computation
   const stateEntry = Object.entries(info.features).find(
     ([key, f]) => key === "observation.state" && f.shape.length === 1,
   );
   const stateKey = stateEntry?.[0] ?? null;
-  const stateDim = stateEntry?.[1].shape[0] ?? 0;
+  const stateDim = stateEntry ? getPositiveVectorDim(stateEntry[1].shape) : 0;
 
   // Collect episode metadata
   type EpMeta = {
@@ -1793,8 +1896,12 @@ export async function loadCrossEpisodeActionVariance(
             const actions: number[][] = [];
             const states: number[][] = [];
             for (let r = localFrom; r < localTo; r++) {
-              const raw = rows[r]?.[actionKey];
-              if (Array.isArray(raw)) actions.push(raw.map(Number));
+              const vector = extractFeatureVector(
+                rows[r] as Record<string, unknown>,
+                actionKey,
+                actionDim,
+              );
+              if (vector.length > 0) actions.push(vector);
               if (stateKey) {
                 const sRaw = rows[r]?.[stateKey];
                 if (Array.isArray(sRaw)) states.push(sRaw.map(Number));
@@ -1844,17 +1951,12 @@ export async function loadCrossEpisodeActionVariance(
           const actions: number[][] = [];
           const states: number[][] = [];
           for (const row of rows) {
-            const raw = row[actionKey];
-            if (Array.isArray(raw)) {
-              actions.push(raw.map(Number));
-            } else {
-              const vec: number[] = [];
-              for (let d = 0; d < actionDim; d++) {
-                const v = row[`${actionKey}.${d}`] ?? row[d];
-                vec.push(typeof v === "number" ? v : Number(v) || 0);
-              }
-              actions.push(vec);
-            }
+            const vector = extractFeatureVector(
+              row as Record<string, unknown>,
+              actionKey,
+              actionDim,
+            );
+            if (vector.length > 0) actions.push(vector);
             if (stateKey) {
               const sRaw = row[stateKey];
               if (Array.isArray(sRaw)) states.push(sRaw.map(Number));
@@ -1899,6 +2001,22 @@ export async function loadCrossEpisodeActionVariance(
   console.log(
     `[cross-ep] Loaded action data for ${episodeActions.length}/${sampled.length} episodes`,
   );
+
+  if (actionDim <= 0) {
+    actionDim =
+      episodeActions.find(({ actions }) => actions[0]?.length > 0)?.actions[0]
+        ?.length ?? 0;
+    actionNames =
+      rawActionNames?.slice(0, actionDim) ??
+      Array.from(
+        { length: actionDim },
+        (_, i) => `${actionKey}${SERIES_NAME_DELIMITER}${i}`,
+      );
+  }
+  if (actionDim <= 0) {
+    console.warn("[cross-ep] Failed to infer a positive action dimension");
+    return null;
+  }
 
   // Resample each episode to numTimeBins and compute variance
   const timeBins = Array.from(

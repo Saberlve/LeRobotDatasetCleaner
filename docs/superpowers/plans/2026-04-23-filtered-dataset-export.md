@@ -13,6 +13,7 @@
 ### Task 1: Lock Down Episode Selection And Export Naming
 
 **Files:**
+
 - Create: `src/server/dataset-export/selection.ts`
 - Create: `src/server/dataset-export/__tests__/selection.test.ts`
 - Modify: `src/server/local-datasets/registry.ts`
@@ -92,8 +93,12 @@ describe("buildEpisodeSelectionPlan", () => {
 
 describe("defaultExportAlias", () => {
   test("adds mode suffix to local repo display name", () => {
-    expect(defaultExportAlias("local/demo_box", "flagged")).toBe("demo_box_flagged");
-    expect(defaultExportAlias("local/demo_box", "unflagged")).toBe("demo_box_unflagged");
+    expect(defaultExportAlias("local/demo_box", "flagged")).toBe(
+      "demo_box_flagged",
+    );
+    expect(defaultExportAlias("local/demo_box", "unflagged")).toBe(
+      "demo_box_unflagged",
+    );
   });
 });
 ```
@@ -123,11 +128,20 @@ export function buildEpisodeSelectionPlan(input: {
   flaggedEpisodeIds: number[];
   mode: ExportMode;
 }): EpisodeSelectionPlan {
-  const sourceEpisodeIds = Array.from({ length: input.totalEpisodes }, (_, index) => index);
-  const flaggedEpisodeIds = [...new Set(input.flaggedEpisodeIds)].sort((a, b) => a - b);
+  const sourceEpisodeIds = Array.from(
+    { length: input.totalEpisodes },
+    (_, index) => index,
+  );
+  const flaggedEpisodeIds = [...new Set(input.flaggedEpisodeIds)].sort(
+    (a, b) => a - b,
+  );
 
   for (const episodeId of flaggedEpisodeIds) {
-    if (!Number.isInteger(episodeId) || episodeId < 0 || episodeId >= input.totalEpisodes) {
+    if (
+      !Number.isInteger(episodeId) ||
+      episodeId < 0 ||
+      episodeId >= input.totalEpisodes
+    ) {
       throw new Error(`Flagged episode id ${episodeId} is out of range`);
     }
   }
@@ -146,9 +160,14 @@ export function buildEpisodeSelectionPlan(input: {
     );
   }
 
-  const droppedEpisodeIds = sourceEpisodeIds.filter((episodeId) => !keptEpisodeIds.includes(episodeId));
+  const droppedEpisodeIds = sourceEpisodeIds.filter(
+    (episodeId) => !keptEpisodeIds.includes(episodeId),
+  );
   const episodeIdMap = Object.fromEntries(
-    keptEpisodeIds.map((episodeId, nextEpisodeId) => [episodeId, nextEpisodeId]),
+    keptEpisodeIds.map((episodeId, nextEpisodeId) => [
+      episodeId,
+      nextEpisodeId,
+    ]),
   );
 
   return {
@@ -170,7 +189,11 @@ export function defaultExportAlias(repoId: string, mode: ExportMode): string {
 - [ ] **Step 4: Expose a registry helper for alias defaults**
 
 ```ts
-export function buildExportRepoId(sourceRepoId: string, customAlias: string, mode: ExportMode): string {
+export function buildExportRepoId(
+  sourceRepoId: string,
+  customAlias: string,
+  mode: ExportMode,
+): string {
   const alias = customAlias.trim() || defaultExportAlias(sourceRepoId, mode);
   return buildLocalRepoId(alias, alias);
 }
@@ -202,6 +225,7 @@ git commit -m "test: add dataset export selection coverage"
 ### Task 2: Prove Fixture-Based Dataset Export On The Server
 
 **Files:**
+
 - Create: `src/server/dataset-export/inspect.ts`
 - Create: `src/server/dataset-export/write.ts`
 - Create: `src/server/dataset-export/exporter.ts`
@@ -230,13 +254,14 @@ describe("exportFilteredDataset", () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "visualizer-export-"));
     datasetRoot = path.join(tempRoot, "demo_v21");
     await fs.cp(
-      path.resolve(
-        "src/server/dataset-export/__tests__/fixtures/minimal-v21",
-      ),
+      path.resolve("src/server/dataset-export/__tests__/fixtures/minimal-v21"),
       datasetRoot,
       { recursive: true },
     );
-    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(tempRoot, "registry.json");
+    process.env.LOCAL_DATASET_REGISTRY_PATH = path.join(
+      tempRoot,
+      "registry.json",
+    );
   });
 
   afterEach(async () => {
@@ -259,18 +284,23 @@ describe("exportFilteredDataset", () => {
     const exportedInfo = JSON.parse(
       await fs.readFile(path.join(outputPath, "meta", "info.json"), "utf8"),
     );
-    const exportedEpisodes = (await fs.readFile(
-      path.join(outputPath, "meta", "episodes.jsonl"),
-      "utf8",
-    ))
+    const exportedEpisodes = (
+      await fs.readFile(path.join(outputPath, "meta", "episodes.jsonl"), "utf8")
+    )
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
 
     expect(result.repoId).toBe("local/demo_v21_unflagged");
     expect(exportedInfo.total_episodes).toBe(2);
-    expect(exportedEpisodes.map((entry: { episode_index: number }) => entry.episode_index)).toEqual([0, 1]);
-    await expect(fs.access(path.join(outputPath, "data", "episode_000002.json"))).rejects.toThrow();
+    expect(
+      exportedEpisodes.map(
+        (entry: { episode_index: number }) => entry.episode_index,
+      ),
+    ).toEqual([0, 1]);
+    await expect(
+      fs.access(path.join(outputPath, "data", "episode_000002.json")),
+    ).rejects.toThrow();
     expect(result.entryRoute).toBe("/local/demo_v21_unflagged/episode_0");
   });
 });
@@ -317,9 +347,15 @@ export type DatasetExportInspection = {
   }>;
 };
 
-export async function inspectExportableDataset(datasetPath: string): Promise<DatasetExportInspection> {
-  const info = JSON.parse(await fs.readFile(path.join(datasetPath, "meta", "info.json"), "utf8"));
-  const episodes = (await fs.readFile(path.join(datasetPath, "meta", "episodes.jsonl"), "utf8"))
+export async function inspectExportableDataset(
+  datasetPath: string,
+): Promise<DatasetExportInspection> {
+  const info = JSON.parse(
+    await fs.readFile(path.join(datasetPath, "meta", "info.json"), "utf8"),
+  );
+  const episodes = (
+    await fs.readFile(path.join(datasetPath, "meta", "episodes.jsonl"), "utf8")
+  )
     .trim()
     .split("\n")
     .filter(Boolean)
@@ -343,19 +379,24 @@ export async function writeFilteredDataset(input: {
   await fs.mkdir(path.join(input.outputPath, "meta"), { recursive: true });
   await fs.mkdir(path.join(input.outputPath, "data"), { recursive: true });
 
-  const rewrittenEpisodes = input.selection.keptEpisodeIds.map((sourceEpisodeId) => {
-    const episode = input.inspection.episodes.find((item) => item.episodeIndex === sourceEpisodeId);
-    if (!episode) throw new Error(`Missing episode metadata for ${sourceEpisodeId}`);
+  const rewrittenEpisodes = input.selection.keptEpisodeIds.map(
+    (sourceEpisodeId) => {
+      const episode = input.inspection.episodes.find(
+        (item) => item.episodeIndex === sourceEpisodeId,
+      );
+      if (!episode)
+        throw new Error(`Missing episode metadata for ${sourceEpisodeId}`);
 
-    const nextEpisodeIndex = input.selection.episodeIdMap[sourceEpisodeId];
-    const nextDataFile = `data/episode_${String(nextEpisodeIndex).padStart(6, "0")}.json`;
-    return {
-      ...episode.raw,
-      episode_index: nextEpisodeIndex,
-      data_file: nextDataFile,
-      source_episode_index: sourceEpisodeId,
-    };
-  });
+      const nextEpisodeIndex = input.selection.episodeIdMap[sourceEpisodeId];
+      const nextDataFile = `data/episode_${String(nextEpisodeIndex).padStart(6, "0")}.json`;
+      return {
+        ...episode.raw,
+        episode_index: nextEpisodeIndex,
+        data_file: nextDataFile,
+        source_episode_index: sourceEpisodeId,
+      };
+    },
+  );
 
   await fs.writeFile(
     path.join(input.outputPath, "meta", "episodes.jsonl"),
@@ -459,6 +500,7 @@ git commit -m "feat: add server-side filtered dataset exporter"
 ### Task 3: Add The Export API Route And API Validation Coverage
 
 **Files:**
+
 - Create: `src/app/api/local-datasets/export/route.ts`
 - Create: `src/app/api/local-datasets/export/__tests__/route.test.ts`
 - Modify: `src/server/dataset-export/exporter.ts`
@@ -556,7 +598,9 @@ async function parseExportPayload(request: Request) {
     typeof payload.mode !== "string" ||
     typeof payload.outputPath !== "string"
   ) {
-    throw new ClientInputError("请求体必须包含 repoId、flaggedEpisodeIds、mode 和 outputPath。");
+    throw new ClientInputError(
+      "请求体必须包含 repoId、flaggedEpisodeIds、mode 和 outputPath。",
+    );
   }
 
   if (payload.alias != null && typeof payload.alias !== "string") {
@@ -585,7 +629,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "过滤导出失败，请检查输入和磁盘状态。",
+        error:
+          error instanceof Error
+            ? error.message
+            : "过滤导出失败，请检查输入和磁盘状态。",
       },
       { status: 500 },
     );
@@ -621,6 +668,7 @@ git commit -m "feat: add filtered dataset export api"
 ### Task 4: Wire The Filtering UI To The Export API
 
 **Files:**
+
 - Modify: `src/components/filtering-panel.tsx`
 - Create: `src/components/__tests__/filtering-panel.test.tsx`
 
@@ -691,10 +739,9 @@ describe("FilteringPanel export controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "导出数据集" }));
 
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "打开导出结果" })).toHaveAttribute(
-        "href",
-        "/local/demo_v21_unflagged/episode_0",
-      ),
+      expect(
+        screen.getByRole("link", { name: "打开导出结果" }),
+      ).toHaveAttribute("href", "/local/demo_v21_unflagged/episode_0"),
     );
   });
 });
@@ -726,13 +773,20 @@ function FlaggedExportCard({
   const [outputPath, setOutputPath] = useState("");
   const [alias, setAlias] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<null | { entryRoute: string; repoId: string; totalEpisodes: number }>(null);
+  const [result, setResult] = useState<null | {
+    entryRoute: string;
+    repoId: string;
+    totalEpisodes: number;
+  }>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isLocalRepo = repoId.startsWith("local/");
   const disableForMode =
-    mode === "flagged" ? flaggedIds.length === 0 : totalEpisodes != null && flaggedIds.length >= totalEpisodes;
-  const disabled = !isLocalRepo || !outputPath.trim() || disableForMode || submitting;
+    mode === "flagged"
+      ? flaggedIds.length === 0
+      : totalEpisodes != null && flaggedIds.length >= totalEpisodes;
+  const disabled =
+    !isLocalRepo || !outputPath.trim() || disableForMode || submitting;
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -755,7 +809,9 @@ function FlaggedExportCard({
       if (!response.ok) throw new Error(payload.error ?? "过滤导出失败");
       setResult(payload);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "过滤导出失败");
+      setError(
+        caughtError instanceof Error ? caughtError.message : "过滤导出失败",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -769,7 +825,9 @@ Pass the total episode count down from `FilteringPanel` using:
 
 ```ts
 const totalEpisodes =
-  episodeLengthStats?.allEpisodeLengths?.length ?? crossEpisodeData?.numEpisodes ?? null;
+  episodeLengthStats?.allEpisodeLengths?.length ??
+  crossEpisodeData?.numEpisodes ??
+  null;
 ```
 
 This keeps the disable logic local to the export card and avoids re-reading dataset metadata from another endpoint.
@@ -790,6 +848,7 @@ git commit -m "feat: add filtering panel dataset export controls"
 ### Task 5: End-To-End Validation And Documentation Touch-Up
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/superpowers/specs/2026-04-23-filtered-dataset-export-design.md` (only if implementation deviates from the approved design)
 

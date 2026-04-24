@@ -20,7 +20,9 @@ function formatPickerError(error: unknown): string {
     if (
       normalizedDetail.includes("no module named 'tkinter'") ||
       normalizedDetail.includes('no module named "tkinter"') ||
-      normalizedDetail.includes("modulenotfounderror: no module named 'tkinter'")
+      normalizedDetail.includes(
+        "modulenotfounderror: no module named 'tkinter'",
+      )
     ) {
       return `${baseMessage}：当前 Python 环境缺少 tkinter。请直接在输入框里粘贴本地数据集绝对路径，例如 /mnt/d/straighten_the_box。`;
     }

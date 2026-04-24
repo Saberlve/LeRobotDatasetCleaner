@@ -2,7 +2,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { isLocalDatasetRepoId } from "@/utils/localDatasets";
+import {
+  buildLocalDatasetUrl,
+  isLocalDatasetRepoId,
+} from "@/utils/localDatasets";
 import { buildVersionedUrl } from "@/utils/versionUtils";
 
 // ---------------------------------------------------------------------------
@@ -172,9 +175,9 @@ describe("buildVersionedUrl", () => {
     await fs.writeFile(registryPath, "{not-json", "utf8");
 
     try {
-      expect(
-        buildVersionedUrl("lerobot/pusht", "v2.1", "meta/info.json"),
-      ).toBe("https://huggingface.co/datasets/lerobot/pusht/resolve/main/meta/info.json");
+      expect(buildVersionedUrl("lerobot/pusht", "v2.1", "meta/info.json")).toBe(
+        "https://huggingface.co/datasets/lerobot/pusht/resolve/main/meta/info.json",
+      );
     } finally {
       await fs.rm(tempDir, { recursive: true, force: true });
       if (previousEnvRegistry === undefined) {
@@ -192,6 +195,34 @@ describe("buildVersionedUrl", () => {
 
   test("does not match prototype keys as local dataset repo ids", () => {
     expect(isLocalDatasetRepoId("toString")).toBe(false);
+  });
+
+  test("client-side local dataset urls fall back to same-origin api paths", () => {
+    const previousPublicBaseUrl =
+      process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+    const previousServerBaseUrl = process.env.LOCAL_DATASET_BASE_URL;
+
+    delete process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+    delete process.env.LOCAL_DATASET_BASE_URL;
+    vi.stubGlobal("window", {} as Window & typeof globalThis);
+
+    try {
+      expect(
+        buildLocalDatasetUrl("local/straighten_box", "meta/info.json"),
+      ).toBe("/api/local-datasets/local/straighten_box/meta/info.json");
+    } finally {
+      vi.unstubAllGlobals();
+      if (previousPublicBaseUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL = previousPublicBaseUrl;
+      }
+      if (previousServerBaseUrl === undefined) {
+        delete process.env.LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.LOCAL_DATASET_BASE_URL = previousServerBaseUrl;
+      }
+    }
   });
 });
 

@@ -1,5 +1,7 @@
+import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 import { NextResponse } from "next/server";
 
@@ -74,24 +76,98 @@ type RouteParams = {
   }>;
 };
 
-export async function GET(_: Request, { params }: RouteParams) {
+function buildBaseHeaders(filePath: string, size: number): HeadersInit {
+  return {
+    "accept-ranges": "bytes",
+    "cache-control": "no-store",
+    "content-length": String(size),
+    "content-type": getContentType(filePath),
+  };
+}
+
+function parseByteRange(
+  rangeHeader: string,
+  fileSize: number,
+): { start: number; end: number } | null {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match) return null;
+
+  const [, startRaw, endRaw] = match;
+  if (startRaw === "" && endRaw === "") return null;
+
+  if (startRaw === "") {
+    const suffixLength = Number.parseInt(endRaw, 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null;
+    const start = Math.max(0, fileSize - suffixLength);
+    return { start, end: fileSize - 1 };
+  }
+
+  const start = Number.parseInt(startRaw, 10);
+  const end = endRaw === "" ? fileSize - 1 : Number.parseInt(endRaw, 10);
+
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start < 0 ||
+    end < start ||
+    start >= fileSize
+  ) {
+    return null;
+  }
+
+  return { start, end: Math.min(end, fileSize - 1) };
+}
+
+export async function GET(request: Request, { params }: RouteParams) {
   const { namespace, dataset, assetPath } = await params;
   const resolved = await resolveAssetPath(namespace, dataset, assetPath);
   if (!resolved) {
-    return NextResponse.json({ error: "Local dataset asset not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Local dataset asset not found" },
+      { status: 404 },
+    );
   }
 
   try {
+    const fileInfo = await stat(resolved.filePath);
+    const rangeHeader = request.headers.get("range");
+    const headers = buildBaseHeaders(resolved.filePath, fileInfo.size);
+
+    if (rangeHeader) {
+      const byteRange = parseByteRange(rangeHeader, fileInfo.size);
+      if (!byteRange) {
+        return new NextResponse(null, {
+          status: 416,
+          headers: {
+            ...headers,
+            "content-range": `bytes */${fileInfo.size}`,
+            "content-length": "0",
+          },
+        });
+      }
+
+      const { start, end } = byteRange;
+      const stream = createReadStream(resolved.filePath, { start, end });
+      return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
+        status: 206,
+        headers: {
+          ...headers,
+          "content-length": String(end - start + 1),
+          "content-range": `bytes ${start}-${end}/${fileInfo.size}`,
+        },
+      });
+    }
+
     const buffer = await readFile(resolved.filePath);
     return new NextResponse(buffer, {
       status: 200,
-      headers: {
-        "content-type": getContentType(resolved.filePath),
-        "cache-control": "no-store",
-      },
+      headers,
     });
   } catch {
-    return NextResponse.json({ error: "Local dataset asset not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Local dataset asset not found" },
+      { status: 404 },
+    );
   }
 }
 
@@ -106,11 +182,7 @@ export async function HEAD(_: Request, { params }: RouteParams) {
     const fileInfo = await stat(resolved.filePath);
     return new NextResponse(null, {
       status: 200,
-      headers: {
-        "content-length": String(fileInfo.size),
-        "content-type": getContentType(resolved.filePath),
-        "cache-control": "no-store",
-      },
+      headers: buildBaseHeaders(resolved.filePath, fileInfo.size),
     });
   } catch {
     return new NextResponse(null, { status: 404 });

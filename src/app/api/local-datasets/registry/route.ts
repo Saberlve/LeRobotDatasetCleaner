@@ -11,9 +11,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "本地数据集注册表读取失败",
+          error instanceof Error ? error.message : "本地数据集注册表读取失败",
       },
       { status: 500 },
     );
