@@ -247,7 +247,8 @@ export function getFilteringExportState(input: {
   mode: ExportMode;
   flaggedCount: number;
   totalEpisodes: number | null;
-  outputPath: string;
+  outputParentDirectory: string;
+  datasetName: string;
   submitting: boolean;
 }): FilteringExportState {
   const isLocalRepo = input.repoId.startsWith("local/");
@@ -269,8 +270,12 @@ export function getFilteringExportState(input: {
   ) {
     reason =
       "All episodes are flagged, so there is no unflagged subset to export.";
-  } else if (!input.outputPath.trim()) {
-    reason = "Choose an output directory before exporting.";
+  } else if (!input.outputParentDirectory.trim()) {
+    reason = "Choose an output parent directory before exporting.";
+  } else if (!input.datasetName.trim()) {
+    reason = "Enter a dataset name before exporting.";
+  } else if (/[\\/]/.test(input.datasetName)) {
+    reason = "Dataset name cannot contain path separators.";
   }
 
   return {
@@ -279,7 +284,9 @@ export function getFilteringExportState(input: {
     disabled:
       !isLocalRepo ||
       disableForMode ||
-      !input.outputPath.trim() ||
+      !input.outputParentDirectory.trim() ||
+      !input.datasetName.trim() ||
+      /[\\/]/.test(input.datasetName) ||
       input.submitting,
     reason,
   };
@@ -287,6 +294,11 @@ export function getFilteringExportState(input: {
 
 function defaultExportAlias(repoId: string, mode: ExportMode): string {
   return `${repoId.replace(/^local\//, "")}_${mode}`;
+}
+
+function joinExportPath(parentDirectory: string, datasetName: string): string {
+  const parent = parentDirectory.trim().replace(/[\\/]+$/, "");
+  return `${parent}/${datasetName.trim()}`;
 }
 
 function FlaggedExportCard({
@@ -302,8 +314,9 @@ function FlaggedExportCard({
     [flagged],
   );
   const [mode, setMode] = useState<ExportMode>("flagged");
-  const [outputPath, setOutputPath] = useState("");
-  const [alias, setAlias] = useState("");
+  const [outputParentDirectory, setOutputParentDirectory] = useState("");
+  const [datasetName, setDatasetName] = useState("");
+  const [pickingDirectory, setPickingDirectory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<null | {
@@ -318,11 +331,44 @@ function FlaggedExportCard({
     mode,
     flaggedCount: count,
     totalEpisodes,
-    outputPath,
+    outputParentDirectory,
+    datasetName,
     submitting,
   });
 
   const aliasPlaceholder = defaultExportAlias(repoId, mode);
+  const effectiveDatasetName = datasetName.trim() || aliasPlaceholder;
+  const resolvedOutputPath =
+    outputParentDirectory.trim() && datasetName.trim()
+      ? joinExportPath(outputParentDirectory, datasetName)
+      : "";
+
+  const handlePickOutputParent = useCallback(async () => {
+    setPickingDirectory(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/local-datasets/pick-directory", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        path?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.path) {
+        throw new Error(payload.error ?? "无法选择输出目录");
+      }
+
+      setOutputParentDirectory(payload.path);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : "无法选择输出目录",
+      );
+    } finally {
+      setPickingDirectory(false);
+    }
+  }, []);
 
   const handleExport = useCallback(async () => {
     if (exportState.disabled) {
@@ -343,8 +389,8 @@ function FlaggedExportCard({
           repoId,
           flaggedEpisodeIds: flaggedIds,
           mode,
-          outputPath,
-          alias: alias.trim(),
+          outputPath: joinExportPath(outputParentDirectory, datasetName),
+          alias: datasetName.trim(),
         }),
       });
       const payload = (await response.json()) as {
@@ -374,7 +420,14 @@ function FlaggedExportCard({
     } finally {
       setSubmitting(false);
     }
-  }, [alias, exportState.disabled, flaggedIds, mode, outputPath, repoId]);
+  }, [
+    datasetName,
+    exportState.disabled,
+    flaggedIds,
+    mode,
+    outputParentDirectory,
+    repoId,
+  ]);
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700/60 space-y-4">
@@ -401,11 +454,11 @@ function FlaggedExportCard({
         </label>
 
         <label className="space-y-1.5">
-          <span className="text-xs text-slate-400">Alias</span>
+          <span className="text-xs text-slate-400">Dataset name</span>
           <input
-            aria-label="导出别名"
-            value={alias}
-            onChange={(event) => setAlias(event.target.value)}
+            aria-label="数据集名称"
+            value={datasetName}
+            onChange={(event) => setDatasetName(event.target.value)}
             placeholder={aliasPlaceholder}
             className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
           />
@@ -413,19 +466,37 @@ function FlaggedExportCard({
       </div>
 
       <label className="space-y-1.5 block">
-        <span className="text-xs text-slate-400">Output directory</span>
-        <input
-          aria-label="输出目录"
-          value={outputPath}
-          onChange={(event) => setOutputPath(event.target.value)}
-          placeholder="/tmp/demo_unflagged"
-          className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
-        />
+        <span className="text-xs text-slate-400">Output parent directory</span>
+        <div className="flex gap-2">
+          <input
+            aria-label="输出父目录"
+            value={outputParentDirectory}
+            readOnly
+            placeholder="/tmp"
+            className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
+          />
+          <button
+            type="button"
+            onClick={handlePickOutputParent}
+            disabled={pickingDirectory || submitting}
+            className="shrink-0 rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-500"
+          >
+            {pickingDirectory ? "选择中..." : "选择目录"}
+          </button>
+        </div>
       </label>
+
+      {resolvedOutputPath && (
+        <div className="rounded-md bg-slate-900/60 px-3 py-2 text-xs text-slate-400">
+          将导出到{" "}
+          <span className="font-mono text-slate-200">{resolvedOutputPath}</span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs text-slate-400">
-          {exportState.reason ?? `Ready to export ${mode} episodes.`}
+          {exportState.reason ??
+            `Ready to export ${mode} episodes as ${effectiveDatasetName}.`}
         </div>
         <button
           type="button"

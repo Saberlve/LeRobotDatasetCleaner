@@ -8,6 +8,7 @@ import React, {
   Suspense,
   useCallback,
 } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { postParentMessageWithParams } from "@/utils/postParentMessage";
 import { SimpleVideosPlayer } from "@/components/simple-videos-player";
@@ -52,6 +53,33 @@ type ActiveTab =
   | "filtering"
   | "doctor"
   | "replay";
+
+const ACTIVE_TABS: ActiveTab[] = [
+  "episodes",
+  "statistics",
+  "frames",
+  "insights",
+  "filtering",
+  "doctor",
+  "replay",
+];
+
+function resolveActiveTab(
+  value: string | null | undefined,
+  canShowReplay: boolean,
+): ActiveTab | null {
+  if (!value || !ACTIVE_TABS.includes(value as ActiveTab)) return null;
+  if (value === "replay" && !canShowReplay) return null;
+  return value as ActiveTab;
+}
+
+function getStoredActiveTab(canShowReplay: boolean): ActiveTab | null {
+  if (typeof window === "undefined") return null;
+  return resolveActiveTab(
+    window.sessionStorage.getItem("activeTab"),
+    canShowReplay,
+  );
+}
 
 export default function EpisodeViewer({
   org,
@@ -147,9 +175,19 @@ function EpisodeViewerInner({
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamString = searchParams.toString();
+  const tabParam = searchParams.get("tab");
+
+  const canShowReplay = isG1Robot(datasetInfo.robot_type);
 
   // Tab state & lazy stats
-  const [activeTab, setActiveTab] = useState<ActiveTab>("episodes");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    () =>
+      resolveActiveTab(tabParam, canShowReplay) ??
+      getStoredActiveTab(canShowReplay) ??
+      "episodes",
+  );
+  const activeTabRef = useRef(activeTab);
   const isLoading = activeTab === "episodes" && (!videosReady || !chartsReady);
 
   useEffect(() => {
@@ -194,28 +232,18 @@ function EpisodeViewerInner({
 
   // Hydrate UI state from sessionStorage after mount (avoids SSR/client mismatch)
   useEffect(() => {
-    const stored = sessionStorage.getItem("activeTab");
-    if (
-      stored &&
-      [
-        "episodes",
-        "statistics",
-        "frames",
-        "insights",
-        "filtering",
-        "replay",
-      ].includes(stored)
-    ) {
-      setActiveTab(stored as ActiveTab);
-    }
+    const urlTab = resolveActiveTab(tabParam, canShowReplay);
+    const storedTab = getStoredActiveTab(canShowReplay);
+    setActiveTab(urlTab ?? storedTab ?? "episodes");
     if (sessionStorage.getItem("framesFlaggedOnly") === "true")
       setFramesFlaggedOnly(true);
     if (sessionStorage.getItem("sidebarFlaggedOnly") === "true")
       setSidebarFlaggedOnly(true);
-  }, []);
+  }, [canShowReplay, tabParam]);
 
   // Persist UI state across episode navigations
   useEffect(() => {
+    activeTabRef.current = activeTab;
     sessionStorage.setItem("activeTab", activeTab);
   }, [activeTab]);
   useEffect(() => {
@@ -313,6 +341,7 @@ function EpisodeViewerInner({
   }, []);
 
   const handleTabChange = (tab: ActiveTab) => {
+    activeTabRef.current = tab;
     setActiveTab(tab);
     if (tab === "statistics") loadStats();
     if (tab === "frames") loadFrames();
@@ -325,6 +354,22 @@ function EpisodeViewerInner({
 
   // Use context for time sync
   const { currentTime, setCurrentTime, setIsPlaying, isPlaying } = useTime();
+
+  const getEpisodeRoute = useCallback(
+    (nextEpisodeId: number) => {
+      const params = new URLSearchParams(searchParamString);
+      params.delete("t");
+      const currentTab = activeTabRef.current;
+      if (currentTab === "episodes") {
+        params.delete("tab");
+      } else {
+        params.set("tab", currentTab);
+      }
+      const query = params.toString();
+      return `./episode_${nextEpisodeId}${query ? `?${query}` : ""}`;
+    },
+    [searchParamString],
+  );
 
   // Pagination state
   const pageSize = 100;
@@ -395,11 +440,11 @@ function EpisodeViewerInner({
           nextEpisodeId >= lowestEpisodeId &&
           nextEpisodeId <= highestEpisodeId
         ) {
-          router.push(`./episode_${nextEpisodeId}`);
+          router.push(getEpisodeRoute(nextEpisodeId));
         }
       }
     },
-    [episodeId, episodes, router, setIsPlaying],
+    [episodeId, episodes, getEpisodeRoute, router, setIsPlaying],
   );
 
   // Initialize based on URL time parameter
@@ -534,7 +579,7 @@ function EpisodeViewerInner({
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
         </button>
-        {isG1Robot(datasetInfo.robot_type) && (
+        {canShowReplay && (
           <button
             className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
               activeTab === "replay"
@@ -549,6 +594,12 @@ function EpisodeViewerInner({
             )}
           </button>
         )}
+        <Link
+          href="/"
+          className="ml-auto px-4 py-2 mr-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded transition-colors"
+        >
+          返回主界面
+        </Link>
       </div>
 
       {/* Body: sidebar + content */}
@@ -568,7 +619,7 @@ function EpisodeViewerInner({
             onEpisodeSelect={
               activeTab === "replay"
                 ? (ep) => {
-                    router.push(`./episode_${ep}`);
+                    router.push(getEpisodeRoute(ep));
                   }
                 : undefined
             }
@@ -584,19 +635,6 @@ function EpisodeViewerInner({
           {activeTab === "episodes" && (
             <>
               <div className="flex items-center justify-start my-4">
-                <a
-                  href="https://github.com/huggingface/lerobot"
-                  target="_blank"
-                  className="block"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="https://github.com/huggingface/lerobot/raw/main/media/readme/lerobot-logo-thumbnail.png"
-                    alt="LeRobot Logo"
-                    className="w-32"
-                  />
-                </a>
-
                 <div>
                   <a
                     href={`https://huggingface.co/datasets/${datasetInfo.repoId}`}

@@ -19,7 +19,8 @@ export const VideosPlayer = ({
   videosInfo,
   onVideosReady,
 }: VideoPlayerProps) => {
-  const { currentTime, setCurrentTime, isPlaying, setIsPlaying } = useTime();
+  const { currentTime, setCurrentTime, isPlaying, setIsPlaying, playbackRate } =
+    useTime();
   const videoRefs = useRef<HTMLVideoElement[]>([]);
   const [hiddenVideos, setHiddenVideos] = useState<string[]>([]);
 
@@ -61,6 +62,7 @@ export const VideosPlayer = ({
           const ref = videoRefs.current[idx];
           if (ref) {
             ref.currentTime = currentTime;
+            ref.playbackRate = playbackRate;
             if (isPlaying) {
               ref.play().catch(() => {});
             }
@@ -69,7 +71,14 @@ export const VideosPlayer = ({
       });
     }
     prevHiddenVideosRef.current = hiddenVideos;
-  }, [hiddenVideos, hiddenSet, isPlaying, videosInfo, currentTime]);
+  }, [
+    hiddenVideos,
+    hiddenSet,
+    isPlaying,
+    videosInfo,
+    currentTime,
+    playbackRate,
+  ]);
 
   // Check video codec support
   useEffect(() => {
@@ -88,13 +97,20 @@ export const VideosPlayer = ({
   useEffect(() => {
     videoRefs.current.forEach((video, idx) => {
       if (!video || hiddenSet.has(videosInfo[idx]?.filename)) return;
+      video.playbackRate = playbackRate;
       if (isPlaying) {
         video.play().catch(() => console.error("Error playing video"));
       } else {
         video.pause();
       }
     });
-  }, [isPlaying, hiddenSet, videosInfo]);
+  }, [isPlaying, hiddenSet, videosInfo, playbackRate]);
+
+  useEffect(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) video.playbackRate = playbackRate;
+    });
+  }, [playbackRate, videosInfo.length]);
 
   // Minimize enlarged video on Escape key
   useEffect(() => {

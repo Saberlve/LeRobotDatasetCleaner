@@ -20,6 +20,7 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import type { EpisodeData } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import { loadEpisodeFlatChartData } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import UrdfPlaybackBar from "@/components/urdf-playback-bar";
+import { useTime } from "@/context/time-context";
 import { CHART_CONFIG } from "@/utils/constants";
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
@@ -496,12 +497,14 @@ function PlaybackDriver({
   totalFrames,
   frameRef,
   setFrame,
+  playbackRate,
 }: {
   playing: boolean;
   fps: number;
   totalFrames: number;
   frameRef: React.MutableRefObject<number>;
   setFrame: React.Dispatch<React.SetStateAction<number>>;
+  playbackRate: number;
 }) {
   const elapsed = useRef(0);
   const last = useRef(0);
@@ -514,7 +517,7 @@ function PlaybackDriver({
       const dt = (now - last.current) / 1000;
       last.current = now;
       if (dt > 0 && dt < 0.5) {
-        elapsed.current += dt;
+        elapsed.current += dt * playbackRate;
         const fd = Math.floor(elapsed.current * fps);
         if (fd > 0) {
           elapsed.current -= fd / fps;
@@ -527,7 +530,7 @@ function PlaybackDriver({
     elapsed.current = 0;
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, fps, totalFrames, frameRef, setFrame]);
+  }, [playing, fps, totalFrames, frameRef, setFrame, playbackRate]);
   return null;
 }
 
@@ -547,6 +550,7 @@ export default function URDFViewer({
   episodeChangerRef?: React.RefObject<((ep: number) => void) | undefined>;
   playToggleRef?: React.RefObject<(() => void) | undefined>;
 }) {
+  const { playbackRate } = useTime();
   const { datasetInfo } = data;
   const fps = datasetInfo.fps || 30;
   const robotConfig = useMemo(
@@ -817,6 +821,7 @@ export default function URDFViewer({
             totalFrames={totalFrames}
             frameRef={frameRef}
             setFrame={setFrame}
+            playbackRate={playbackRate}
           />
         </Canvas>
       </div>

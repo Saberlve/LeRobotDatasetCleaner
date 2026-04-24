@@ -23,7 +23,8 @@ export const SimpleVideosPlayer = ({
   videosInfo,
   onVideosReady,
 }: VideoPlayerProps) => {
-  const { currentTime, setCurrentTime, isPlaying, setIsPlaying } = useTime();
+  const { currentTime, setCurrentTime, isPlaying, setIsPlaying, playbackRate } =
+    useTime();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [hiddenVideos, setHiddenVideos] = React.useState<string[]>([]);
   const [enlargedVideo, setEnlargedVideo] = React.useState<string | null>(null);
@@ -141,6 +142,7 @@ export const SimpleVideosPlayer = ({
 
     videoRefs.current.forEach((video, idx) => {
       if (!video || hiddenSet.has(videosInfo[idx].filename)) return;
+      video.playbackRate = playbackRate;
       if (isPlaying) {
         video.play().catch((e) => {
           if (e.name !== "AbortError") {
@@ -151,7 +153,13 @@ export const SimpleVideosPlayer = ({
         video.pause();
       }
     });
-  }, [isPlaying, videosReady, hiddenSet, videosInfo]);
+  }, [isPlaying, videosReady, hiddenSet, videosInfo, playbackRate]);
+
+  useEffect(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) video.playbackRate = playbackRate;
+    });
+  }, [playbackRate, videosInfo.length]);
 
   // Sync all video times when currentTime changes.
   // For the primary video, only seek when the change came from an external source
@@ -211,6 +219,7 @@ export const SimpleVideosPlayer = ({
         video.currentTime = segmentStart;
       }
     }
+    video.playbackRate = playbackRate;
     video.play().catch((e: unknown) => {
       if ((e as Error)?.name !== "AbortError") {
         console.error("Error playing video", e);
