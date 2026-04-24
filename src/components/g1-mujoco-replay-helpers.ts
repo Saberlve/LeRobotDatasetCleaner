@@ -36,44 +36,7 @@ export const G1_JOINT_NAMES = [
   "right_wrist_yaw_joint",
 ] as const;
 
-export const G1_REQUIRED_ASSET_PATHS = [
-  "/mujoco/g1/g1.xml",
-  "/mujoco/g1/assets/pelvis.STL",
-  "/mujoco/g1/assets/pelvis_contour_link.STL",
-  "/mujoco/g1/assets/left_hip_pitch_link.STL",
-  "/mujoco/g1/assets/left_hip_roll_link.STL",
-  "/mujoco/g1/assets/left_hip_yaw_link.STL",
-  "/mujoco/g1/assets/left_knee_link.STL",
-  "/mujoco/g1/assets/left_ankle_pitch_link.STL",
-  "/mujoco/g1/assets/left_ankle_roll_link.STL",
-  "/mujoco/g1/assets/right_hip_pitch_link.STL",
-  "/mujoco/g1/assets/right_hip_roll_link.STL",
-  "/mujoco/g1/assets/right_hip_yaw_link.STL",
-  "/mujoco/g1/assets/right_knee_link.STL",
-  "/mujoco/g1/assets/right_ankle_pitch_link.STL",
-  "/mujoco/g1/assets/right_ankle_roll_link.STL",
-  "/mujoco/g1/assets/waist_yaw_link_rev_1_0.STL",
-  "/mujoco/g1/assets/waist_roll_link_rev_1_0.STL",
-  "/mujoco/g1/assets/torso_link_rev_1_0.STL",
-  "/mujoco/g1/assets/logo_link.STL",
-  "/mujoco/g1/assets/head_link.STL",
-  "/mujoco/g1/assets/left_shoulder_pitch_link.STL",
-  "/mujoco/g1/assets/left_shoulder_roll_link.STL",
-  "/mujoco/g1/assets/left_shoulder_yaw_link.STL",
-  "/mujoco/g1/assets/left_elbow_link.STL",
-  "/mujoco/g1/assets/left_wrist_roll_link.STL",
-  "/mujoco/g1/assets/left_wrist_pitch_link.STL",
-  "/mujoco/g1/assets/left_wrist_yaw_link.STL",
-  "/mujoco/g1/assets/left_rubber_hand.STL",
-  "/mujoco/g1/assets/right_shoulder_pitch_link.STL",
-  "/mujoco/g1/assets/right_shoulder_roll_link.STL",
-  "/mujoco/g1/assets/right_shoulder_yaw_link.STL",
-  "/mujoco/g1/assets/right_elbow_link.STL",
-  "/mujoco/g1/assets/right_wrist_roll_link.STL",
-  "/mujoco/g1/assets/right_wrist_pitch_link.STL",
-  "/mujoco/g1/assets/right_wrist_yaw_link.STL",
-  "/mujoco/g1/assets/right_rubber_hand.STL",
-];
+export const G1_REQUIRED_ASSET_PATHS = ["/mujoco/g1/g1.xml"];
 
 export function extractOrderedG1StateColumns(row: Record<string, unknown>) {
   const statesColumns = Array.from(

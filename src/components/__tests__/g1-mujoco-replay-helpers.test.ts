@@ -84,13 +84,8 @@ describe("buildG1QposFrame", () => {
 describe("G1_REQUIRED_ASSET_PATHS", () => {
   test("matches the current browser G1 asset manifest", () => {
     expect(G1_REQUIRED_ASSET_PATHS).toEqual(
-      expect.arrayContaining([
-        "/mujoco/g1/g1.xml",
-        "/mujoco/g1/assets/pelvis.STL",
-        "/mujoco/g1/assets/left_hip_pitch_link.STL",
-        "/mujoco/g1/assets/right_shoulder_yaw_link.STL",
-      ]),
+      expect.arrayContaining(["/mujoco/g1/g1.xml"]),
     );
-    expect(G1_REQUIRED_ASSET_PATHS).toHaveLength(36);
+    expect(G1_REQUIRED_ASSET_PATHS).toHaveLength(1);
   });
 });
