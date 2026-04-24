@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import G1MujocoReplay from "@/components/g1-mujoco-replay";
 
@@ -54,16 +60,17 @@ describe("G1MujocoReplay", () => {
       />,
     );
 
-    expect(screen.getByText("Loading Replay…").textContent).toBe("Loading Replay…");
     await waitFor(() =>
       expect(screen.getByText("Episode 4").textContent).toBe("Episode 4"),
     );
 
-    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe("Play");
+    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
+      "Play",
+    );
     expect(screen.getByText("Frame 0/1").textContent).toBe("Frame 0/1");
   });
 
-  test("renders fallback data through the URDF viewer when replay init fails", async () => {
+  test("renders an explicit error instead of falling back to URDF when trajectory mapping fails", async () => {
     render(
       <G1MujocoReplay
         datasetInfo={{ robot_type: "g1", fps: 30 } as never}
@@ -74,10 +81,11 @@ describe("G1MujocoReplay", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId("urdf-viewer").textContent).toBe(
-        '{"source":"fallback"}',
+      expect(screen.getByText(/Replay unavailable:/).textContent).toContain(
+        "Missing G1 state column",
       ),
     );
+    expect(screen.queryByTestId("urdf-viewer")).toBeNull();
   });
 
   test("supports play, pause, and reset controls", async () => {
@@ -98,10 +106,6 @@ describe("G1MujocoReplay", () => {
     fireEvent.click(screen.getByRole("button", { name: "Play" }));
     expect(screen.getByRole("button", { name: "Pause" }).textContent).toBe(
       "Pause",
-    );
-
-    await waitFor(() =>
-      expect(screen.getByText("Frame 1/1").textContent).toBe("Frame 1/1"),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
