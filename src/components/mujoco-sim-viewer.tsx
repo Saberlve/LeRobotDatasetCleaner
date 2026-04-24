@@ -15,14 +15,17 @@ import { loadEpisodeFlatChartData } from "@/app/[org]/[dataset]/[episode]/fetch-
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
 import UrdfPlaybackBar from "@/components/urdf-playback-bar";
-import { CHART_CONFIG } from "@/utils/constants";
 import {
   G1_JOINT_NAMES,
   buildG1QposFrame,
   extractOrderedG1StateColumns,
 } from "@/components/g1-mujoco-replay-helpers";
-
-const SERIES_DELIM = CHART_CONFIG.SERIES_NAME_DELIMITER;
+import {
+  DEFAULT_G1_MUJOCO_XML_PATH,
+  G1_VISUAL_ASSET_BASE_PATH,
+  G1_VISUAL_MANIFEST_PATH,
+  prepareMujocoVisualPoseXml,
+} from "@/components/mujoco-sim-viewer-helpers";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MujocoModule = any;
@@ -33,12 +36,6 @@ type MjData = any;
 
 const G1_QPOS_OFFSET = 7; // floating base takes first 7 values
 
-// Map: joint name -> qpos index
-const JOINT_NAME_TO_QPOS_IDX: Record<string, number> = {};
-G1_JOINT_NAMES.forEach((name, i) => {
-  JOINT_NAME_TO_QPOS_IDX[name] = G1_QPOS_OFFSET + i;
-});
-
 // ─── MuJoCo geom types ───
 const mjGEOM_PLANE = 0;
 // const mjGEOM_HFIELD = 1;
@@ -48,6 +45,25 @@ const mjGEOM_CAPSULE = 3;
 const mjGEOM_CYLINDER = 5;
 const mjGEOM_BOX = 6;
 const mjGEOM_MESH = 7;
+
+type G1VisualDescriptor = {
+  geomIndex: number;
+  glb: string;
+  meshPos: [number, number, number];
+  meshQuat: [number, number, number, number];
+  rgba: [number, number, number, number];
+};
+
+type G1VisualManifest = {
+  visuals: G1VisualDescriptor[];
+};
+
+type LoadedVisual = {
+  geomIndex: number;
+  meshPos: THREE.Vector3;
+  meshQuat: THREE.Quaternion;
+  object: THREE.Object3D;
+};
 
 // ─── MuJoCo Scene ───
 function MujocoScene({
@@ -65,7 +81,9 @@ function MujocoScene({
 }) {
   const { scene } = useThree();
   const meshesRef = useRef<THREE.Mesh[]>([]);
+  const visualsRef = useRef<LoadedVisual[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visualProgress, setVisualProgress] = useState({ loaded: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
@@ -73,6 +91,11 @@ function MujocoScene({
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
+    let cancelled = false;
+    const mujocoRoot = new THREE.Group();
+    mujocoRoot.rotation.x = -Math.PI / 2;
+    mujocoRoot.name = "mujoco-z-up-root";
+    scene.add(mujocoRoot);
 
     const init = async () => {
       try {
@@ -81,72 +104,11 @@ function MujocoScene({
         const mujoco: MujocoModule = await loadMujoco();
         mujocoRef.current = mujoco;
 
-        // Set up virtual file system for meshes
-        mujoco.FS.mkdirTree("/mujoco/g1/assets");
-
-        // List of mesh files needed
-        const meshFiles = [
-          "pelvis.STL",
-          "pelvis_contour_link.STL",
-          "left_hip_pitch_link.STL",
-          "left_hip_roll_link.STL",
-          "left_hip_yaw_link.STL",
-          "left_knee_link.STL",
-          "left_ankle_pitch_link.STL",
-          "left_ankle_roll_link.STL",
-          "right_hip_pitch_link.STL",
-          "right_hip_roll_link.STL",
-          "right_hip_yaw_link.STL",
-          "right_knee_link.STL",
-          "right_ankle_pitch_link.STL",
-          "right_ankle_roll_link.STL",
-          "waist_yaw_link_rev_1_0.STL",
-          "waist_roll_link_rev_1_0.STL",
-          "torso_link_rev_1_0.STL",
-          "logo_link.STL",
-          "head_link.STL",
-          "left_shoulder_pitch_link.STL",
-          "left_shoulder_roll_link.STL",
-          "left_shoulder_yaw_link.STL",
-          "left_elbow_link.STL",
-          "left_wrist_roll_link.STL",
-          "left_wrist_pitch_link.STL",
-          "left_wrist_yaw_link.STL",
-          "left_rubber_hand.STL",
-          "right_shoulder_pitch_link.STL",
-          "right_shoulder_roll_link.STL",
-          "right_shoulder_yaw_link.STL",
-          "right_elbow_link.STL",
-          "right_wrist_roll_link.STL",
-          "right_wrist_pitch_link.STL",
-          "right_wrist_yaw_link.STL",
-          "right_rubber_hand.STL",
-        ];
-
-        // Load mesh files into virtual file system
-        await Promise.all(
-          meshFiles.map(async (filename) => {
-            const response = await fetch(`/mujoco/g1/assets/${filename}`);
-            if (!response.ok) {
-              console.warn(`Failed to load mesh: ${filename}`);
-              return;
-            }
-            const buffer = await response.arrayBuffer();
-            mujoco.FS.writeFile(
-              `/mujoco/g1/assets/${filename}`,
-              new Uint8Array(buffer),
-            );
-          }),
-        );
-
-        // Load XML
-        const xmlResponse = await fetch("/mujoco/g1/g1.xml");
-        let xmlText = await xmlResponse.text();
-        // Point meshdir to virtual file system
-        xmlText = xmlText.replace(
-          'meshdir="assets"',
-          'meshdir="/mujoco/g1/assets"',
-        );
+        // Keep the original G1 body/geom assembly for exact visual poses, but
+        // rewrite mesh geoms to tiny invisible boxes so MuJoCo never loads or
+        // compiles the heavy STL visual assets in the browser.
+        const xmlResponse = await fetch(DEFAULT_G1_MUJOCO_XML_PATH);
+        const xmlText = prepareMujocoVisualPoseXml(await xmlResponse.text());
 
         // Create model and data
         const model = mujoco.MjModel.from_xml_string(xmlText);
@@ -174,11 +136,10 @@ function MujocoScene({
           let geometry: THREE.BufferGeometry | null = null;
 
           if (geomType === mjGEOM_MESH) {
-            // Mesh geom - load from STL via MuJoCo mesh data
-            const meshId = model.geom_dataid[i];
-            if (meshId >= 0) {
-              geometry = createMeshGeometry(model, meshId);
-            }
+            // Full-resolution visual meshes are rendered from GLB assets.
+            // Keep MuJoCo mesh geoms in the model for exact geom_xpos/xmat,
+            // but skip their duplicate Three.js geometry.
+            geometry = null;
           } else if (geomType === mjGEOM_BOX) {
             geometry = new THREE.BoxGeometry(
               size[0] * 2,
@@ -218,7 +179,7 @@ function MujocoScene({
           mesh.castShadow = true;
           mesh.receiveShadow = true;
 
-          scene.add(mesh);
+          mujocoRoot.add(mesh);
           meshes.push(mesh);
         }
 
@@ -234,6 +195,16 @@ function MujocoScene({
         syncGeomsToThreeJs(model, data, meshes);
 
         setLoading(false);
+
+        void loadG1VisualMeshes({
+          data,
+          root: mujocoRoot,
+          visualsRef,
+          isCancelled: () => cancelled,
+          onProgress: (loaded, total) => {
+            if (!cancelled) setVisualProgress({ loaded, total });
+          },
+        });
       } catch (err) {
         console.error("Failed to initialize MuJoCo:", err);
         setError(String(err));
@@ -244,10 +215,12 @@ function MujocoScene({
     void init();
 
     return () => {
+      cancelled = true;
       // Cleanup meshes
       for (const mesh of meshesRef.current) {
         if (mesh) {
           scene.remove(mesh);
+          mesh.removeFromParent();
           mesh.geometry.dispose();
           if (Array.isArray(mesh.material)) {
             mesh.material.forEach((m) => m.dispose());
@@ -257,6 +230,12 @@ function MujocoScene({
         }
       }
       meshesRef.current = [];
+      for (const visual of visualsRef.current) {
+        visual.object.removeFromParent();
+        disposeObject3D(visual.object);
+      }
+      visualsRef.current = [];
+      scene.remove(mujocoRoot);
 
       // Cleanup MuJoCo
       if (dataRef.current) {
@@ -306,6 +285,7 @@ function MujocoScene({
 
     // Sync geoms to Three.js
     syncGeomsToThreeJs(model, data, meshesRef.current);
+    syncVisualsToMuJoCo(data, visualsRef.current);
   });
 
   if (loading) {
@@ -327,70 +307,19 @@ function MujocoScene({
       </Html>
     );
   }
+  if (
+    visualProgress.total > 0 &&
+    visualProgress.loaded < visualProgress.total
+  ) {
+    return (
+      <Html position={[0, 1.35, 0]} center>
+        <div className="rounded bg-slate-950/80 px-3 py-1 text-sm text-slate-200">
+          Loading G1 visual mesh {visualProgress.loaded}/{visualProgress.total}
+        </div>
+      </Html>
+    );
+  }
   return null;
-}
-
-// ─── Create mesh geometry from MuJoCo mesh data ───
-function createMeshGeometry(
-  model: MjModel,
-  meshId: number,
-): THREE.BufferGeometry {
-  const vertadr = model.mesh_vertadr[meshId];
-  const vertnum = model.mesh_vertnum[meshId];
-  const faceadr = model.mesh_faceadr[meshId];
-  const facenum = model.mesh_facenum[meshId];
-
-  const vertices: number[] = [];
-  const normals: number[] = [];
-  const indices: number[] = [];
-
-  // Read vertices
-  for (let i = 0; i < vertnum; i++) {
-    vertices.push(
-      model.mesh_vert[(vertadr + i) * 3],
-      model.mesh_vert[(vertadr + i) * 3 + 1],
-      model.mesh_vert[(vertadr + i) * 3 + 2],
-    );
-  }
-
-  // Read normals
-  const normaladr = model.mesh_normaladr[meshId];
-  const normalnum = model.mesh_normalnum[meshId];
-  if (normalnum > 0) {
-    for (let i = 0; i < normalnum; i++) {
-      normals.push(
-        model.mesh_normal[(normaladr + i) * 3],
-        model.mesh_normal[(normaladr + i) * 3 + 1],
-        model.mesh_normal[(normaladr + i) * 3 + 2],
-      );
-    }
-  }
-
-  // Read faces
-  for (let i = 0; i < facenum; i++) {
-    indices.push(
-      model.mesh_face[(faceadr + i) * 3],
-      model.mesh_face[(faceadr + i) * 3 + 1],
-      model.mesh_face[(faceadr + i) * 3 + 2],
-    );
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(vertices, 3),
-  );
-  if (normals.length > 0) {
-    geometry.setAttribute(
-      "normal",
-      new THREE.Float32BufferAttribute(normals, 3),
-    );
-  } else {
-    geometry.computeVertexNormals();
-  }
-  geometry.setIndex(indices);
-
-  return geometry;
 }
 
 // ─── Sync MuJoCo geom poses to Three.js meshes ───
@@ -440,6 +369,148 @@ function syncGeomsToThreeJs(
     mesh.position.copy(tempPos);
     mesh.quaternion.copy(tempQuat);
   }
+}
+
+async function loadG1VisualMeshes({
+  root,
+  data,
+  visualsRef,
+  isCancelled,
+  onProgress,
+}: {
+  root: THREE.Group;
+  data: MjData;
+  visualsRef: React.MutableRefObject<LoadedVisual[]>;
+  isCancelled: () => boolean;
+  onProgress: (loaded: number, total: number) => void;
+}) {
+  try {
+    const response = await fetch(G1_VISUAL_MANIFEST_PATH);
+    if (!response.ok) {
+      throw new Error(`Failed to load ${G1_VISUAL_MANIFEST_PATH}`);
+    }
+    const manifest = (await response.json()) as G1VisualManifest;
+    const visuals = manifest.visuals ?? [];
+    onProgress(0, visuals.length);
+
+    const { GLTFLoader } =
+      await import("three/examples/jsm/loaders/GLTFLoader.js");
+    const loader = new GLTFLoader();
+
+    for (const [index, visual] of visuals.entries()) {
+      if (isCancelled()) return;
+      await nextAnimationFrame();
+
+      const gltf = await loader.loadAsync(
+        `${G1_VISUAL_ASSET_BASE_PATH}/${visual.glb}`,
+      );
+      if (isCancelled()) {
+        disposeObject3D(gltf.scene);
+        return;
+      }
+
+      const object = gltf.scene;
+      applyVisualMaterial(object, visual.rgba);
+      root.add(object);
+      const loadedVisual = {
+        geomIndex: visual.geomIndex,
+        meshPos: new THREE.Vector3(...visual.meshPos),
+        meshQuat: mujocoQuatToThree(visual.meshQuat),
+        object,
+      };
+      visualsRef.current.push(loadedVisual);
+      syncVisualsToMuJoCo(data, [loadedVisual]);
+      onProgress(index + 1, visuals.length);
+    }
+
+    syncVisualsToMuJoCo(data, visualsRef.current);
+  } catch (err) {
+    console.error("Failed to load G1 visual meshes:", err);
+    onProgress(0, 0);
+  }
+}
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function applyVisualMaterial(
+  object: THREE.Object3D,
+  rgba: [number, number, number, number],
+) {
+  const material = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(rgba[0], rgba[1], rgba[2]),
+    transparent: rgba[3] < 1,
+    opacity: rgba[3],
+    metalness: 0.25,
+    roughness: 0.55,
+  });
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    child.material = material;
+    child.castShadow = true;
+    child.receiveShadow = true;
+  });
+}
+
+function syncVisualsToMuJoCo(data: MjData, visuals: LoadedVisual[]) {
+  const tempPos = new THREE.Vector3();
+  const tempQuat = new THREE.Quaternion();
+  const meshPos = new THREE.Vector3();
+  const tempMat = new THREE.Matrix4();
+
+  for (const visual of visuals) {
+    const geomIndex = visual.geomIndex;
+    tempPos.set(
+      data.geom_xpos[geomIndex * 3],
+      data.geom_xpos[geomIndex * 3 + 1],
+      data.geom_xpos[geomIndex * 3 + 2],
+    );
+
+    const xmat = data.geom_xmat;
+    const base = geomIndex * 9;
+    tempMat.set(
+      xmat[base + 0],
+      xmat[base + 1],
+      xmat[base + 2],
+      0,
+      xmat[base + 3],
+      xmat[base + 4],
+      xmat[base + 5],
+      0,
+      xmat[base + 6],
+      xmat[base + 7],
+      xmat[base + 8],
+      0,
+      0,
+      0,
+      0,
+      1,
+    );
+    tempQuat.setFromRotationMatrix(tempMat);
+
+    meshPos.copy(visual.meshPos).applyQuaternion(tempQuat);
+    visual.object.position.copy(tempPos).add(meshPos);
+    visual.object.quaternion.copy(tempQuat).multiply(visual.meshQuat);
+  }
+}
+
+function mujocoQuatToThree([w, x, y, z]: [number, number, number, number]) {
+  return new THREE.Quaternion(x, y, z, w).normalize();
+}
+
+function disposeObject3D(object: THREE.Object3D) {
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    child.geometry?.dispose();
+    const materials = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+    for (const material of materials) {
+      material.dispose();
+    }
+  });
 }
 
 // ─── Playback driver ───

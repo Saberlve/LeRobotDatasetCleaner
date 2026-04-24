@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import G1MujocoReplay from "@/components/g1-mujoco-replay";
 
 vi.mock(
@@ -37,8 +37,25 @@ vi.mock("@/components/urdf-viewer", () => ({
   ),
 }));
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      text: async () => `
+        <mujoco model="g1_kinematic_replay">
+          <compiler angle="radian" autolimits="true" />
+          <worldbody><geom type="plane" size="1 1 0.1" /></worldbody>
+        </mujoco>
+      `,
+      json: async () => ({ visuals: [] }),
+    })),
+  );
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 function makeRow(length = 29, offset = 0) {
