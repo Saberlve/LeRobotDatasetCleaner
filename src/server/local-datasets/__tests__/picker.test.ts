@@ -12,9 +12,69 @@ import {
 import { pickDirectory } from "@/server/local-datasets/picker";
 
 describe("pickDirectory", () => {
+  test("uses the windows native picker first when running under WSL", async () => {
+    const createProcess = vi.fn().mockResolvedValue({
+      stdout: "D:\\datasets\\demo\r\n",
+    });
+
+    const result = await pickDirectory({
+      createProcess,
+      platform: "linux",
+      env: { WSL_DISTRO_NAME: "Ubuntu" },
+    });
+
+    expect(result).toEqual({ path: "/mnt/d/datasets/demo", error: null });
+    expect(createProcess).toHaveBeenCalledTimes(1);
+    expect(createProcess).toHaveBeenCalledWith(
+      "powershell.exe",
+      expect.arrayContaining(["-NoProfile", "-Command"]),
+    );
+  });
+
+  test("prefers the native linux directory picker before tkinter", async () => {
+    const createProcess = vi.fn().mockResolvedValue({
+      stdout: "/mnt/d/native-picked\n",
+    });
+
+    const result = await pickDirectory({
+      createProcess,
+      platform: "linux",
+      env: {},
+    });
+
+    expect(result).toEqual({ path: "/mnt/d/native-picked", error: null });
+    expect(createProcess).toHaveBeenCalledTimes(1);
+    expect(createProcess).toHaveBeenCalledWith(
+      "zenity",
+      expect.arrayContaining(["--file-selection", "--directory"]),
+    );
+  });
+
+  test("falls back to tkinter when native linux pickers are unavailable", async () => {
+    const createProcess = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("spawn zenity ENOENT"))
+      .mockRejectedValueOnce(new Error("spawn kdialog ENOENT"))
+      .mockResolvedValueOnce({ stdout: "/mnt/d/tk-picked\n" });
+
+    const result = await pickDirectory({
+      createProcess,
+      platform: "linux",
+      env: {},
+    });
+
+    expect(result).toEqual({ path: "/mnt/d/tk-picked", error: null });
+    expect(createProcess).toHaveBeenNthCalledWith(
+      3,
+      "python3",
+      expect.arrayContaining(["-c"]),
+    );
+  });
+
   test("returns a chinese gui error when tk is unavailable", async () => {
     const result = await pickDirectory({
       createProcess: vi.fn().mockRejectedValue(new Error("tk unavailable")),
+      platform: "unsupported",
     });
 
     expect(result.path).toBeNull();
@@ -31,6 +91,7 @@ describe("pickDirectory", () => {
             "Traceback ... ModuleNotFoundError: No module named 'tkinter'",
           ),
         ),
+      platform: "unsupported",
     });
 
     expect(result.path).toBeNull();

@@ -9,6 +9,11 @@ export type PickDirectoryResult = {
 };
 
 type CreateProcess = typeof execFileAsync;
+type PickerCommand = {
+  command: string;
+  args: string[];
+  outputPathStyle?: "windows";
+};
 
 function formatPickerError(error: unknown): string {
   const baseMessage = "无法打开本地文件夹选择窗口";
@@ -37,30 +42,130 @@ function formatPickerError(error: unknown): string {
 
 export async function pickDirectory(deps?: {
   createProcess?: CreateProcess;
+  platform?: NodeJS.Platform | string;
+  env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
 }): Promise<PickDirectoryResult> {
   const createProcess = deps?.createProcess ?? execFileAsync;
+  const platform = deps?.platform ?? process.platform;
+  const env = deps?.env ?? process.env;
+  const errors: unknown[] = [];
 
-  try {
-    const script = [
-      "import tkinter as tk",
-      "from tkinter import filedialog",
-      "root = tk.Tk()",
-      "root.withdraw()",
-      "root.attributes('-topmost', True)",
-      "print(filedialog.askdirectory())",
-      "root.destroy()",
-    ].join(";");
-    const { stdout } = await createProcess("python3", ["-c", script]);
-    const selectedPath = stdout.trim();
+  for (const picker of buildPickerCommands(platform, env)) {
+    try {
+      const { stdout } = await createProcess(picker.command, picker.args);
+      const selectedPath = normalizeSelectedPath(
+        stdout.trim(),
+        picker.outputPathStyle,
+      );
 
-    return {
-      path: selectedPath || null,
-      error: null,
-    };
-  } catch (error) {
-    return {
-      path: null,
-      error: formatPickerError(error),
-    };
+      return {
+        path: selectedPath || null,
+        error: null,
+      };
+    } catch (error) {
+      errors.push(error);
+    }
   }
+
+  return {
+    path: null,
+    error: formatPickerError(errors.at(-1)),
+  };
+}
+
+function buildPickerCommands(
+  platform: NodeJS.Platform | string,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+) {
+  const commands: PickerCommand[] = [];
+
+  if (platform === "linux" && isWsl(env)) {
+    commands.push(buildWindowsFolderPickerCommand());
+  }
+
+  if (platform === "linux") {
+    commands.push(
+      {
+        command: "zenity",
+        args: [
+          "--file-selection",
+          "--directory",
+          "--title=选择本地数据集文件夹",
+        ],
+      },
+      {
+        command: "kdialog",
+        args: ["--getexistingdirectory", process.cwd(), "选择本地数据集文件夹"],
+      },
+    );
+  } else if (platform === "darwin") {
+    commands.push({
+      command: "osascript",
+      args: [
+        "-e",
+        'POSIX path of (choose folder with prompt "选择本地数据集文件夹")',
+      ],
+    });
+  } else if (platform === "win32") {
+    commands.push(buildWindowsFolderPickerCommand());
+  }
+
+  commands.push({
+    command: "python3",
+    args: ["-c", buildTkinterPickerScript()],
+  });
+
+  return commands;
+}
+
+function buildWindowsFolderPickerCommand(): PickerCommand {
+  return {
+    command: "powershell.exe",
+    outputPathStyle: "windows",
+    args: [
+      "-NoProfile",
+      "-Command",
+      [
+        "Add-Type -AssemblyName System.Windows.Forms",
+        "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",
+        '$dialog.Description = "选择本地数据集文件夹"',
+        "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $dialog.SelectedPath }",
+      ].join("; "),
+    ],
+  };
+}
+
+function isWsl(env: NodeJS.ProcessEnv | Record<string, string | undefined>) {
+  return Boolean(env.WSL_DISTRO_NAME || env.WSL_INTEROP);
+}
+
+function normalizeSelectedPath(
+  path: string,
+  style?: PickerCommand["outputPathStyle"],
+) {
+  if (style === "windows") {
+    return windowsPathToWslPath(path);
+  }
+  return path;
+}
+
+function windowsPathToWslPath(path: string) {
+  const match = path.match(/^([A-Za-z]):[\\/](.*)$/);
+  if (!match) return path;
+
+  const drive = match[1].toLowerCase();
+  const rest = match[2].replace(/\\/g, "/");
+  return `/mnt/${drive}/${rest}`;
+}
+
+function buildTkinterPickerScript() {
+  return [
+    "import tkinter as tk",
+    "from tkinter import filedialog",
+    "root = tk.Tk()",
+    "root.withdraw()",
+    "root.attributes('-topmost', True)",
+    "print(filedialog.askdirectory())",
+    "root.destroy()",
+  ].join(";");
 }
