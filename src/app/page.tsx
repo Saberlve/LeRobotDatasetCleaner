@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { LocalDatasetCard } from "@/components/home/local-dataset-card";
+import { RecentLocalDatasets } from "@/components/home/recent-local-datasets";
 
 const EXAMPLE_DATASETS = [
   "lerobot/high_quality_folding",
@@ -32,6 +32,9 @@ function HomeInner() {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [isPickingLocal, setIsPickingLocal] = useState(false);
+  const [isOpeningLocal, setIsOpeningLocal] = useState(false);
+  const [localMessage, setLocalMessage] = useState("");
 
   useEffect(() => {
     if (process.env.REPO_ID) {
@@ -73,7 +76,7 @@ function HomeInner() {
   }, []);
 
   useEffect(() => {
-    if (!query.trim()) {
+    if (!query.trim() || isLikelyLocalPath(query)) {
       setSuggestions([]);
       setShowSuggestions(false);
       setIsLoading(false);
@@ -139,8 +142,74 @@ function HomeInner() {
       activeIndex >= 0 && suggestions[activeIndex]
         ? suggestions[activeIndex]
         : query.trim();
-    if (target) {
-      navigate(target);
+    if (!target) {
+      return;
+    }
+
+    if (isLikelyLocalPath(target)) {
+      void openLocalDataset(target);
+      return;
+    }
+
+    navigate(target);
+  }
+
+  async function handlePickLocalDataset() {
+    setIsPickingLocal(true);
+    setLocalMessage("");
+    setShowSuggestions(false);
+
+    try {
+      const response = await fetch("/api/local-datasets/pick-directory", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        path?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.path) {
+        throw new Error(payload.error ?? "无法选择本地文件夹");
+      }
+
+      setQuery(payload.path);
+    } catch (error) {
+      setLocalMessage(
+        error instanceof Error ? error.message : "无法选择本地文件夹",
+      );
+    } finally {
+      setIsPickingLocal(false);
+    }
+  }
+
+  async function openLocalDataset(path: string) {
+    setIsOpeningLocal(true);
+    setLocalMessage("");
+
+    try {
+      const response = await fetch("/api/local-datasets/register", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ path: path.trim(), alias: "" }),
+      });
+      const payload = (await response.json()) as {
+        entryRoute?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.entryRoute) {
+        throw new Error(payload.error ?? "本地数据集导入失败");
+      }
+
+      router.push(payload.entryRoute);
+    } catch (error) {
+      setLocalMessage(
+        error instanceof Error ? error.message : "本地数据集导入失败",
+      );
+    } finally {
+      setIsOpeningLocal(false);
     }
   }
 
@@ -283,8 +352,18 @@ function HomeInner() {
             <button
               type="submit"
               className="rounded-md bg-sky-500 px-4 py-2.5 text-base font-medium shadow-lg shadow-sky-950/40 transition-colors hover:bg-sky-400"
+              disabled={isOpeningLocal}
             >
-              打开数据集
+              {isOpeningLocal ? "正在打开..." : "打开数据集"}
+            </button>
+
+            <button
+              type="button"
+              className="rounded-md bg-sky-500 px-4 py-2.5 text-base font-medium shadow-lg shadow-sky-950/40 transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-sky-500/50"
+              onClick={handlePickLocalDataset}
+              disabled={isPickingLocal}
+            >
+              {isPickingLocal ? "正在选择..." : "选择本地文件夹"}
             </button>
 
             <Link
@@ -294,6 +373,16 @@ function HomeInner() {
               浏览 LeRobot 列表
             </Link>
           </form>
+
+          {localMessage ? (
+            <p className="mt-3 max-w-3xl rounded-md border border-red-400/30 bg-red-950/35 px-4 py-2 text-sm text-red-100">
+              {localMessage}
+            </p>
+          ) : null}
+
+          <div className="w-full max-w-3xl">
+            <RecentLocalDatasets />
+          </div>
 
           <div className="mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
             {EXAMPLE_DATASETS.map((repoId) => (
@@ -308,22 +397,16 @@ function HomeInner() {
             ))}
           </div>
         </section>
-
-        <section className="pb-10">
-          <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/12 bg-slate-950/55 p-4 shadow-2xl shadow-black/25 backdrop-blur md:p-6">
-            <div className="mb-4 px-2">
-              <p className="text-sm font-medium uppercase tracking-[0.3em] text-emerald-300/80">
-                Local Import
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">
-                本地数据集导入
-              </h2>
-            </div>
-
-            <LocalDatasetCard />
-          </div>
-        </section>
       </main>
     </div>
+  );
+}
+
+function isLikelyLocalPath(value: string) {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("~/") ||
+    /^[A-Za-z]:[\\/]/.test(trimmed)
   );
 }

@@ -1,5 +1,15 @@
 [
   {
+    "path": "/mnt/d/pickXtimes_v21_filtered",
+    "version": "v2.1",
+    "totalEpisodes": 42,
+    "fps": 30,
+    "robotType": "Acone",
+    "repoId": "local/pickXtimes_v21_filtered",
+    "displayName": "pickXtimes_v21_filtered",
+    "lastOpenedAt": "2026-04-24T06:47:52.933Z"
+  },
+  {
     "path": "/mnt/d/straighten_the_box",
     "version": "v2.1",
     "totalEpisodes": 80,
