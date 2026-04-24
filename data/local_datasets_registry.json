@@ -1,15 +1,5 @@
 [
   {
-    "path": "/mnt/d/share/11_repo",
-    "version": "v2.1",
-    "totalEpisodes": 4,
-    "fps": 30,
-    "robotType": "g1",
-    "repoId": "local/11_repo",
-    "displayName": "11_repo",
-    "lastOpenedAt": "2026-04-24T07:43:20.241Z"
-  },
-  {
     "path": "/mnt/d/pickXtimes_v21_filtered",
     "version": "v2.1",
     "totalEpisodes": 42,
