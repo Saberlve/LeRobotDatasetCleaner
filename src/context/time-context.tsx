@@ -15,6 +15,8 @@ type TimeContextType = {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   duration: number;
   setDuration: React.Dispatch<React.SetStateAction<number>>;
+  playbackRate: PlaybackRate;
+  setPlaybackRate: (rate: number) => void;
 };
 
 const TimeContext = createContext<TimeContextType | undefined>(undefined);
@@ -26,6 +28,33 @@ export const useTime = () => {
 };
 
 const TIME_RENDER_THROTTLE_MS = 80;
+const PLAYBACK_RATE_STORAGE_KEY = "lerobot.playbackRate";
+
+export const PLAYBACK_RATE_OPTIONS = [0.5, 1, 1.5, 2, 3] as const;
+export type PlaybackRate = (typeof PLAYBACK_RATE_OPTIONS)[number];
+
+function normalizePlaybackRate(value: unknown): PlaybackRate {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : Number.NaN;
+
+  return PLAYBACK_RATE_OPTIONS.find((rate) => rate === parsed) ?? 1;
+}
+
+function readStoredPlaybackRate(): PlaybackRate {
+  if (typeof window === "undefined") return 1;
+
+  try {
+    return normalizePlaybackRate(
+      window.localStorage.getItem(PLAYBACK_RATE_STORAGE_KEY),
+    );
+  } catch {
+    return 1;
+  }
+}
 
 export const TimeProvider: React.FC<{
   children: React.ReactNode;
@@ -34,6 +63,9 @@ export const TimeProvider: React.FC<{
   const [currentTime, setCurrentTimeState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration);
+  const [playbackRate, setPlaybackRateState] = useState<PlaybackRate>(
+    readStoredPlaybackRate,
+  );
   const listeners = useRef<Set<(t: number) => void>>(new Set());
 
   // Keep the authoritative time in a ref so subscribers and sync effects
@@ -80,6 +112,17 @@ export const TimeProvider: React.FC<{
     return () => listeners.current.delete(cb);
   }, []);
 
+  const setPlaybackRate = useCallback((rate: number) => {
+    const nextRate = normalizePlaybackRate(rate);
+    setPlaybackRateState(nextRate);
+
+    try {
+      window.localStorage.setItem(PLAYBACK_RATE_STORAGE_KEY, String(nextRate));
+    } catch {
+      // Ignore storage failures; playback speed still updates for this session.
+    }
+  }, []);
+
   return (
     <TimeContext.Provider
       value={{
@@ -90,6 +133,8 @@ export const TimeProvider: React.FC<{
         setIsPlaying,
         duration,
         setDuration,
+        playbackRate,
+        setPlaybackRate,
       }}
     >
       {children}

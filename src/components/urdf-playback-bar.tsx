@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { PLAYBACK_RATE_OPTIONS, useTime } from "@/context/time-context";
 
 interface UrdfPlaybackBarProps {
   frame: number;
@@ -23,6 +24,7 @@ export default function UrdfPlaybackBar({
   onTrailToggle,
   onFrameChange,
 }: UrdfPlaybackBarProps) {
+  const { playbackRate, setPlaybackRate } = useTime();
   const currentTime = totalFrames > 0 ? (frame / fps).toFixed(2) : "0.00";
   const totalTime = (totalFrames / fps).toFixed(2);
 
@@ -73,6 +75,19 @@ export default function UrdfPlaybackBar({
       <span className="text-xs text-slate-500 tabular-nums w-20 text-right shrink-0">
         F {frame}/{Math.max(totalFrames - 1, 0)}
       </span>
+      <select
+        aria-label="Playback speed"
+        value={String(playbackRate)}
+        onChange={(event) => setPlaybackRate(Number(event.target.value))}
+        className="h-8 rounded border border-slate-600 bg-slate-800 px-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500 shrink-0"
+        title="Playback speed"
+      >
+        {PLAYBACK_RATE_OPTIONS.map((rate) => (
+          <option key={rate} value={String(rate)}>
+            {rate}x
+          </option>
+        ))}
+      </select>
 
       {/* Keyboard hints */}
       <div className="text-xs text-slate-500 select-none hidden md:flex flex-col gap-y-0.5 ml-2 shrink-0">

@@ -104,6 +104,180 @@ describe("exportFilteredDataset", () => {
     expect(result.entryRoute).toBe("/local/demo_v21_unflagged/episode_0");
   });
 
+  test("exports v2.1 datasets whose episode metadata uses the info data_path template", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_template_flagged");
+    await fs.mkdir(path.join(datasetRoot, "data", "chunk-000"), {
+      recursive: true,
+    });
+    await fs.mkdir(
+      path.join(datasetRoot, "videos", "chunk-000", "egocentric"),
+      {
+        recursive: true,
+      },
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "info.json"),
+      JSON.stringify(
+        {
+          codebase_version: "v2.1",
+          robot_type: "SO101",
+          total_episodes: 3,
+          total_frames: 30,
+          total_tasks: 1,
+          total_videos: 0,
+          total_chunks: 1,
+          chunks_size: 1000,
+          fps: 30,
+          data_path:
+            "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+          video_path:
+            "videos/chunk-{episode_chunk:03d}/egocentric/episode_{episode_index:06d}.mp4",
+          features: {
+            "observation.images.egocentric": {
+              dtype: "video",
+              shape: [480, 640, 3],
+              names: ["height", "width", "channel"],
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "episodes.jsonl"),
+      [
+        JSON.stringify({ episode_index: 0, length: 10 }),
+        JSON.stringify({ episode_index: 1, length: 11 }),
+        JSON.stringify({ episode_index: 2, length: 12 }),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "episodes_stats.jsonl"),
+      [
+        JSON.stringify({ episode_index: 0, mean: 0.1 }),
+        JSON.stringify({ episode_index: 1, mean: 0.2 }),
+        JSON.stringify({ episode_index: 2, mean: 0.3 }),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "tasks.jsonl"),
+      `${JSON.stringify({ task_index: 0, task: "pick" })}\n`,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "lang_map.json"),
+      JSON.stringify({ pick: 0 }, null, 2),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "modality.json"),
+      JSON.stringify({ video: ["observation.images.egocentric"] }, null, 2),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "stats.json"),
+      JSON.stringify({ action: { mean: [999] } }, null, 2),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "stats_psi0.json"),
+      JSON.stringify({ action: { mean: [123] } }, null, 2),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "data", "chunk-000", "episode_000001.parquet"),
+      "episode-one",
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(
+        datasetRoot,
+        "videos",
+        "chunk-000",
+        "egocentric",
+        "episode_000001.mp4",
+      ),
+      "video-one",
+      "utf8",
+    );
+
+    const result = await exportFilteredDataset({
+      repoId: "local/demo_v21",
+      datasetPath: datasetRoot,
+      flaggedEpisodeIds: [1],
+      mode: "flagged",
+      outputPath,
+      alias: "demo_v21_template_flagged",
+    });
+
+    const exportedPayload = await fs.readFile(
+      path.join(outputPath, "data", "chunk-000", "episode_000000.parquet"),
+      "utf8",
+    );
+    const exportedVideo = await fs.readFile(
+      path.join(
+        outputPath,
+        "videos",
+        "chunk-000",
+        "egocentric",
+        "episode_000000.mp4",
+      ),
+      "utf8",
+    );
+    const exportedEpisodes = (
+      await fs.readFile(path.join(outputPath, "meta", "episodes.jsonl"), "utf8")
+    )
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    const exportedEpisodeStats = (
+      await fs.readFile(
+        path.join(outputPath, "meta", "episodes_stats.jsonl"),
+        "utf8",
+      )
+    )
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+
+    expect(result.repoId).toBe("local/demo_v21_template_flagged");
+    expect(exportedPayload).toBe("episode-one");
+    expect(exportedVideo).toBe("video-one");
+    await expect(
+      fs.access(path.join(outputPath, "meta", "stats.json")),
+    ).rejects.toThrow();
+    await expect(
+      fs.access(path.join(outputPath, "meta", "stats_psi0.json")),
+    ).rejects.toThrow();
+    await expect(
+      fs.access(path.join(outputPath, "meta", "tasks.jsonl")),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(outputPath, "meta", "lang_map.json")),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(outputPath, "meta", "modality.json")),
+    ).resolves.toBeUndefined();
+    expect(exportedEpisodes).toEqual([
+      expect.objectContaining({
+        episode_index: 0,
+        source_episode_index: 1,
+        length: 11,
+      }),
+    ]);
+    expect(exportedEpisodeStats).toEqual([
+      expect.objectContaining({
+        episode_index: 0,
+        source_episode_index: 1,
+        mean: 0.2,
+      }),
+    ]);
+  });
+
   test("rejects aliases that resolve to the source repo id before writing output", async () => {
     const outputPath = path.join(tempRoot, "demo_v21_alias_collision");
 

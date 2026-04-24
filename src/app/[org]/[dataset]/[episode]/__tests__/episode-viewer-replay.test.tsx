@@ -48,6 +48,21 @@ vi.mock("@/components/loading-component", () => ({
   default: () => <div data-testid="loading" />,
 }));
 
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    ...props
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 function makeEpisodeData(robotType: string, codebaseVersion = "v3.0") {
   return {
     datasetInfo: {
@@ -85,6 +100,13 @@ afterEach(() => {
 });
 
 describe("EpisodeViewer replay tab", () => {
+  test("shows a link back to the home page", async () => {
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    const homeLink = await screen.findByRole("link", { name: "返回主界面" });
+    expect(homeLink.getAttribute("href")).toBe("/");
+  });
+
   test("shows Replay for G1 datasets and hides legacy labels", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
@@ -108,7 +130,7 @@ describe("EpisodeViewer replay tab", () => {
     expect(await screen.findByRole("button", { name: "Replay" })).toBeDefined();
   });
 
-  test("routes ArrowDown from replay to the next episode", async () => {
+  test("routes ArrowDown from replay to the next episode and keeps replay tab", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
     const replayButton = await screen.findByRole("button", { name: "Replay" });
@@ -117,7 +139,7 @@ describe("EpisodeViewer replay tab", () => {
     fireEvent.keyDown(window, { key: "ArrowDown" });
 
     await waitFor(() => {
-      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1");
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1?tab=replay");
     });
   });
 

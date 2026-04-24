@@ -1,5 +1,5 @@
 import React from "react";
-import { useTime } from "../context/time-context";
+import { PLAYBACK_RATE_OPTIONS, useTime } from "../context/time-context";
 import {
   FaPlay,
   FaPause,
@@ -11,8 +11,15 @@ import {
 } from "react-icons/fa";
 
 const PlaybackBar: React.FC = () => {
-  const { duration, isPlaying, setIsPlaying, currentTime, setCurrentTime } =
-    useTime();
+  const {
+    duration,
+    isPlaying,
+    setIsPlaying,
+    currentTime,
+    setCurrentTime,
+    playbackRate,
+    setPlaybackRate,
+  } = useTime();
 
   const sliderActiveRef = React.useRef(false);
   const wasPlayingRef = React.useRef(false);
@@ -103,6 +110,19 @@ const PlaybackBar: React.FC = () => {
       <span className="w-16 text-right tabular-nums text-xs text-slate-200 shrink-0">
         {Math.floor(sliderValue)} / {Math.floor(duration)}
       </span>
+      <select
+        aria-label="Playback speed"
+        value={String(playbackRate)}
+        onChange={(event) => setPlaybackRate(Number(event.target.value))}
+        className="h-8 rounded border border-slate-600 bg-slate-800 px-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500 shrink-0"
+        title="Playback speed"
+      >
+        {PLAYBACK_RATE_OPTIONS.map((rate) => (
+          <option key={rate} value={String(rate)}>
+            {rate}x
+          </option>
+        ))}
+      </select>
 
       <div className="text-xs text-slate-300 select-none ml-8 flex-col gap-y-0.5 hidden md:flex">
         <p>
