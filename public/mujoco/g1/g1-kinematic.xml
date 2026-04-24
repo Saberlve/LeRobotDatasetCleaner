@@ -1,0 +1,156 @@
+<mujoco model="g1_kinematic_replay">
+  <compiler angle="radian" autolimits="true" />
+  <option timestep="0.0166667" gravity="0 0 -9.81" integrator="Euler" />
+
+  <visual>
+    <headlight ambient="0.6 0.6 0.6" diffuse="0.7 0.7 0.7" specular="0.1 0.1 0.1" />
+    <rgba haze="0.15 0.25 0.35 1" />
+  </visual>
+
+  <asset>
+    <material name="dark" rgba="0.18 0.18 0.2 1" />
+    <material name="light" rgba="0.78 0.8 0.82 1" />
+    <material name="accent" rgba="0.95 0.48 0.12 1" />
+
+                                                                                                                                              </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="8 8 0.1" rgba="0.16 0.18 0.2 1" />
+
+    <body name="pelvis_root" pos="0 0 0.79">
+      <freejoint name="floating_base_joint" />
+      <inertial pos="0 0 0" mass="12" diaginertia="0.25 0.25 0.25" />
+      <geom name="visual_0_pelvis" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+      <geom name="visual_1_pelvis_contour_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+
+      <body name="left_hip_pitch_link" pos="0 0.064 -0.103">
+        <joint name="left_hip_pitch_joint" axis="0 1 0" range="-2.6 2.9" />
+        <geom name="visual_2_left_hip_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+        <body name="left_hip_roll_link">
+          <joint name="left_hip_roll_joint" axis="1 0 0" range="-0.52 2.97" />
+          <geom name="visual_3_left_hip_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+          <body name="left_hip_yaw_link">
+            <joint name="left_hip_yaw_joint" axis="0 0 1" range="-2.75 2.75" />
+            <geom name="visual_4_left_hip_yaw_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+            <body name="left_knee_link" pos="0 0 -0.213">
+              <joint name="left_knee_joint" axis="0 1 0" range="-0.09 2.62" />
+              <geom name="visual_5_left_knee_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+              <body name="left_ankle_pitch_link" pos="0 0 -0.213">
+                <joint name="left_ankle_pitch_joint" axis="0 1 0" range="-0.87 0.52" />
+                <geom name="visual_6_left_ankle_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                <body name="left_ankle_roll_link" pos="0 0 -0.05">
+                  <joint name="left_ankle_roll_joint" axis="1 0 0" range="-0.26 0.26" />
+                  <geom name="visual_7_left_ankle_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="right_hip_pitch_link" pos="0 -0.064 -0.103">
+        <joint name="right_hip_pitch_joint" axis="0 1 0" range="-2.6 2.9" />
+        <geom name="visual_8_right_hip_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+        <body name="right_hip_roll_link">
+          <joint name="right_hip_roll_joint" axis="1 0 0" range="-2.97 0.52" />
+          <geom name="visual_9_right_hip_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+          <body name="right_hip_yaw_link">
+            <joint name="right_hip_yaw_joint" axis="0 0 1" range="-2.75 2.75" />
+            <geom name="visual_10_right_hip_yaw_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+            <body name="right_knee_link" pos="0 0 -0.213">
+              <joint name="right_knee_joint" axis="0 1 0" range="-0.09 2.62" />
+              <geom name="visual_11_right_knee_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+              <body name="right_ankle_pitch_link" pos="0 0 -0.213">
+                <joint name="right_ankle_pitch_joint" axis="0 1 0" range="-0.87 0.52" />
+                <geom name="visual_12_right_ankle_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                <body name="right_ankle_roll_link" pos="0 0 -0.05">
+                  <joint name="right_ankle_roll_joint" axis="1 0 0" range="-0.26 0.26" />
+                  <geom name="visual_13_right_ankle_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="waist_yaw_link" pos="0 0 0.103">
+        <joint name="waist_yaw_joint" axis="0 0 1" range="-2.62 2.62" />
+        <geom name="visual_14_waist_yaw_link_rev_1_0" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+        <body name="waist_roll_link">
+          <joint name="waist_roll_joint" axis="1 0 0" range="-0.52 0.52" />
+          <geom name="visual_15_waist_roll_link_rev_1_0" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+          <body name="waist_pitch_link" pos="0 0 0.04">
+            <joint name="waist_pitch_joint" axis="0 1 0" range="-0.52 0.52" />
+            <body name="torso_link" pos="0 0 0.14">
+              <geom name="visual_16_torso_link_rev_1_0" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+              <geom name="visual_17_logo_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+              <body name="head_link" pos="0 0 0.24">
+                <geom name="visual_18_head_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+              </body>
+
+              <body name="left_shoulder_pitch_link" pos="0 0.161 0.204">
+                <joint name="left_shoulder_pitch_joint" axis="0 1 0" range="-3.09 2.67" />
+                <geom name="visual_19_left_shoulder_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                <body name="left_shoulder_roll_link" pos="0 0.024 -0.103">
+                  <joint name="left_shoulder_roll_joint" axis="1 0 0" range="-1.59 2.25" />
+                  <geom name="visual_20_left_shoulder_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                  <body name="left_shoulder_yaw_link" pos="0 0.006 -0.103">
+                    <joint name="left_shoulder_yaw_joint" axis="0 0 1" range="-2.62 2.62" />
+                    <geom name="visual_21_left_shoulder_yaw_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                    <body name="left_elbow_link" pos="0.19 0 -0.02">
+                      <joint name="left_elbow_joint" axis="0 1 0" range="-1.05 2.09" />
+                      <geom name="visual_22_left_elbow_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                      <body name="left_wrist_roll_link" pos="0.18 0 0">
+                        <joint name="left_wrist_roll_joint" axis="1 0 0" range="-2.97 2.97" />
+                        <geom name="visual_23_left_wrist_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                        <body name="left_wrist_pitch_link" pos="0.04 0 0">
+                          <joint name="left_wrist_pitch_joint" axis="0 1 0" range="-1.61 1.61" />
+                          <geom name="visual_24_left_wrist_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                          <body name="left_wrist_yaw_link" pos="0.046 0 0">
+                            <joint name="left_wrist_yaw_joint" axis="0 0 1" range="-1.61 1.61" />
+                            <geom name="visual_25_left_wrist_yaw_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                            <geom name="visual_26_left_rubber_hand" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" pos="0.0415 0.003 0" />
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+
+              <body name="right_shoulder_pitch_link" pos="0 -0.161 0.204">
+                <joint name="right_shoulder_pitch_joint" axis="0 1 0" range="-3.09 2.67" />
+                <geom name="visual_27_right_shoulder_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                <body name="right_shoulder_roll_link" pos="0 -0.024 -0.103">
+                  <joint name="right_shoulder_roll_joint" axis="1 0 0" range="-2.25 1.59" />
+                  <geom name="visual_28_right_shoulder_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                  <body name="right_shoulder_yaw_link" pos="0 -0.006 -0.103">
+                    <joint name="right_shoulder_yaw_joint" axis="0 0 1" range="-2.62 2.62" />
+                    <geom name="visual_29_right_shoulder_yaw_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                    <body name="right_elbow_link" pos="0.19 0 -0.02">
+                      <joint name="right_elbow_joint" axis="0 1 0" range="-1.05 2.09" />
+                      <geom name="visual_30_right_elbow_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                      <body name="right_wrist_roll_link" pos="0.18 0 0">
+                        <joint name="right_wrist_roll_joint" axis="1 0 0" range="-2.97 2.97" />
+                        <geom name="visual_31_right_wrist_roll_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                        <body name="right_wrist_pitch_link" pos="0.04 0 0">
+                          <joint name="right_wrist_pitch_joint" axis="0 1 0" range="-1.61 1.61" />
+                          <geom name="visual_32_right_wrist_pitch_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                          <body name="right_wrist_yaw_link" pos="0.046 0 0">
+                            <joint name="right_wrist_yaw_joint" axis="0 0 1" range="-1.61 1.61" />
+                            <geom name="visual_33_right_wrist_yaw_link" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" />
+                            <geom name="visual_34_right_rubber_hand" type="box" size="0.001 0.001 0.001" rgba="0 0 0 0" contype="0" conaffinity="0" pos="0.0415 -0.003 0" />
+                          </body>
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
