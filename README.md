@@ -46,119 +46,157 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 - **hyparquet** (for reading Parquet files)
 - **Tailwind CSS** (styling)
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
+### 1. Install Runtime Dependencies
 
-This project uses `npm`.
-
-For local folder picking on Ubuntu/WSL, install:
+Use Node.js 20 or newer. The Docker image and local development flow are tested with Node 20.
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y python3-tk
+node -v
+npm -v
 ```
 
-### Installation
-
-Install dependencies:
+Install project dependencies:
 
 ```bash
-npm install --no-package-lock
+cd lerobot-dataset-visualizer
+npm ci
 ```
 
-If the app exits immediately or prints that Next.js dependencies are missing/corrupted, reinstall dependencies before retrying. A healthy install must include:
+If `npm ci` is not available in your environment, use:
 
-- `node_modules/next/package.json`
-- a non-empty `node_modules/next/dist/bin/next`
-- a loadable `@next/swc-linux-x64-gnu` native module
+```bash
+npm install
+```
 
-### Development
+### 2. One-Command Local Dataset Startup
 
-Run the development server:
+For a local LeRobot dataset, run the helper script with the dataset path:
+
+```bash
+DATASET_ROOT=/absolute/path/to/your/lerobot_dataset \
+DATASET_ALIAS=local/my_dataset \
+./run_local_v21.sh
+```
+
+Then open:
+
+```text
+http://127.0.0.1:<printed-port>/local/my_dataset/episode_0
+```
+
+The script is the recommended local launcher. It:
+
+- installs missing npm dependencies automatically;
+- validates the local Next.js install before startup;
+- starts the app on `PORT`, defaulting to `3001`;
+- auto-selects the next free port when the default port is occupied;
+- sets `LOCAL_LEROBOT_DATASETS_JSON`, `LOCAL_DATASET_BASE_URL`, and `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL` for local dataset loading.
+
+Common examples:
+
+```bash
+# Use defaults from the script.
+./run_local_v21.sh
+
+# Open a specific local dataset.
+DATASET_ROOT=/mnt/d/straighten_the_box \
+DATASET_ALIAS=local/straighten_the_box \
+./run_local_v21.sh
+
+# Force a port.
+PORT=3002 \
+DATASET_ROOT=/mnt/d/straighten_the_box \
+DATASET_ALIAS=local/straighten_the_box \
+./run_local_v21.sh
+```
+
+Run `./run_local_v21.sh --help` to print all supported options.
+
+### 3. Standard Development Server
+
+If you only need the home page or remote Hugging Face datasets, run:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-The landing page is now in Chinese and exposes two entry flows:
+The landing page supports:
 
-- Remote Hugging Face dataset search/open
-- Local folder import using the existing `/api/local-datasets/*` routes
+- remote Hugging Face dataset search/open;
+- local folder import through `/api/local-datasets/*`;
+- recent local dataset shortcuts;
+- filtered dataset export for `flagged` or `unflagged` episode subsets.
+
+### Optional GUI Folder Picker Setup
+
+Local folder picking works best when a native picker is available.
+
+Ubuntu/WSL:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y zenity python3-tk
+```
+
+KDE Linux:
+
+```bash
+sudo apt-get install -y kdialog
+```
+
+If no GUI picker is available, paste the dataset path manually in the app.
+
+### Local Dataset Requirements
+
+The local dataset directory should be a LeRobot-format dataset with metadata under `meta/` and episode data under `data/`. Supported versions are:
+
+- `v2.0`
+- `v2.1`
+- `v3.0`
+
+Local repo aliases must use the `local/<name>` format. The `<name>` part may contain letters, numbers, `.`, `_`, and `-`.
 
 To export a filtered local dataset:
 
 1. Open a local dataset in the visualizer.
-2. Flag episodes in the Filtering panel.
-3. Choose `flagged` or `unflagged`, enter an output directory, and run export.
-4. Open the exported dataset from the success link shown in the Filtering panel.
+2. Flag episodes in the Filtering panel or with the `f` shortcut.
+3. Choose `flagged` or `unflagged`.
+4. Pick an existing output parent directory and enter a new dataset name.
+5. Open the exported dataset from the success link shown in the Filtering panel.
 
-You can start editing the page by modifying `src/app/page.tsx` or other files in the `src/` directory. The app supports hot-reloading for rapid development.
+## Environment Variables
 
-### Local v2.1 Dataset Launcher
+| Variable                               | Required                             | Purpose                                                                                                       |
+| -------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                 | No                                   | Next.js port. `run_local_v21.sh` defaults to `3001`; `npm run dev` defaults to `3000`.                        |
+| `DATASET_ROOT`                         | For `run_local_v21.sh` local startup | Absolute path to the local LeRobot dataset.                                                                   |
+| `DATASET_ALIAS`                        | For `run_local_v21.sh` local startup | Local repo id, for example `local/straighten_the_box`.                                                        |
+| `LOCAL_LEROBOT_DATASETS_JSON`          | No                                   | JSON object mapping local repo ids to dataset roots, for example `{"local/demo":"/mnt/d/demo"}`.              |
+| `LOCAL_DATASET_BASE_URL`               | No                                   | Server-side base URL for local dataset asset requests.                                                        |
+| `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL`   | No                                   | Browser-side base URL for local dataset asset requests. Defaults to `LOCAL_DATASET_BASE_URL` in the launcher. |
+| `LOCAL_DATASET_REGISTRY_PATH`          | No                                   | Path to the recent/imported local dataset registry JSON file.                                                 |
+| `DATASET_URL`                          | No                                   | Remote dataset host base URL. Defaults to `https://huggingface.co/datasets`.                                  |
+| `REPO_ID`                              | No                                   | Optional startup redirect repo id, for example `lerobot/pusht`.                                               |
+| `EPISODES`                             | No                                   | Optional whitespace-separated episode allowlist used by startup redirect and data loading.                    |
+| `MAX_EPISODE_POINTS`                   | No                                   | Max sampled points per episode chart.                                                                         |
+| `MAX_FRAMES_OVERVIEW_EPISODES`         | No                                   | Max episodes sampled by the Frames overview.                                                                  |
+| `MAX_CROSS_EPISODE_SAMPLE`             | No                                   | Max episodes sampled by cross-episode action analysis.                                                        |
+| `MAX_CROSS_EPISODE_FRAMES_PER_EPISODE` | No                                   | Max frames per sampled episode for cross-episode action analysis.                                             |
 
-For local LeRobot v2.1 datasets, use the helper script:
+## Troubleshooting
 
-```bash
-cd /root/code/data_clean/lerobot-dataset-visualizer
-./run_local_v21.sh
-```
+- Immediate exit with no UI: reinstall dependencies with `npm ci` or `npm install`.
+- `Next.js dependencies are missing or corrupted.`: remove `node_modules` and reinstall dependencies.
+- `PORT <n> is already in use`: either stop the conflicting process or run with another port, for example `PORT=3002 ./run_local_v21.sh`.
+- Native SWC crash during startup: reinstall dependencies so `@next/swc-linux-x64-gnu` is restored.
+- Folder picker does nothing on WSL/Linux: install `zenity`, `kdialog`, or `python3-tk`, or paste the path manually.
+- Local dataset opens but assets fail to load: make sure `LOCAL_DATASET_BASE_URL` and `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL` point to the same running app port.
 
-Default behavior:
-
-- `DATASET_ALIAS=local/pickXtimes_v21_filtered`
-- `DATASET_ROOT=/mnt/d/pickXtimes_v21_filtered`
-- `PORT=3000`
-- `LOCAL_DATASET_BASE_URL=http://127.0.0.1:$PORT`
-- `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL=http://127.0.0.1:$PORT`
-
-The script now performs these startup checks automatically:
-
-- If the default port is already occupied, it picks the next free port unless you explicitly set `PORT`.
-- If Next.js dependencies are missing or corrupted, it reruns installation and then validates that the local `next` entrypoint is usable before starting.
-
-Examples:
-
-```bash
-./run_local_v21.sh
-PORT=3001 ./run_local_v21.sh
-DATASET_ROOT=/mnt/d/straighten_the_box ./run_local_v21.sh
-DATASET_ALIAS=local/straighten_the_box DATASET_ROOT=/mnt/d/straighten_the_box ./run_local_v21.sh
-```
-
-If this project is running on `3001` while another web app is using `3000`, make sure both local dataset base URLs point to `3001`:
-
-```bash
-PORT=3001 \
-LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 \
-NEXT_PUBLIC_LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 \
-./run_local_v21.sh
-```
-
-After startup, open:
-
-```text
-http://127.0.0.1:<PORT>/<DATASET_ALIAS>/episode_0
-```
-
-For example, if `3000` is occupied, the script may start on `3001` and print:
-
-```text
-▲ Next.js 15.3.6
-- Local: http://localhost:3001
-✓ Ready in 2.2s
-```
-
-### Troubleshooting
-
-- Immediate exit with no UI: reinstall dependencies with `npm install --no-package-lock`.
-- `Next.js dependencies are missing or corrupted.`: the local `next` install is broken; reinstall dependencies.
-- `PORT 3000 is already in use`: either stop the conflicting service or rerun with another explicit port, for example `PORT=3001 ./run_local_v21.sh`.
-- Native SWC crash during startup: reinstall dependencies so `@next/swc-linux-x64-gnu` is restored correctly.
-
-### Other Commands
+## Development Commands
 
 ```bash
 # Build for production
@@ -173,13 +211,6 @@ npm run lint
 # Format code
 npm run format
 ```
-
-### Environment Variables
-
-- `DATASET_URL`: (optional) Base URL for dataset hosting (defaults to HuggingFace Datasets).
-- `LOCAL_DATASET_BASE_URL`: (optional) Server-side base URL for local dataset asset requests.
-- `NEXT_PUBLIC_LOCAL_DATASET_BASE_URL`: (optional) Client-side base URL for local dataset asset requests.
-- `LOCAL_LEROBOT_DATASETS_JSON`: (optional) JSON object mapping local repo ids to dataset roots.
 
 ## Docker Deployment
 

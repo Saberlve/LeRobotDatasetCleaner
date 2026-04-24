@@ -1,5 +1,15 @@
 [
   {
+    "path": "/mnt/d/share/straighten0_the_box_filtered",
+    "version": "v2.1",
+    "totalEpisodes": 55,
+    "fps": 30,
+    "robotType": "g1",
+    "repoId": "local/straighten0_the_box_filtered",
+    "displayName": "straighten0_the_box_filtered",
+    "lastOpenedAt": "2026-04-24T08:44:34.894Z"
+  },
+  {
     "path": "/mnt/d/pickXtimes_v21_filtered",
     "version": "v2.1",
     "totalEpisodes": 42,

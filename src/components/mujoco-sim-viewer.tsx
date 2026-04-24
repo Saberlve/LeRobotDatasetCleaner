@@ -573,7 +573,7 @@ export default function MujocoSimViewer({
   playToggleRef?: React.RefObject<(() => void) | undefined>;
   showPhysicsToggle?: boolean;
 }) {
-  const { playbackRate } = useTime();
+  const { isPlaying, setIsPlaying, playbackRate } = useTime();
   const { datasetInfo } = data;
   const fps = datasetInfo.fps || 30;
   const repoId = org && dataset ? `${org}/${dataset}` : null;
@@ -609,7 +609,7 @@ export default function MujocoSimViewer({
       setSelectedEpisode(epId);
       setFrame(0);
       frameRef.current = 0;
-      setPlaying(false);
+      setIsPlaying(false);
 
       if (chartDataCache.current[epId]) {
         setChartData(chartDataCache.current[epId]);
@@ -636,7 +636,7 @@ export default function MujocoSimViewer({
         .catch((err) => console.error("Failed to load episode:", err))
         .finally(() => setEpisodeLoading(false));
     },
-    [ensureDatasetInfo, repoId],
+    [ensureDatasetInfo, repoId, setIsPlaying],
   );
 
   useEffect(() => {
@@ -658,7 +658,6 @@ export default function MujocoSimViewer({
 
   // Playback
   const [frame, setFrame] = useState(0);
-  const [playing, setPlaying] = useState(false);
   const frameRef = useRef(0);
   const [physicsEnabled, setPhysicsEnabled] = useState(false);
 
@@ -672,17 +671,21 @@ export default function MujocoSimViewer({
   );
 
   const handlePlayPause = useCallback(() => {
-    setPlaying((prev) => {
+    setIsPlaying((prev) => {
       if (!prev) frameRef.current = frame;
       return !prev;
     });
-  }, [frame]);
+  }, [frame, setIsPlaying]);
 
   const handleReset = useCallback(() => {
-    setPlaying(false);
+    setIsPlaying(false);
     setFrame(0);
     frameRef.current = 0;
-  }, []);
+  }, [setIsPlaying]);
+
+  useEffect(() => {
+    if (isPlaying) frameRef.current = frame;
+  }, [frame, isPlaying]);
 
   useEffect(() => {
     if (playToggleRef) playToggleRef.current = handlePlayPause;
@@ -753,7 +756,7 @@ export default function MujocoSimViewer({
           />
           <OrbitControls target={[0, 0.5, 0]} />
           <PlaybackDriver
-            playing={playing}
+            playing={isPlaying}
             fps={fps}
             totalFrames={totalFrames}
             frameRef={frameRef}
@@ -769,7 +772,7 @@ export default function MujocoSimViewer({
           frame={frame}
           totalFrames={totalFrames}
           fps={fps}
-          playing={playing}
+          playing={isPlaying}
           onPlayPause={handlePlayPause}
           trailEnabled={false}
           onTrailToggle={() => {}}

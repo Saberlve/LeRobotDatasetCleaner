@@ -4,6 +4,7 @@ import React from "react";
 import { useEffect, useState } from "react";
 import type { EpisodeData } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import MujocoSimViewer from "@/components/mujoco-sim-viewer";
+import { useTime } from "@/context/time-context";
 import {
   buildG1QposFrame,
   extractOrderedG1StateColumns,
@@ -29,14 +30,14 @@ export default function G1MujocoReplay({
   const [status, setStatus] = useState<ReplayStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const { isPlaying, setIsPlaying } = useTime();
 
   useEffect(() => {
     setStatus("loading");
     setError(null);
     setFrame(0);
-    setPlaying(false);
-  }, [initialChartData]);
+    setIsPlaying(false);
+  }, [initialChartData, setIsPlaying]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +71,7 @@ export default function G1MujocoReplay({
   }, [initialChartData]);
 
   useEffect(() => {
-    if (!playing || status !== "ready") return;
+    if (!isPlaying || status !== "ready") return;
 
     const timer = window.setInterval(
       () => {
@@ -80,7 +81,7 @@ export default function G1MujocoReplay({
     );
 
     return () => window.clearInterval(timer);
-  }, [datasetInfo.fps, initialChartData.length, playing, status]);
+  }, [datasetInfo.fps, initialChartData.length, isPlaying, status]);
 
   if (status === "loading") {
     return <div className="p-6 text-slate-200">Loading Replay…</div>;
@@ -101,12 +102,12 @@ export default function G1MujocoReplay({
         Frame {frame}/{Math.max(initialChartData.length - 1, 0)}
       </div>
       <div className="flex gap-2">
-        <button onClick={() => setPlaying((value) => !value)}>
-          {playing ? "Pause" : "Play"}
+        <button onClick={() => setIsPlaying((value) => !value)}>
+          {isPlaying ? "Pause" : "Play"}
         </button>
         <button
           onClick={() => {
-            setPlaying(false);
+            setIsPlaying(false);
             setFrame(0);
           }}
         >

@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import G1MujocoReplay from "@/components/g1-mujoco-replay";
+import { TimeProvider, useTime } from "@/context/time-context";
 
 vi.mock(
   "@mujoco/mujoco",
@@ -68,8 +69,21 @@ function makeRow(length = 29, offset = 0) {
 }
 
 describe("G1MujocoReplay", () => {
+  function renderReplay(element: React.ReactElement) {
+    return render(<TimeProvider duration={1}>{element}</TimeProvider>);
+  }
+
+  function SharedPlaybackToggle() {
+    const { setIsPlaying } = useTime();
+    return (
+      <button onClick={() => setIsPlaying((value) => !value)}>
+        Toggle shared playback
+      </button>
+    );
+  }
+
   test("renders loading then ready state for a valid G1 trajectory", async () => {
-    render(
+    renderReplay(
       <G1MujocoReplay
         datasetInfo={{ robot_type: "g1", fps: 30 } as never}
         episodeId={4}
@@ -88,7 +102,7 @@ describe("G1MujocoReplay", () => {
   });
 
   test("renders an explicit error instead of falling back to URDF when trajectory mapping fails", async () => {
-    render(
+    renderReplay(
       <G1MujocoReplay
         datasetInfo={{ robot_type: "g1", fps: 30 } as never}
         episodeId={2}
@@ -106,7 +120,7 @@ describe("G1MujocoReplay", () => {
   });
 
   test("supports play, pause, and reset controls", async () => {
-    render(
+    renderReplay(
       <G1MujocoReplay
         datasetInfo={{ robot_type: "g1", fps: 30 } as never}
         episodeId={4}
@@ -134,13 +148,44 @@ describe("G1MujocoReplay", () => {
     expect(screen.getByText("Frame 0/1").textContent).toBe("Frame 0/1");
   });
 
+  test("uses the shared playback state", async () => {
+    render(
+      <TimeProvider duration={1}>
+        <SharedPlaybackToggle />
+        <G1MujocoReplay
+          datasetInfo={{ robot_type: "g1", fps: 30 } as never}
+          episodeId={4}
+          initialChartData={[makeRow(), makeRow(29, 1)]}
+        />
+      </TimeProvider>,
+    );
+
+    await screen.findByRole("button", { name: "Play" });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Toggle shared playback" }),
+    );
+    expect(screen.getByRole("button", { name: "Pause" }).textContent).toBe(
+      "Pause",
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Toggle shared playback" }),
+    );
+    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
+      "Play",
+    );
+  });
+
   test("resets frame and playing state when replay input changes", async () => {
     const { rerender } = render(
-      <G1MujocoReplay
-        datasetInfo={{ robot_type: "g1", fps: 30 } as never}
-        episodeId={4}
-        initialChartData={[makeRow(), makeRow(29, 1)]}
-      />,
+      <TimeProvider duration={1}>
+        <G1MujocoReplay
+          datasetInfo={{ robot_type: "g1", fps: 30 } as never}
+          episodeId={4}
+          initialChartData={[makeRow(), makeRow(29, 1)]}
+        />
+      </TimeProvider>,
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Play" }));
@@ -149,11 +194,13 @@ describe("G1MujocoReplay", () => {
     );
 
     rerender(
-      <G1MujocoReplay
-        datasetInfo={{ robot_type: "g1", fps: 30 } as never}
-        episodeId={5}
-        initialChartData={[makeRow(29, 100), makeRow(29, 101)]}
-      />,
+      <TimeProvider duration={1}>
+        <G1MujocoReplay
+          datasetInfo={{ robot_type: "g1", fps: 30 } as never}
+          episodeId={5}
+          initialChartData={[makeRow(29, 100), makeRow(29, 101)]}
+        />
+      </TimeProvider>,
     );
 
     await waitFor(() =>

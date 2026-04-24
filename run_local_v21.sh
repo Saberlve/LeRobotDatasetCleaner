@@ -11,7 +11,7 @@ PORT_WAS_SET=0
 if [ -n "${PORT+x}" ]; then
   PORT_WAS_SET=1
 fi
-PORT=3001
+PORT="${PORT:-3001}"
 
 port_in_use() {
   local port="$1"
