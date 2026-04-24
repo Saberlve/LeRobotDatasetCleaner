@@ -123,6 +123,8 @@ describe("G1 MuJoCo assembly", () => {
     expect(xml).toContain(
       '<body name="right_shoulder_pitch_link" pos="0.0039563 -0.10021 0.24778" quat="0.990264 -0.139201 1.38722e-05 9.86868e-05">',
     );
-    expect(xml).not.toContain('<body name="left_elbow_link" pos="0.19 0 -0.02">');
+    expect(xml).not.toContain(
+      '<body name="left_elbow_link" pos="0.19 0 -0.02">',
+    );
   });
 });

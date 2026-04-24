@@ -3,6 +3,12 @@ const PSI0_STATE_DIM = 32;
 const PSI0_HAND_DIM = 14;
 const PSI0_ARM_DIM = 14;
 const PSI0_TORSO_RPY_START = 28;
+const PSI0_TORSO_HEIGHT_INDEX = 31;
+const PSI0_ACTION_TORSO_HEIGHT_INDEX = 31;
+const PSI0_ACTION_VX_INDEX = 32;
+const PSI0_ACTION_VY_INDEX = 33;
+const PSI0_ACTION_VYAW_INDEX = 34;
+const PSI0_ACTION_TARGET_YAW_INDEX = 35;
 
 export const G1_JOINT_NAMES = [
   "left_hip_pitch_joint",
@@ -99,4 +105,85 @@ export function buildG1QposFrame(
   });
 
   return qpos;
+}
+
+export function buildG1QposFrames(
+  rows: Record<string, unknown>[],
+  orderedColumns: string[],
+  fps: number,
+) {
+  const safeFps = Number.isFinite(fps) && fps > 0 ? fps : 30;
+  const dt = 1 / safeFps;
+  let x = 0;
+  let y = 0;
+  let yaw = 0;
+
+  return rows.map((row, index) => {
+    const hasBaseCommand = hasPsi0BaseCommand(row);
+    if (hasBaseCommand) {
+      const targetYaw = readNumber(
+        row,
+        actionKey(PSI0_ACTION_TARGET_YAW_INDEX),
+      );
+      if (targetYaw !== null) {
+        yaw = targetYaw;
+      } else if (index > 0) {
+        yaw += (readNumber(row, actionKey(PSI0_ACTION_VYAW_INDEX)) ?? 0) * dt;
+      }
+
+      if (index > 0) {
+        const vx = readNumber(row, actionKey(PSI0_ACTION_VX_INDEX)) ?? 0;
+        const vy = readNumber(row, actionKey(PSI0_ACTION_VY_INDEX)) ?? 0;
+        const cosYaw = Math.cos(yaw);
+        const sinYaw = Math.sin(yaw);
+        x += (vx * cosYaw - vy * sinYaw) * dt;
+        y += (vx * sinYaw + vy * cosYaw) * dt;
+      }
+    }
+
+    const qpos = buildG1QposFrame(row, orderedColumns);
+    if (!hasBaseCommand) return qpos;
+
+    const height =
+      readNumber(row, stateKey(PSI0_TORSO_HEIGHT_INDEX)) ??
+      readNumber(row, actionKey(PSI0_ACTION_TORSO_HEIGHT_INDEX)) ??
+      0;
+    qpos[0] = x;
+    qpos[1] = y;
+    qpos[2] = height;
+    writeYawQuaternion(qpos, yaw);
+    return qpos;
+  });
+}
+
+function hasPsi0BaseCommand(row: Record<string, unknown>) {
+  return (
+    actionKey(PSI0_ACTION_VX_INDEX) in row ||
+    actionKey(PSI0_ACTION_VY_INDEX) in row ||
+    actionKey(PSI0_ACTION_VYAW_INDEX) in row ||
+    actionKey(PSI0_ACTION_TARGET_YAW_INDEX) in row
+  );
+}
+
+function stateKey(index: number) {
+  return `states | ${index}`;
+}
+
+function actionKey(index: number) {
+  return `action | ${index}`;
+}
+
+function readNumber(row: Record<string, unknown>, key: string) {
+  const raw = row[key];
+  const value = typeof raw === "number" ? raw : Number(raw);
+  if (Number.isFinite(value)) return value;
+  return null;
+}
+
+function writeYawQuaternion(qpos: Float64Array, yaw: number) {
+  const halfYaw = yaw / 2;
+  qpos[3] = Math.cos(halfYaw);
+  qpos[4] = 0;
+  qpos[5] = 0;
+  qpos[6] = Math.sin(halfYaw);
 }
