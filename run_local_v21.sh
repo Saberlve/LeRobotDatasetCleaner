@@ -11,7 +11,7 @@ PORT_WAS_SET=0
 if [ -n "${PORT+x}" ]; then
   PORT_WAS_SET=1
 fi
-PORT="${PORT:-3000}"
+PORT=3001
 
 port_in_use() {
   local port="$1"
@@ -44,6 +44,7 @@ fi
 
 export LOCAL_LEROBOT_DATASETS_JSON="${LOCAL_LEROBOT_DATASETS_JSON:-{\"${DATASET_ALIAS}\":\"${DATASET_ROOT}\"}}"
 export LOCAL_DATASET_BASE_URL="${LOCAL_DATASET_BASE_URL:-http://127.0.0.1:${PORT}}"
+export NEXT_PUBLIC_LOCAL_DATASET_BASE_URL="${NEXT_PUBLIC_LOCAL_DATASET_BASE_URL:-${LOCAL_DATASET_BASE_URL}}"
 
 if [ "${1:-}" = "help" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   cat <<EOF
@@ -58,6 +59,7 @@ if [ "${1:-}" = "help" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   DATASET_ROOT=${DATASET_ROOT}
   PORT=${PORT}
   LOCAL_DATASET_BASE_URL=${LOCAL_DATASET_BASE_URL}
+  NEXT_PUBLIC_LOCAL_DATASET_BASE_URL=${NEXT_PUBLIC_LOCAL_DATASET_BASE_URL}
 
 启动后可直接访问：
   http://127.0.0.1:${PORT}/${DATASET_ALIAS}/episode_0
@@ -71,10 +73,12 @@ if [ "${1:-}" = "help" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     Next.js 启动端口，默认：${PORT}
   LOCAL_DATASET_BASE_URL
     本地数据 API 基础地址，默认：${LOCAL_DATASET_BASE_URL}
+  NEXT_PUBLIC_LOCAL_DATASET_BASE_URL
+    前端使用的本地数据 API 基础地址，默认：${NEXT_PUBLIC_LOCAL_DATASET_BASE_URL}
 
 示例：
   ./run_local_v21.sh
-  PORT=3001 LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 ./run_local_v21.sh
+  PORT=3001 LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 NEXT_PUBLIC_LOCAL_DATASET_BASE_URL=http://127.0.0.1:3001 ./run_local_v21.sh
 EOF
   exit 0
 fi

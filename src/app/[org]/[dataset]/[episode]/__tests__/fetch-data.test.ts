@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { computeColumnMinMax } from "@/app/[org]/[dataset]/[episode]/fetch-data";
+import {
+  buildV2ColumnDefinitions,
+  computeColumnMinMax,
+  extractFeatureVector,
+  getPositiveVectorDim,
+} from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import type { ChartRow } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 
 // ---------------------------------------------------------------------------
@@ -55,6 +60,48 @@ describe("computeColumnMinMax — flat numeric values (v2.x / v3.0 style)", () =
     const result = computeColumnMinMax(groups);
     expect(result[0].min).toBe(3.0);
     expect(result[0].max).toBe(3.0);
+  });
+});
+
+describe("cross-episode vector helpers", () => {
+  test("treats non-positive feature shapes as unknown instead of valid dimensions", () => {
+    expect(getPositiveVectorDim([-1])).toBe(0);
+    expect(getPositiveVectorDim([0])).toBe(0);
+    expect(getPositiveVectorDim([6])).toBe(6);
+  });
+
+  test("extracts action vectors from dotted parquet columns when shape is unknown", () => {
+    const row = {
+      "action.0": 0.1,
+      "action.1": -0.2,
+      "action.2": 0.3,
+    };
+
+    expect(extractFeatureVector(row, "action", 0)).toEqual([0.1, -0.2, 0.3]);
+  });
+
+  test("expands v2.x unknown-length vector features from actual parquet rows", () => {
+    const columns = buildV2ColumnDefinitions(
+      [
+        {
+          key: "states",
+          length: -1,
+          names: null,
+        },
+      ],
+      [
+        {
+          states: Array.from({ length: 32 }, (_, index) => index),
+        },
+      ],
+    );
+
+    expect(columns).toEqual([
+      {
+        key: "states",
+        value: Array.from({ length: 32 }, (_, index) => `states | ${index}`),
+      },
+    ]);
   });
 });
 

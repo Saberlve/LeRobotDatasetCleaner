@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useEffect, useState } from "react";
-import URDFViewer from "@/components/urdf-viewer";
+import type { EpisodeData } from "@/app/[org]/[dataset]/[episode]/fetch-data";
+import MujocoSimViewer from "@/components/mujoco-sim-viewer";
 import {
   buildG1QposFrame,
   extractOrderedG1StateColumns,
@@ -14,7 +15,7 @@ type G1MujocoReplayProps = {
   datasetInfo: { robot_type: string | null; fps: number };
   episodeId: number;
   initialChartData: ChartRow[];
-  fallbackData?: React.ComponentProps<typeof URDFViewer>["data"];
+  fallbackData?: EpisodeData;
 };
 
 type ReplayStatus = "loading" | "ready" | "error";
@@ -40,7 +41,7 @@ export default function G1MujocoReplay({
   useEffect(() => {
     let cancelled = false;
 
-    async function init() {
+    function init() {
       try {
         const firstRow = initialChartData[0];
         if (!firstRow) {
@@ -48,13 +49,7 @@ export default function G1MujocoReplay({
         }
 
         const orderedColumns = extractOrderedG1StateColumns(firstRow);
-        const qpos = buildG1QposFrame(firstRow, orderedColumns);
-
-        const MUJOCO_MODULE = "@mujoco/mujoco";
-        const loadMujocoModule = await import(MUJOCO_MODULE);
-        const loadMujoco = loadMujocoModule.default;
-        const mujoco = await loadMujoco();
-        mujoco.mj_forward?.({}, { qpos });
+        buildG1QposFrame(firstRow, orderedColumns);
 
         if (!cancelled) {
           setStatus("ready");
@@ -67,7 +62,7 @@ export default function G1MujocoReplay({
       }
     }
 
-    void init();
+    init();
 
     return () => {
       cancelled = true;
@@ -77,9 +72,12 @@ export default function G1MujocoReplay({
   useEffect(() => {
     if (!playing || status !== "ready") return;
 
-    const timer = window.setInterval(() => {
-      setFrame((current) => (current + 1) % initialChartData.length);
-    }, 1000 / Math.max(datasetInfo.fps || 30, 1));
+    const timer = window.setInterval(
+      () => {
+        setFrame((current) => (current + 1) % initialChartData.length);
+      },
+      1000 / Math.max(datasetInfo.fps || 30, 1),
+    );
 
     return () => window.clearInterval(timer);
   }, [datasetInfo.fps, initialChartData.length, playing, status]);
@@ -89,11 +87,11 @@ export default function G1MujocoReplay({
   }
 
   if (status === "error") {
-    if (fallbackData) {
-      return <URDFViewer data={fallbackData} />;
-    }
-
     return <div className="p-6 text-red-400">Replay unavailable: {error}</div>;
+  }
+
+  if (fallbackData) {
+    return <MujocoSimViewer data={fallbackData} showPhysicsToggle={false} />;
   }
 
   return (

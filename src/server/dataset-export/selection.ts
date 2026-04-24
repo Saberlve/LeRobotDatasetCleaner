@@ -22,11 +22,20 @@ export function buildEpisodeSelectionPlan(input: {
     throw new Error("Total episodes must be a positive integer");
   }
 
-  const sourceEpisodeIds = Array.from({ length: input.totalEpisodes }, (_, index) => index);
-  const flaggedEpisodeIds = [...new Set(input.flaggedEpisodeIds)].sort((a, b) => a - b);
+  const sourceEpisodeIds = Array.from(
+    { length: input.totalEpisodes },
+    (_, index) => index,
+  );
+  const flaggedEpisodeIds = [...new Set(input.flaggedEpisodeIds)].sort(
+    (a, b) => a - b,
+  );
 
   for (const episodeId of flaggedEpisodeIds) {
-    if (!Number.isInteger(episodeId) || episodeId < 0 || episodeId >= input.totalEpisodes) {
+    if (
+      !Number.isInteger(episodeId) ||
+      episodeId < 0 ||
+      episodeId >= input.totalEpisodes
+    ) {
       throw new Error(`Flagged episode id ${episodeId} is out of range`);
     }
   }
@@ -46,9 +55,14 @@ export function buildEpisodeSelectionPlan(input: {
   }
 
   const keptEpisodeIdSet = new Set(keptEpisodeIds);
-  const droppedEpisodeIds = sourceEpisodeIds.filter((episodeId) => !keptEpisodeIdSet.has(episodeId));
+  const droppedEpisodeIds = sourceEpisodeIds.filter(
+    (episodeId) => !keptEpisodeIdSet.has(episodeId),
+  );
   const episodeIdMap = Object.fromEntries(
-    keptEpisodeIds.map((episodeId, nextEpisodeId) => [episodeId, nextEpisodeId]),
+    keptEpisodeIds.map((episodeId, nextEpisodeId) => [
+      episodeId,
+      nextEpisodeId,
+    ]),
   );
 
   return {

@@ -89,7 +89,11 @@ describe("buildEpisodeSelectionPlan", () => {
 
 describe("defaultExportAlias", () => {
   test("adds mode suffix to local repo display name", () => {
-    expect(defaultExportAlias("local/demo_box", "flagged")).toBe("demo_box_flagged");
-    expect(defaultExportAlias("local/demo_box", "unflagged")).toBe("demo_box_unflagged");
+    expect(defaultExportAlias("local/demo_box", "flagged")).toBe(
+      "demo_box_flagged",
+    );
+    expect(defaultExportAlias("local/demo_box", "unflagged")).toBe(
+      "demo_box_unflagged",
+    );
   });
 });

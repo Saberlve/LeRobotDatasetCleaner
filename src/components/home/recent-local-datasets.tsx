@@ -26,7 +26,10 @@ export function RecentLocalDatasets() {
         const response = await fetch("/api/local-datasets/registry", {
           cache: "no-store",
         });
-        const payload = (await response.json()) as { entries?: RecentEntry[]; error?: string };
+        const payload = (await response.json()) as {
+          entries?: RecentEntry[];
+          error?: string;
+        };
 
         if (!response.ok) {
           throw new Error(payload.error ?? "最近导入列表读取失败");
@@ -36,7 +39,9 @@ export function RecentLocalDatasets() {
           return;
         }
 
-        const nextEntries = Array.isArray(payload.entries) ? payload.entries : [];
+        const nextEntries = Array.isArray(payload.entries)
+          ? payload.entries
+          : [];
         setEntries(nextEntries);
         setStatus(nextEntries.length > 0 ? "" : "还没有导入过本地数据集。");
       } catch (error) {
@@ -45,7 +50,9 @@ export function RecentLocalDatasets() {
         }
 
         setEntries([]);
-        setStatus(error instanceof Error ? error.message : "最近导入列表读取失败");
+        setStatus(
+          error instanceof Error ? error.message : "最近导入列表读取失败",
+        );
       }
     }
 
@@ -62,7 +69,9 @@ export function RecentLocalDatasets() {
         <h3 className="text-sm font-medium uppercase tracking-[0.25em] text-slate-400">
           最近导入
         </h3>
-        <span className="text-xs text-slate-500">{entries.length > 0 ? `${entries.length} 项` : ""}</span>
+        <span className="text-xs text-slate-500">
+          {entries.length > 0 ? `${entries.length} 项` : ""}
+        </span>
       </div>
 
       {status ? (
@@ -80,10 +89,15 @@ export function RecentLocalDatasets() {
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white">{entry.displayName}</p>
-                  <p className="mt-1 break-all text-xs text-slate-400">{entry.path}</p>
+                  <p className="text-sm font-semibold text-white">
+                    {entry.displayName}
+                  </p>
+                  <p className="mt-1 break-all text-xs text-slate-400">
+                    {entry.path}
+                  </p>
                   <p className="mt-2 text-xs text-slate-300">
-                    {entry.version} · {entry.totalEpisodes} episodes · {entry.fps} FPS
+                    {entry.version} · {entry.totalEpisodes} episodes ·{" "}
+                    {entry.fps} FPS
                     {entry.robotType ? ` · ${entry.robotType}` : ""}
                   </p>
                 </div>

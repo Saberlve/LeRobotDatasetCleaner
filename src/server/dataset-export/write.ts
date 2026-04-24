@@ -23,7 +23,10 @@ function buildTempOutputPath(outputPath: string): string {
   return `${outputPath}.tmp-${process.pid}-${Date.now()}`;
 }
 
-async function resolveEpisodeDataPath(datasetPath: string, dataFile: string): Promise<string> {
+async function resolveEpisodeDataPath(
+  datasetPath: string,
+  dataFile: string,
+): Promise<string> {
   if (path.isAbsolute(dataFile)) {
     throw new Error("Episode data_file must stay within the dataset root");
   }
@@ -80,7 +83,10 @@ export async function writeFilteredDataset(input: {
         episode.dataFile,
       );
       const rawEpisodeData = await fs.readFile(sourceDataPath, "utf8");
-      const parsedEpisodeData = JSON.parse(rawEpisodeData) as Record<string, unknown>;
+      const parsedEpisodeData = JSON.parse(rawEpisodeData) as Record<
+        string,
+        unknown
+      >;
 
       return {
         outputDataPath: path.join(input.outputPath, nextDataFile),
@@ -115,7 +121,9 @@ export async function writeFilteredDataset(input: {
       ),
     );
 
-    const rewrittenEpisodes = preparedEpisodes.map(({ rewrittenEpisode }) => rewrittenEpisode);
+    const rewrittenEpisodes = preparedEpisodes.map(
+      ({ rewrittenEpisode }) => rewrittenEpisode,
+    );
 
     await fs.writeFile(
       path.join(tempOutputPath, "meta", "episodes.jsonl"),

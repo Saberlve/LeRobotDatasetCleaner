@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import EpisodeViewer from "@/app/[org]/[dataset]/[episode]/episode-viewer";
 
@@ -42,12 +48,12 @@ vi.mock("@/components/loading-component", () => ({
   default: () => <div data-testid="loading" />,
 }));
 
-function makeEpisodeData(robotType: string) {
+function makeEpisodeData(robotType: string, codebaseVersion = "v3.0") {
   return {
     datasetInfo: {
       repoId: `local/demo_${robotType}`,
       robot_type: robotType,
-      codebase_version: "v3.0",
+      codebase_version: codebaseVersion,
       fps: 30,
     },
     episodeId: 0,
@@ -82,11 +88,24 @@ describe("EpisodeViewer replay tab", () => {
   test("shows Replay for G1 datasets and hides legacy labels", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    expect((await screen.findByRole("button", { name: "Replay" })).textContent).toBe(
-      "Replay",
-    );
+    expect(
+      (await screen.findByRole("button", { name: "Replay" })).textContent,
+    ).toBe("Replay");
     expect(screen.queryByRole("button", { name: "3D Replay" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sim Replay" })).toBeNull();
+  });
+
+  test("shows Replay for local v2.1 G1 datasets", async () => {
+    mocks.getEpisodeDataSafe.mockResolvedValueOnce({
+      data: makeEpisodeData("g1", "v2.1"),
+      error: null,
+    });
+
+    render(
+      <EpisodeViewer org="local" dataset="straighten_the_box" episodeId={0} />,
+    );
+
+    expect(await screen.findByRole("button", { name: "Replay" })).toBeDefined();
   });
 
   test("routes ArrowDown from replay to the next episode", async () => {
@@ -95,9 +114,11 @@ describe("EpisodeViewer replay tab", () => {
     const replayButton = await screen.findByRole("button", { name: "Replay" });
     replayButton.click();
 
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+    fireEvent.keyDown(window, { key: "ArrowDown" });
 
-    expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1");
+    await waitFor(() => {
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1");
+    });
   });
 
   test("does not show Replay for non-G1 datasets", async () => {

@@ -9,6 +9,25 @@ import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
 
 const PAGE_SIZE = 48;
 
+export function resolvePreviewSeekTime(
+  info: EpisodeFrameInfo,
+  showLast: boolean,
+  duration: number,
+): number {
+  if (!showLast) {
+    return Math.max(0, info.firstFrameTime);
+  }
+
+  const epsilon = 1 / 60;
+  const unclampedLast = info.lastFrameTime ?? Math.max(0, duration - epsilon);
+  const maxSeek =
+    Number.isFinite(duration) && duration > 0
+      ? Math.max(0, duration - epsilon)
+      : unclampedLast;
+
+  return Math.max(info.firstFrameTime, Math.min(unclampedLast, maxSeek));
+}
+
 function FrameThumbnail({
   info,
   showLast,
@@ -41,19 +60,24 @@ function FrameThumbnail({
     if (!video || !inView) return;
 
     const seek = () => {
-      if (showLast) {
-        video.currentTime =
-          info.lastFrameTime ?? Math.max(0, video.duration - 0.05);
-      } else {
-        video.currentTime = info.firstFrameTime;
+      video.pause();
+      const target = resolvePreviewSeekTime(info, showLast, video.duration);
+      if (Math.abs(video.currentTime - target) < 1e-3) {
+        return;
       }
+
+      const handleSeeked = () => {
+        video.pause();
+      };
+      video.addEventListener("seeked", handleSeeked, { once: true });
+      video.currentTime = target;
     };
 
-    if (video.readyState >= 1) {
+    if (video.readyState >= 2) {
       seek();
     } else {
-      video.addEventListener("loadedmetadata", seek, { once: true });
-      return () => video.removeEventListener("loadedmetadata", seek);
+      video.addEventListener("loadeddata", seek, { once: true });
+      return () => video.removeEventListener("loadeddata", seek);
     }
   }, [inView, showLast, info]);
 

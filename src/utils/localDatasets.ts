@@ -9,14 +9,27 @@ export function isLocalDatasetRepoId(repoId: string): boolean {
 }
 
 export function getLocalDatasetBaseUrl(): string {
-  return (
-    process.env.LOCAL_DATASET_BASE_URL ||
+  const configuredBaseUrl =
     process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL ||
-    "http://127.0.0.1:3000"
-  );
+    process.env.LOCAL_DATASET_BASE_URL;
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
+  return "http://127.0.0.1:3000";
 }
 
-export function buildLocalDatasetUrl(repoId: string, assetPath: string): string {
+export function buildLocalDatasetUrl(
+  repoId: string,
+  assetPath: string,
+): string {
   const trimmedPath = assetPath.replace(/^\/+/, "");
-  return `${getLocalDatasetBaseUrl()}/api/local-datasets/${repoId}/${trimmedPath}`;
+  const baseUrl = getLocalDatasetBaseUrl();
+  const routePath = `/api/local-datasets/${repoId}/${trimmedPath}`;
+  return baseUrl ? `${baseUrl}${routePath}` : routePath;
 }

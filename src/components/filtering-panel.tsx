@@ -254,7 +254,8 @@ export function getFilteringExportState(input: {
   const disableForMode =
     input.mode === "flagged"
       ? input.flaggedCount === 0
-      : input.totalEpisodes != null && input.flaggedCount >= input.totalEpisodes;
+      : input.totalEpisodes != null &&
+        input.flaggedCount >= input.totalEpisodes;
 
   let reason: string | null = null;
   if (!isLocalRepo) {
@@ -266,7 +267,8 @@ export function getFilteringExportState(input: {
     input.totalEpisodes != null &&
     input.flaggedCount >= input.totalEpisodes
   ) {
-    reason = "All episodes are flagged, so there is no unflagged subset to export.";
+    reason =
+      "All episodes are flagged, so there is no unflagged subset to export.";
   } else if (!input.outputPath.trim()) {
     reason = "Choose an output directory before exporting.";
   }
@@ -274,7 +276,11 @@ export function getFilteringExportState(input: {
   return {
     isLocalRepo,
     disableForMode,
-    disabled: !isLocalRepo || disableForMode || !input.outputPath.trim() || input.submitting,
+    disabled:
+      !isLocalRepo ||
+      disableForMode ||
+      !input.outputPath.trim() ||
+      input.submitting,
     reason,
   };
 }
@@ -291,7 +297,10 @@ function FlaggedExportCard({
   totalEpisodes: number | null;
 }) {
   const { flagged, count } = useFlaggedEpisodes();
-  const flaggedIds = useMemo(() => [...flagged].sort((a, b) => a - b), [flagged]);
+  const flaggedIds = useMemo(
+    () => [...flagged].sort((a, b) => a - b),
+    [flagged],
+  );
   const [mode, setMode] = useState<ExportMode>("flagged");
   const [outputPath, setOutputPath] = useState("");
   const [alias, setAlias] = useState("");
@@ -358,7 +367,9 @@ function FlaggedExportCard({
       });
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error ? caughtError.message : "Dataset export failed.",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Dataset export failed.",
       );
     } finally {
       setSubmitting(false);

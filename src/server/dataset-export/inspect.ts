@@ -22,12 +22,20 @@ function assertValidEpisodeRecord(
   const episodeIndex = raw.episode_index;
   const dataFile = raw.data_file;
 
-  if (typeof episodeIndex !== "number" || !Number.isInteger(episodeIndex) || episodeIndex < 0) {
-    throw new Error("Episode metadata is invalid: episode_index must be a non-negative integer");
+  if (
+    typeof episodeIndex !== "number" ||
+    !Number.isInteger(episodeIndex) ||
+    episodeIndex < 0
+  ) {
+    throw new Error(
+      "Episode metadata is invalid: episode_index must be a non-negative integer",
+    );
   }
 
   if (typeof dataFile !== "string" || !dataFile.trim()) {
-    throw new Error("Episode metadata is invalid: data_file must be a non-empty string");
+    throw new Error(
+      "Episode metadata is invalid: data_file must be a non-empty string",
+    );
   }
 
   if (seenEpisodeIndexes.has(episodeIndex)) {
@@ -51,7 +59,9 @@ export async function inspectExportableDataset(
   ) as Record<string, unknown>;
 
   const seenEpisodeIndexes = new Set<number>();
-  const episodes = (await fs.readFile(path.join(datasetPath, "meta", "episodes.jsonl"), "utf8"))
+  const episodes = (
+    await fs.readFile(path.join(datasetPath, "meta", "episodes.jsonl"), "utf8")
+  )
     .trim()
     .split("\n")
     .filter(Boolean)

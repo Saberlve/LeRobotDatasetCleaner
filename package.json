@@ -15,6 +15,7 @@
     "validate": "npm run type-check && npm run lint && npm run format:check && npm run test"
   },
   "dependencies": {
+    "@mujoco/mujoco": "^3.7.0",
     "@next/swc-linux-x64-gnu": "^15.3.5",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
@@ -29,19 +30,19 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
-    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.182.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
+    "jsdom": "^26.1.0",
     "prettier": "3.8.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "jsdom": "^26.1.0",
     "vitest": "^3.2.4"
   }
 }
