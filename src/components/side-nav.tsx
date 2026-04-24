@@ -3,6 +3,10 @@
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
+import {
+  filterEpisodeIdsByModeKeepingCurrent,
+  type EpisodeFilterMode,
+} from "@/components/episode-filter-mode";
 
 import type { DatasetDisplayInfo } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 
@@ -14,8 +18,8 @@ interface SidebarProps {
   currentPage: number;
   prevPage: () => void;
   nextPage: () => void;
-  showFlaggedOnly: boolean;
-  onShowFlaggedOnlyChange: (v: boolean) => void;
+  episodeFilterMode: EpisodeFilterMode;
+  onEpisodeFilterModeChange: (mode: EpisodeFilterMode) => void;
   onEpisodeSelect?: (ep: number) => void;
 }
 
@@ -27,17 +31,33 @@ const Sidebar: React.FC<SidebarProps> = ({
   currentPage,
   prevPage,
   nextPage,
-  showFlaggedOnly,
-  onShowFlaggedOnlyChange,
+  episodeFilterMode,
+  onEpisodeFilterModeChange,
   onEpisodeSelect,
 }) => {
   const [mobileVisible, setMobileVisible] = useState(false);
   const { flagged, count, toggle } = useFlaggedEpisodes();
+  const unflaggedCount = Math.max(0, datasetInfo.total_episodes - count);
 
   const displayEpisodes = useMemo(() => {
-    if (!showFlaggedOnly || count === 0) return paginatedEpisodes;
-    return [...flagged].sort((a, b) => a - b);
-  }, [paginatedEpisodes, showFlaggedOnly, flagged, count]);
+    if (episodeFilterMode === "all") return paginatedEpisodes;
+    const allEpisodes = Array.from(
+      { length: datasetInfo.total_episodes },
+      (_, index) => index,
+    );
+    return filterEpisodeIdsByModeKeepingCurrent({
+      episodes: allEpisodes,
+      flagged,
+      mode: episodeFilterMode,
+      currentEpisode: episodeId,
+    }).sort((a, b) => a - b);
+  }, [
+    datasetInfo.total_episodes,
+    paginatedEpisodes,
+    episodeFilterMode,
+    flagged,
+    episodeId,
+  ]);
 
   return (
     <div className="flex z-10 shrink-0">
@@ -53,20 +73,27 @@ const Sidebar: React.FC<SidebarProps> = ({
           <li>FPS: {datasetInfo.fps}</li>
         </ul>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 space-y-2">
           <p className="text-sm font-semibold text-slate-200">Episodes:</p>
-          {count > 0 && (
-            <button
-              onClick={() => onShowFlaggedOnlyChange(!showFlaggedOnly)}
-              className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
-                showFlaggedOnly
-                  ? "bg-orange-500/20 text-orange-400 border border-orange-500/40"
-                  : "text-slate-500 hover:text-slate-300 border border-slate-700"
-              }`}
-            >
-              Flagged ({count})
-            </button>
-          )}
+          <div className="flex flex-wrap gap-1">
+            {[
+              ["all", "All"] as const,
+              ["flagged", `Flagged (${count})`] as const,
+              ["unflagged", `Unflagged (${unflaggedCount})`] as const,
+            ].map(([mode, label]) => (
+              <button
+                key={mode}
+                onClick={() => onEpisodeFilterModeChange(mode)}
+                className={`text-xs px-1.5 py-0.5 rounded transition-colors ${
+                  episodeFilterMode === mode
+                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/40"
+                    : "text-slate-500 hover:text-slate-300 border border-slate-700"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="ml-2 mt-1">
@@ -106,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             ))}
           </ul>
 
-          {!showFlaggedOnly && totalPages > 1 && (
+          {episodeFilterMode === "all" && totalPages > 1 && (
             <div className="mt-3 flex items-center text-xs">
               <button
                 onClick={prevPage}

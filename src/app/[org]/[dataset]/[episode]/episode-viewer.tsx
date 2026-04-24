@@ -15,7 +15,10 @@ import { SimpleVideosPlayer } from "@/components/simple-videos-player";
 import DataRecharts from "@/components/data-recharts";
 import PlaybackBar from "@/components/playback-bar";
 import { TimeProvider, useTime } from "@/context/time-context";
-import { FlaggedEpisodesProvider } from "@/context/flagged-episodes-context";
+import {
+  FlaggedEpisodesProvider,
+  useFlaggedEpisodes,
+} from "@/context/flagged-episodes-context";
 import Sidebar from "@/components/side-nav";
 import StatsPanel from "@/components/stats-panel";
 import OverviewPanel from "@/components/overview-panel";
@@ -38,6 +41,11 @@ import {
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import { isLocalDatasetRepoId } from "@/utils/localDatasets";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
+import {
+  getAdjacentEpisodeInFilter,
+  resolveStoredEpisodeFilterMode,
+  type EpisodeFilterMode,
+} from "@/components/episode-filter-mode";
 
 const G1MujocoReplay = lazy(() => import("@/components/g1-mujoco-replay"));
 const ActionInsightsPanel = lazy(
@@ -206,8 +214,11 @@ function EpisodeViewerInner({
     useState<EpisodeFramesData | null>(null);
   const [framesLoading, setFramesLoading] = useState(false);
   const framesLoadedRef = useRef(false);
-  const [framesFlaggedOnly, setFramesFlaggedOnly] = useState(false);
-  const [sidebarFlaggedOnly, setSidebarFlaggedOnly] = useState(false);
+  const [framesFilterMode, setFramesFilterMode] =
+    useState<EpisodeFilterMode>("all");
+  const [sidebarFilterMode, setSidebarFilterMode] =
+    useState<EpisodeFilterMode>("all");
+  const [uiStateHydrated, setUiStateHydrated] = useState(false);
   const [crossEpData, setCrossEpData] =
     useState<CrossEpisodeVarianceData | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
@@ -235,23 +246,39 @@ function EpisodeViewerInner({
     const urlTab = resolveActiveTab(tabParam, canShowReplay);
     const storedTab = getStoredActiveTab(canShowReplay);
     setActiveTab(urlTab ?? storedTab ?? "episodes");
-    if (sessionStorage.getItem("framesFlaggedOnly") === "true")
-      setFramesFlaggedOnly(true);
-    if (sessionStorage.getItem("sidebarFlaggedOnly") === "true")
-      setSidebarFlaggedOnly(true);
+    setFramesFilterMode(
+      resolveStoredEpisodeFilterMode(
+        sessionStorage.getItem("framesFilterMode") ??
+          (sessionStorage.getItem("framesFlaggedOnly") === "true"
+            ? "flagged"
+            : null),
+      ),
+    );
+    setSidebarFilterMode(
+      resolveStoredEpisodeFilterMode(
+        sessionStorage.getItem("sidebarFilterMode") ??
+          (sessionStorage.getItem("sidebarFlaggedOnly") === "true"
+            ? "flagged"
+            : null),
+      ),
+    );
+    setUiStateHydrated(true);
   }, [canShowReplay, tabParam]);
 
   // Persist UI state across episode navigations
   useEffect(() => {
+    if (!uiStateHydrated) return;
     activeTabRef.current = activeTab;
     sessionStorage.setItem("activeTab", activeTab);
-  }, [activeTab]);
+  }, [activeTab, uiStateHydrated]);
   useEffect(() => {
-    sessionStorage.setItem("sidebarFlaggedOnly", String(sidebarFlaggedOnly));
-  }, [sidebarFlaggedOnly]);
+    if (!uiStateHydrated) return;
+    sessionStorage.setItem("sidebarFilterMode", sidebarFilterMode);
+  }, [sidebarFilterMode, uiStateHydrated]);
   useEffect(() => {
-    sessionStorage.setItem("framesFlaggedOnly", String(framesFlaggedOnly));
-  }, [framesFlaggedOnly]);
+    if (!uiStateHydrated) return;
+    sessionStorage.setItem("framesFilterMode", framesFilterMode);
+  }, [framesFilterMode, uiStateHydrated]);
 
   const loadStats = () => {
     if (statsLoadedRef.current) return;
@@ -354,6 +381,7 @@ function EpisodeViewerInner({
 
   // Use context for time sync
   const { currentTime, setCurrentTime, setIsPlaying, isPlaying } = useTime();
+  const { flagged, toggle } = useFlaggedEpisodes();
 
   const getEpisodeRoute = useCallback(
     (nextEpisodeId: number) => {
@@ -426,25 +454,52 @@ function EpisodeViewerInner({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const { key } = e;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
 
       if (key === " ") {
         e.preventDefault();
         setIsPlaying((prev: boolean) => !prev);
+      } else if (key.toLowerCase() === "f") {
+        e.preventDefault();
+        toggle(episodeId);
       } else if (key === "ArrowDown" || key === "ArrowUp") {
         e.preventDefault();
-        const nextEpisodeId =
-          key === "ArrowDown" ? episodeId + 1 : episodeId - 1;
-        const lowestEpisodeId = episodes[0];
-        const highestEpisodeId = episodes[episodes.length - 1];
-        if (
-          nextEpisodeId >= lowestEpisodeId &&
-          nextEpisodeId <= highestEpisodeId
-        ) {
+        const filterMode =
+          activeTabRef.current === "frames"
+            ? framesFilterMode
+            : sidebarFilterMode;
+        const nextEpisodeId = getAdjacentEpisodeInFilter({
+          episodes,
+          flagged,
+          mode: filterMode,
+          currentEpisode: episodeId,
+          direction: key === "ArrowDown" ? 1 : -1,
+        });
+        if (nextEpisodeId !== null) {
           router.push(getEpisodeRoute(nextEpisodeId));
         }
       }
     },
-    [episodeId, episodes, getEpisodeRoute, router, setIsPlaying],
+    [
+      episodeId,
+      episodes,
+      flagged,
+      framesFilterMode,
+      getEpisodeRoute,
+      router,
+      setIsPlaying,
+      sidebarFilterMode,
+      toggle,
+    ],
   );
 
   // Initialize based on URL time parameter
@@ -614,8 +669,8 @@ function EpisodeViewerInner({
             currentPage={currentPage}
             prevPage={prevPage}
             nextPage={nextPage}
-            showFlaggedOnly={sidebarFlaggedOnly}
-            onShowFlaggedOnlyChange={setSidebarFlaggedOnly}
+            episodeFilterMode={sidebarFilterMode}
+            onEpisodeFilterModeChange={setSidebarFilterMode}
             onEpisodeSelect={
               activeTab === "replay"
                 ? (ep) => {
@@ -703,8 +758,8 @@ function EpisodeViewerInner({
             <OverviewPanel
               data={episodeFramesData}
               loading={framesLoading}
-              flaggedOnly={framesFlaggedOnly}
-              onFlaggedOnlyChange={setFramesFlaggedOnly}
+              episodeFilterMode={framesFilterMode}
+              onEpisodeFilterModeChange={setFramesFilterMode}
             />
           )}
 
@@ -728,7 +783,7 @@ function EpisodeViewerInner({
                 episodeLengthStats={episodeLengthStats}
                 flatChartData={data.flatChartData}
                 onViewFlaggedEpisodes={() => {
-                  setSidebarFlaggedOnly(true);
+                  setSidebarFilterMode("flagged");
                   handleTabChange("episodes");
                 }}
               />

@@ -88,6 +88,7 @@ function makeEpisodeData(robotType: string, codebaseVersion = "v3.0") {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   mocks.getEpisodeDataSafe.mockResolvedValue({
     data: makeEpisodeData("g1"),
     error: null,
@@ -96,6 +97,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -141,6 +143,42 @@ describe("EpisodeViewer replay tab", () => {
     await waitFor(() => {
       expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1?tab=replay");
     });
+  });
+
+  test("toggles the current episode flag with f", async () => {
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    await screen.findByRole("button", { name: "Replay" });
+
+    fireEvent.keyDown(window, { key: "f" });
+
+    await waitFor(() => {
+      expect(sessionStorage.getItem("flagged-episodes")).toBe("[0]");
+    });
+  });
+
+  test("routes ArrowDown to the next visible episode in flagged filter mode", async () => {
+    sessionStorage.setItem("sidebarFilterMode", "flagged");
+    sessionStorage.setItem("flagged-episodes", "[2]");
+
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    await screen.findByRole("button", { name: "Replay" });
+
+    await waitFor(() => {
+      fireEvent.keyDown(window, { key: "ArrowDown" });
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_2");
+    });
+  });
+
+  test("preserves the stored sidebar filter mode while hydrating", async () => {
+    sessionStorage.setItem("sidebarFilterMode", "flagged");
+
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    await screen.findByRole("button", { name: "Replay" });
+
+    expect(sessionStorage.getItem("sidebarFilterMode")).toBe("flagged");
   });
 
   test("does not show Replay for non-G1 datasets", async () => {
