@@ -1,0 +1,187 @@
+<mujoco model="g1_replay">
+  <compiler angle="radian" meshdir="assets" autolimits="true" />
+  <option timestep="0.0166667" gravity="0 0 -9.81" integrator="Euler" />
+
+  <visual>
+    <headlight ambient="0.6 0.6 0.6" diffuse="0.7 0.7 0.7" specular="0.1 0.1 0.1" />
+    <rgba haze="0.15 0.25 0.35 1" />
+  </visual>
+
+  <asset>
+    <material name="dark" rgba="0.18 0.18 0.2 1" />
+    <material name="light" rgba="0.78 0.8 0.82 1" />
+    <material name="accent" rgba="0.95 0.48 0.12 1" />
+
+    <mesh name="pelvis" file="pelvis.STL" />
+    <mesh name="pelvis_contour_link" file="pelvis_contour_link.STL" />
+    <mesh name="left_hip_pitch_link" file="left_hip_pitch_link.STL" />
+    <mesh name="left_hip_roll_link" file="left_hip_roll_link.STL" />
+    <mesh name="left_hip_yaw_link" file="left_hip_yaw_link.STL" />
+    <mesh name="left_knee_link" file="left_knee_link.STL" />
+    <mesh name="left_ankle_pitch_link" file="left_ankle_pitch_link.STL" />
+    <mesh name="left_ankle_roll_link" file="left_ankle_roll_link.STL" />
+    <mesh name="right_hip_pitch_link" file="right_hip_pitch_link.STL" />
+    <mesh name="right_hip_roll_link" file="right_hip_roll_link.STL" />
+    <mesh name="right_hip_yaw_link" file="right_hip_yaw_link.STL" />
+    <mesh name="right_knee_link" file="right_knee_link.STL" />
+    <mesh name="right_ankle_pitch_link" file="right_ankle_pitch_link.STL" />
+    <mesh name="right_ankle_roll_link" file="right_ankle_roll_link.STL" />
+    <mesh name="waist_yaw_link_rev_1_0" file="waist_yaw_link_rev_1_0.STL" />
+    <mesh name="waist_roll_link_rev_1_0" file="waist_roll_link_rev_1_0.STL" />
+    <mesh name="torso_link_rev_1_0" file="torso_link_rev_1_0.STL" />
+    <mesh name="logo_link" file="logo_link.STL" />
+    <mesh name="head_link" file="head_link.STL" />
+    <mesh name="left_shoulder_pitch_link" file="left_shoulder_pitch_link.STL" />
+    <mesh name="left_shoulder_roll_link" file="left_shoulder_roll_link.STL" />
+    <mesh name="left_shoulder_yaw_link" file="left_shoulder_yaw_link.STL" />
+    <mesh name="left_elbow_link" file="left_elbow_link.STL" />
+    <mesh name="left_wrist_roll_link" file="left_wrist_roll_link.STL" />
+    <mesh name="left_wrist_pitch_link" file="left_wrist_pitch_link.STL" />
+    <mesh name="left_wrist_yaw_link" file="left_wrist_yaw_link.STL" />
+    <mesh name="left_rubber_hand" file="left_rubber_hand.STL" />
+    <mesh name="right_shoulder_pitch_link" file="right_shoulder_pitch_link.STL" />
+    <mesh name="right_shoulder_roll_link" file="right_shoulder_roll_link.STL" />
+    <mesh name="right_shoulder_yaw_link" file="right_shoulder_yaw_link.STL" />
+    <mesh name="right_elbow_link" file="right_elbow_link.STL" />
+    <mesh name="right_wrist_roll_link" file="right_wrist_roll_link.STL" />
+    <mesh name="right_wrist_pitch_link" file="right_wrist_pitch_link.STL" />
+    <mesh name="right_wrist_yaw_link" file="right_wrist_yaw_link.STL" />
+    <mesh name="right_rubber_hand" file="right_rubber_hand.STL" />
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="8 8 0.1" rgba="0.16 0.18 0.2 1" />
+
+    <body name="pelvis_root" pos="0 0 0.793">
+      <freejoint name="floating_base_joint" />
+      <inertial pos="0 0 0" mass="12" diaginertia="0.25 0.25 0.25" />
+      <geom mesh="pelvis" material="dark" />
+      <geom mesh="pelvis_contour_link" material="light" />
+
+      <body name="left_hip_pitch_link" pos="0 0.064452 -0.1027">
+        <joint name="left_hip_pitch_joint" axis="0 1 0" range="-2.6 2.9" />
+        <geom mesh="left_hip_pitch_link" material="dark" />
+        <body name="left_hip_roll_link" pos="0 0.052 -0.030465" quat="0.996179 0 -0.0873386 0">
+          <joint name="left_hip_roll_joint" axis="1 0 0" range="-0.52 2.97" />
+          <geom mesh="left_hip_roll_link" material="light" />
+          <body name="left_hip_yaw_link" pos="0.025001 0 -0.12412">
+            <joint name="left_hip_yaw_joint" axis="0 0 1" range="-2.75 2.75" />
+            <geom mesh="left_hip_yaw_link" material="dark" />
+            <body name="left_knee_link" pos="-0.078273 0.0021489 -0.17734" quat="0.996179 0 0.0873386 0">
+              <joint name="left_knee_joint" axis="0 1 0" range="-0.09 2.62" />
+              <geom mesh="left_knee_link" material="light" />
+              <body name="left_ankle_pitch_link" pos="0 -9.4445e-05 -0.30001">
+                <joint name="left_ankle_pitch_joint" axis="0 1 0" range="-0.87 0.52" />
+                <geom mesh="left_ankle_pitch_link" material="dark" />
+                <body name="left_ankle_roll_link" pos="0 0 -0.017558">
+                  <joint name="left_ankle_roll_joint" axis="1 0 0" range="-0.26 0.26" />
+                  <geom mesh="left_ankle_roll_link" material="light" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="right_hip_pitch_link" pos="0 -0.064452 -0.1027">
+        <joint name="right_hip_pitch_joint" axis="0 1 0" range="-2.6 2.9" />
+        <geom mesh="right_hip_pitch_link" material="dark" />
+        <body name="right_hip_roll_link" pos="0 -0.052 -0.030465" quat="0.996179 0 -0.0873386 0">
+          <joint name="right_hip_roll_joint" axis="1 0 0" range="-2.97 0.52" />
+          <geom mesh="right_hip_roll_link" material="light" />
+          <body name="right_hip_yaw_link" pos="0.025001 0 -0.12412">
+            <joint name="right_hip_yaw_joint" axis="0 0 1" range="-2.75 2.75" />
+            <geom mesh="right_hip_yaw_link" material="dark" />
+            <body name="right_knee_link" pos="-0.078273 -0.0021489 -0.17734" quat="0.996179 0 0.0873386 0">
+              <joint name="right_knee_joint" axis="0 1 0" range="-0.09 2.62" />
+              <geom mesh="right_knee_link" material="light" />
+              <body name="right_ankle_pitch_link" pos="0 9.4445e-05 -0.30001">
+                <joint name="right_ankle_pitch_joint" axis="0 1 0" range="-0.87 0.52" />
+                <geom mesh="right_ankle_pitch_link" material="dark" />
+                <body name="right_ankle_roll_link" pos="0 0 -0.017558">
+                  <joint name="right_ankle_roll_joint" axis="1 0 0" range="-0.26 0.26" />
+                  <geom mesh="right_ankle_roll_link" material="light" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="waist_yaw_link">
+        <joint name="waist_yaw_joint" axis="0 0 1" range="-2.62 2.62" />
+        <geom mesh="waist_yaw_link_rev_1_0" material="light" />
+        <body name="waist_roll_link" pos="-0.0039635 0 0.044">
+          <joint name="waist_roll_joint" axis="1 0 0" range="-0.52 0.52" />
+          <geom mesh="waist_roll_link_rev_1_0" material="dark" />
+          <body name="torso_link">
+            <joint name="waist_pitch_joint" axis="0 1 0" range="-0.52 0.52" />
+            <geom mesh="torso_link_rev_1_0" material="dark" />
+            <geom pos="0.0039635 0 -0.044" quat="1 0 0 0" mesh="logo_link" material="accent" />
+            <geom pos="0.0039635 0 -0.044" quat="1 0 0 0" mesh="head_link" material="light" />
+
+            <body name="left_shoulder_pitch_link" pos="0.0039563 0.10022 0.24778" quat="0.990264 0.139201 1.38722e-05 -9.86868e-05">
+              <joint name="left_shoulder_pitch_joint" axis="0 1 0" range="-3.09 2.67" />
+              <geom mesh="left_shoulder_pitch_link" material="dark" />
+              <body name="left_shoulder_roll_link" pos="0 0.038 -0.013831" quat="0.990268 -0.139172 0 0">
+                <joint name="left_shoulder_roll_joint" axis="1 0 0" range="-1.59 2.25" />
+                <geom mesh="left_shoulder_roll_link" material="light" />
+                <body name="left_shoulder_yaw_link" pos="0 0.00624 -0.1032">
+                  <joint name="left_shoulder_yaw_joint" axis="0 0 1" range="-2.62 2.62" />
+                  <geom mesh="left_shoulder_yaw_link" material="dark" />
+                  <body name="left_elbow_link" pos="0.015783 0 -0.080518">
+                    <joint name="left_elbow_joint" axis="0 1 0" range="-1.05 2.09" />
+                    <geom mesh="left_elbow_link" material="light" />
+                    <body name="left_wrist_roll_link" pos="0.1 0.00188791 -0.01">
+                      <joint name="left_wrist_roll_joint" axis="1 0 0" range="-2.97 2.97" />
+                      <geom mesh="left_wrist_roll_link" material="dark" />
+                      <body name="left_wrist_pitch_link" pos="0.038 0 0">
+                        <joint name="left_wrist_pitch_joint" axis="0 1 0" range="-1.61 1.61" />
+                        <geom mesh="left_wrist_pitch_link" material="light" />
+                        <body name="left_wrist_yaw_link" pos="0.046 0 0">
+                          <joint name="left_wrist_yaw_joint" axis="0 0 1" range="-1.61 1.61" />
+                          <geom mesh="left_wrist_yaw_link" material="dark" />
+                          <geom pos="0.0415 0.003 0" mesh="left_rubber_hand" material="light" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+
+            <body name="right_shoulder_pitch_link" pos="0.0039563 -0.10021 0.24778" quat="0.990264 -0.139201 1.38722e-05 9.86868e-05">
+              <joint name="right_shoulder_pitch_joint" axis="0 1 0" range="-3.09 2.67" />
+              <geom mesh="right_shoulder_pitch_link" material="dark" />
+              <body name="right_shoulder_roll_link" pos="0 -0.038 -0.013831" quat="0.990268 0.139172 0 0">
+                <joint name="right_shoulder_roll_joint" axis="1 0 0" range="-2.25 1.59" />
+                <geom mesh="right_shoulder_roll_link" material="light" />
+                <body name="right_shoulder_yaw_link" pos="0 -0.00624 -0.1032">
+                  <joint name="right_shoulder_yaw_joint" axis="0 0 1" range="-2.62 2.62" />
+                  <geom mesh="right_shoulder_yaw_link" material="dark" />
+                  <body name="right_elbow_link" pos="0.015783 0 -0.080518">
+                    <joint name="right_elbow_joint" axis="0 1 0" range="-1.05 2.09" />
+                    <geom mesh="right_elbow_link" material="light" />
+                    <body name="right_wrist_roll_link" pos="0.1 -0.00188791 -0.01">
+                      <joint name="right_wrist_roll_joint" axis="1 0 0" range="-2.97 2.97" />
+                      <geom mesh="right_wrist_roll_link" material="dark" />
+                      <body name="right_wrist_pitch_link" pos="0.038 0 0">
+                        <joint name="right_wrist_pitch_joint" axis="0 1 0" range="-1.61 1.61" />
+                        <geom mesh="right_wrist_pitch_link" material="light" />
+                        <body name="right_wrist_yaw_link" pos="0.046 0 0">
+                          <joint name="right_wrist_yaw_joint" axis="0 0 1" range="-1.61 1.61" />
+                          <geom mesh="right_wrist_yaw_link" material="dark" />
+                          <geom pos="0.0415 -0.003 0" mesh="right_rubber_hand" material="light" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
