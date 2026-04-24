@@ -57,10 +57,7 @@ function stripMujocoGeomMeshAttributes(tag: string) {
     "group",
   ].reduce(
     (current, attribute) =>
-      current.replace(
-        new RegExp(`\\s+${attribute}=(["'])[^"']*\\1`, "g"),
-        "",
-      ),
+      current.replace(new RegExp(`\\s+${attribute}=(["'])[^"']*\\1`, "g"), ""),
     tag,
   );
 }

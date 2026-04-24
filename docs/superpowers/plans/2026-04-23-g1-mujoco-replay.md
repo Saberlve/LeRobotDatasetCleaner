@@ -36,6 +36,7 @@
 ### Task 1: Add Browser Component Test Support
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `vitest.config.ts`
 
@@ -105,6 +106,7 @@ git commit -m "test: add browser component test support"
 ### Task 2: Add Deterministic G1 Replay Helpers And Asset Validation
 
 **Files:**
+
 - Create: `src/components/g1-mujoco-replay-helpers.ts`
 - Create: `src/components/__tests__/g1-mujoco-replay-helpers.test.ts`
 
@@ -151,7 +153,9 @@ describe("buildG1QposFrame", () => {
       { length: G1_JOINT_NAMES.length },
       (_, index) => `observation.state | ${index}`,
     );
-    const row = Object.fromEntries(columns.map((column, index) => [column, index]));
+    const row = Object.fromEntries(
+      columns.map((column, index) => [column, index]),
+    );
 
     expect(Array.from(buildG1QposFrame(row, columns).slice(0, 10))).toEqual([
       0, 0, 0, 1, 0, 0, 0, 0, 1, 2,
@@ -261,6 +265,7 @@ git commit -m "test: add g1 mujoco replay helper coverage"
 ### Task 3: Add The G1 MuJoCo Replay Component With Fallback States
 
 **Files:**
+
 - Create: `src/components/g1-mujoco-replay.tsx`
 - Create: `src/components/__tests__/g1-mujoco-replay.test.tsx`
 
@@ -325,7 +330,9 @@ describe("G1MujocoReplay", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("Replay unavailable: Missing G1 state column observation.state | 1"),
+        screen.getByText(
+          "Replay unavailable: Missing G1 state column observation.state | 1",
+        ),
       ).toBeInTheDocument(),
     );
   });
@@ -409,9 +416,12 @@ export default function G1MujocoReplay({
 
   useEffect(() => {
     if (!playing || status !== "ready") return;
-    const timer = window.setInterval(() => {
-      setFrame((current) => (current + 1) % initialChartData.length);
-    }, 1000 / Math.max(datasetInfo.fps || 30, 1));
+    const timer = window.setInterval(
+      () => {
+        setFrame((current) => (current + 1) % initialChartData.length);
+      },
+      1000 / Math.max(datasetInfo.fps || 30, 1),
+    );
     return () => window.clearInterval(timer);
   }, [datasetInfo.fps, initialChartData.length, playing, status]);
 
@@ -423,11 +433,7 @@ export default function G1MujocoReplay({
     if (fallbackData) {
       return <URDFViewer data={fallbackData as never} />;
     }
-    return (
-      <div className="p-6 text-red-400">
-        Replay unavailable: {error}
-      </div>
-    );
+    return <div className="p-6 text-red-400">Replay unavailable: {error}</div>;
   }
 
   return (
@@ -469,6 +475,7 @@ git commit -m "feat: add g1 mujoco replay component"
 ### Task 4: Add MuJoCo Assets And Runtime Guardrails
 
 **Files:**
+
 - Create: `public/mujoco/g1/g1.xml`
 - Create: `public/mujoco/g1/assets/*`
 - Modify: `src/components/g1-mujoco-replay-helpers.ts`
@@ -572,6 +579,7 @@ git commit -m "feat: add g1 mujoco replay assets"
 ### Task 5: Integrate A Single Replay Tab Into Episode Viewer
 
 **Files:**
+
 - Modify: `src/app/[org]/[dataset]/[episode]/episode-viewer.tsx`
 - Create: `src/app/[org]/[dataset]/[episode]/__tests__/episode-viewer-replay.test.tsx`
 
@@ -615,7 +623,9 @@ vi.mock("@/app/[org]/[dataset]/[episode]/fetch-data", () => ({
 describe("EpisodeViewer replay tab", () => {
   test("shows Replay for G1 datasets", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
-    expect(await screen.findByRole("button", { name: "Replay" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Replay" }),
+    ).toBeInTheDocument();
   });
 });
 ```
@@ -645,36 +655,40 @@ const G1MujocoReplay = lazy(() => import("@/components/g1-mujoco-replay"));
 Replace the old tab buttons:
 
 ```tsx
-{datasetInfo.robot_type?.toLowerCase().includes("g1") && (
-  <button
-    className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
-      activeTab === "replay"
-        ? "text-orange-400"
-        : "text-slate-400 hover:text-slate-200"
-    }`}
-    onClick={() => handleTabChange("replay")}
-  >
-    Replay
-    {activeTab === "replay" && (
-      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
-    )}
-  </button>
-)}
+{
+  datasetInfo.robot_type?.toLowerCase().includes("g1") && (
+    <button
+      className={`px-6 py-2.5 text-sm font-medium transition-colors relative ${
+        activeTab === "replay"
+          ? "text-orange-400"
+          : "text-slate-400 hover:text-slate-200"
+      }`}
+      onClick={() => handleTabChange("replay")}
+    >
+      Replay
+      {activeTab === "replay" && (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
+      )}
+    </button>
+  );
+}
 ```
 
 Render the new component:
 
 ```tsx
-{activeTab === "replay" && (
-  <Suspense fallback={<Loading />}>
-    <G1MujocoReplay
-      datasetInfo={datasetInfo}
-      episodeId={episodeId}
-      initialChartData={data.flatChartData}
-      fallbackData={data}
-    />
-  </Suspense>
-)}
+{
+  activeTab === "replay" && (
+    <Suspense fallback={<Loading />}>
+      <G1MujocoReplay
+        datasetInfo={datasetInfo}
+        episodeId={episodeId}
+        initialChartData={data.flatChartData}
+        fallbackData={data}
+      />
+    </Suspense>
+  );
+}
 ```
 
 Update keyboard routing so `Space`, `ArrowUp`, and `ArrowDown` target the replay episode changer path rather than separate `urdf` / `sim` refs.
@@ -694,6 +708,7 @@ git commit -m "feat: integrate single g1 replay tab"
 ### Task 6: Verification Sweep
 
 **Files:**
+
 - Modify: `src/components/g1-mujoco-replay.tsx`
 - Modify: `src/app/[org]/[dataset]/[episode]/episode-viewer.tsx`
 - Modify: `src/components/__tests__/g1-mujoco-replay.test.tsx`
@@ -709,8 +724,18 @@ test("reset returns playback to frame 0", async () => {
       datasetInfo={{ robot_type: "g1", fps: 30 } as never}
       episodeId={7}
       initialChartData={[
-        Object.fromEntries(Array.from({ length: 29 }, (_, index) => [`observation.state | ${index}`, index])),
-        Object.fromEntries(Array.from({ length: 29 }, (_, index) => [`observation.state | ${index}`, index + 1])),
+        Object.fromEntries(
+          Array.from({ length: 29 }, (_, index) => [
+            `observation.state | ${index}`,
+            index,
+          ]),
+        ),
+        Object.fromEntries(
+          Array.from({ length: 29 }, (_, index) => [
+            `observation.state | ${index}`,
+            index + 1,
+          ]),
+        ),
       ]}
     />,
   );

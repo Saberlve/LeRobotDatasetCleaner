@@ -106,7 +106,7 @@ describe("G1MujocoReplay", () => {
   });
 
   test("supports play, pause, and reset controls", async () => {
-    const { rerender } = render(
+    render(
       <G1MujocoReplay
         datasetInfo={{ robot_type: "g1", fps: 30 } as never}
         episodeId={4}

@@ -17,6 +17,7 @@ import type { DatasetMetadata } from "@/utils/parquetUtils";
 import UrdfPlaybackBar from "@/components/urdf-playback-bar";
 import {
   G1_JOINT_NAMES,
+  buildG1QposFrames,
   buildG1QposFrame,
   extractOrderedG1StateColumns,
 } from "@/components/g1-mujoco-replay-helpers";
@@ -70,13 +71,13 @@ function MujocoScene({
   mujocoRef,
   modelRef,
   dataRef,
-  jointValues,
+  qposFrame,
   physicsEnabled,
 }: {
   mujocoRef: React.MutableRefObject<MujocoModule | null>;
   modelRef: React.MutableRefObject<MjModel | null>;
   dataRef: React.MutableRefObject<MjData | null>;
-  jointValues: Float64Array;
+  qposFrame: Float64Array;
   physicsEnabled: boolean;
 }) {
   const { scene } = useThree();
@@ -256,14 +257,10 @@ function MujocoScene({
     const mujoco = mujocoRef.current;
     if (!model || !data || !mujoco || meshesRef.current.length === 0) return;
 
-    // Update qpos from joint values
+    // Update full qpos, including the floating base position and yaw.
     const qpos = data.qpos;
-    for (
-      let i = 0;
-      i < jointValues.length && i < model.nq - G1_QPOS_OFFSET;
-      i++
-    ) {
-      qpos[G1_QPOS_OFFSET + i] = jointValues[i];
+    for (let i = 0; i < qposFrame.length && i < model.nq; i++) {
+      qpos[i] = qposFrame[i];
     }
 
     // Run forward kinematics or physics step
@@ -271,11 +268,11 @@ function MujocoScene({
       // Use PD control tracking: set ctrl to target positions
       for (
         let i = 0;
-        i < jointValues.length && i < model.nq - G1_QPOS_OFFSET;
+        i < qposFrame.length - G1_QPOS_OFFSET && i < model.nq - G1_QPOS_OFFSET;
         i++
       ) {
         if (i < model.nu) {
-          data.ctrl[i] = jointValues[i];
+          data.ctrl[i] = qposFrame[G1_QPOS_OFFSET + i];
         }
       }
       mujoco.mj_step(model, data);
@@ -687,14 +684,19 @@ export default function MujocoSimViewer({
     if (playToggleRef) playToggleRef.current = handlePlayPause;
   }, [playToggleRef, handlePlayPause]);
 
-  // Compute joint values for current frame
-  const jointValues = useMemo(() => {
+  const qposFrames = useMemo(() => {
     if (totalFrames === 0 || stateColumns.length === 0) {
-      return new Float64Array(G1_JOINT_NAMES.length);
+      return [];
     }
-    const row = chartData[Math.min(frame, totalFrames - 1)];
-    return buildG1QposFrame(row, stateColumns).slice(G1_QPOS_OFFSET);
-  }, [chartData, frame, stateColumns, totalFrames]);
+    return buildG1QposFrames(chartData, stateColumns, fps);
+  }, [chartData, fps, stateColumns, totalFrames]);
+
+  const qposFrame = useMemo(() => {
+    if (qposFrames.length === 0) {
+      return buildG1QposFrame({}, []);
+    }
+    return qposFrames[Math.min(frame, qposFrames.length - 1)];
+  }, [frame, qposFrames]);
 
   if (data.flatChartData.length === 0) {
     return (
@@ -731,7 +733,7 @@ export default function MujocoSimViewer({
             mujocoRef={mujocoRef}
             modelRef={modelRef}
             dataRef={dataRef}
-            jointValues={jointValues}
+            qposFrame={qposFrame}
             physicsEnabled={physicsEnabled}
           />
           <Grid
