@@ -244,3 +244,26 @@ export async function registerLocalDataset(input: {
   await saveLocalDatasetRegistry(next);
   return entry;
 }
+
+export async function removeLocalDatasetRegistryEntry(input: {
+  repoId: string;
+  path: string;
+}): Promise<{ removed: boolean }> {
+  if (!LOCAL_REPO_ID_PATTERN.test(input.repoId) || !input.path.trim()) {
+    throw new Error("Local dataset registry removal input is invalid");
+  }
+
+  const targetPath = path.resolve(input.path);
+  const existing = await loadLocalDatasetRegistry();
+  const next = existing.filter(
+    (entry) =>
+      entry.repoId !== input.repoId || path.resolve(entry.path) !== targetPath,
+  );
+
+  if (next.length === existing.length) {
+    return { removed: false };
+  }
+
+  await saveLocalDatasetRegistry(next);
+  return { removed: true };
+}

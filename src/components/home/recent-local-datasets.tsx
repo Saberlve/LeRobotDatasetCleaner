@@ -17,6 +17,7 @@ export function RecentLocalDatasets() {
   const router = useRouter();
   const [entries, setEntries] = useState<RecentEntry[]>([]);
   const [status, setStatus] = useState("正在读取最近导入的数据集...");
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +64,43 @@ export function RecentLocalDatasets() {
     };
   }, []);
 
+  async function handleRemove(entry: RecentEntry) {
+    const confirmed = window.confirm(
+      `仅从最近导入移除 ${entry.displayName}，不会删除磁盘文件。`,
+    );
+    if (!confirmed) return;
+
+    const key = `${entry.repoId}:${entry.path}`;
+    setRemovingKey(key);
+    setStatus("");
+
+    try {
+      const response = await fetch("/api/local-datasets/registry", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ repoId: entry.repoId, path: entry.path }),
+      });
+      const payload = (await response.json()) as {
+        removed?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "最近导入删除失败");
+      }
+
+      setEntries((previous) =>
+        previous.filter(
+          (item) => item.repoId !== entry.repoId || item.path !== entry.path,
+        ),
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "最近导入删除失败");
+    } finally {
+      setRemovingKey(null);
+    }
+  }
+
   return (
     <div className="mt-6 border-t border-white/10 pt-5">
       <div className="flex items-center justify-between gap-3">
@@ -101,13 +139,24 @@ export function RecentLocalDatasets() {
                     {entry.robotType ? ` · ${entry.robotType}` : ""}
                   </p>
                 </div>
-                <button
-                  className="rounded-xl border border-emerald-400/40 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/10"
-                  type="button"
-                  onClick={() => router.push(`/${entry.repoId}/episode_0`)}
-                >
-                  打开
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    className="rounded-xl border border-emerald-400/40 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/10"
+                    type="button"
+                    onClick={() => router.push(`/${entry.repoId}/episode_0`)}
+                  >
+                    打开
+                  </button>
+                  <button
+                    aria-label={`删除 ${entry.displayName}`}
+                    className="rounded-xl border border-red-400/40 px-3 py-2 text-sm font-medium text-red-100 transition hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    type="button"
+                    disabled={removingKey === `${entry.repoId}:${entry.path}`}
+                    onClick={() => void handleRemove(entry)}
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
             </li>
           ))}

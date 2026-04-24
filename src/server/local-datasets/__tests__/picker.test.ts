@@ -3,7 +3,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { GET as registryRoute } from "@/app/api/local-datasets/registry/route";
+import {
+  DELETE as registryDeleteRoute,
+  GET as registryRoute,
+} from "@/app/api/local-datasets/registry/route";
 import { POST as registerRoute } from "@/app/api/local-datasets/register/route";
 import {
   GET as localAssetGetRoute,
@@ -151,6 +154,39 @@ describe("local dataset api routes", () => {
           lastOpenedAt: "2026-04-23T00:00:00.000Z",
         },
       ],
+    });
+  });
+
+  test("registry DELETE removes a recent local dataset entry without deleting files", async () => {
+    await fs.writeFile(
+      process.env.LOCAL_DATASET_REGISTRY_PATH!,
+      JSON.stringify([
+        {
+          repoId: "local/demo_box",
+          path: "/tmp/demo",
+          displayName: "demo_box",
+          version: "v2.1",
+          totalEpisodes: 8,
+          fps: 30,
+          robotType: "Acone",
+          lastOpenedAt: "2026-04-23T00:00:00.000Z",
+        },
+      ]),
+      "utf8",
+    );
+
+    const response = await registryDeleteRoute(
+      new Request("http://localhost/api/local-datasets/registry", {
+        method: "DELETE",
+        body: JSON.stringify({ repoId: "local/demo_box", path: "/tmp/demo" }),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ removed: true });
+    await expect(registryRoute().then((res) => res.json())).resolves.toEqual({
+      entries: [],
     });
   });
 

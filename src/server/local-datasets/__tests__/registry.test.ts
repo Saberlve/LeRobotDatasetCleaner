@@ -8,6 +8,7 @@ import {
   buildLocalRepoId,
   loadLocalDatasetRegistry,
   registerLocalDataset,
+  removeLocalDatasetRegistryEntry,
   validateLocalDatasetPath,
 } from "@/server/local-datasets/registry";
 
@@ -274,5 +275,43 @@ describe("local dataset registry", () => {
     expect(all[0].fps).toBe(50);
     expect(all[0].robotType).toBe("SO101");
     expect(all[0].lastOpenedAt).toEqual(expect.any(String));
+  });
+
+  test("removeLocalDatasetRegistryEntry removes only the matching repo id and path", async () => {
+    await fs.writeFile(
+      process.env.LOCAL_DATASET_REGISTRY_PATH!,
+      JSON.stringify([
+        {
+          repoId: "local/demo_box",
+          path: "/tmp/demo",
+          displayName: "demo_box",
+          version: "v3.0",
+          totalEpisodes: 3,
+          fps: 30,
+          robotType: "SO101",
+          lastOpenedAt: "2026-04-23T00:00:00.000Z",
+        },
+        {
+          repoId: "local/other_box",
+          path: "/tmp/other",
+          displayName: "other_box",
+          version: "v3.0",
+          totalEpisodes: 4,
+          fps: 30,
+          robotType: "SO101",
+          lastOpenedAt: "2026-04-23T00:00:00.000Z",
+        },
+      ]),
+      "utf8",
+    );
+
+    const result = await removeLocalDatasetRegistryEntry({
+      repoId: "local/demo_box",
+      path: "/tmp/demo",
+    });
+    const all = await loadLocalDatasetRegistry();
+
+    expect(result.removed).toBe(true);
+    expect(all.map((entry) => entry.repoId)).toEqual(["local/other_box"]);
   });
 });

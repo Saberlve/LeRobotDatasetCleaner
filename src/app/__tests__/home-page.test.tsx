@@ -87,4 +87,58 @@ describe("home page", () => {
       }),
     );
   });
+
+  test("removes a recent local dataset entry without deleting files", async () => {
+    vi.stubGlobal(
+      "confirm",
+      vi.fn(() => true),
+    );
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (
+          url === "/api/local-datasets/registry" &&
+          init?.method === "DELETE"
+        ) {
+          return new Response(JSON.stringify({ removed: true }), {
+            status: 200,
+          });
+        }
+        if (url === "/api/local-datasets/registry") {
+          return new Response(
+            JSON.stringify({
+              entries: [
+                {
+                  repoId: "local/demo",
+                  displayName: "demo",
+                  path: "/mnt/d/demo",
+                  version: "v2.1",
+                  totalEpisodes: 3,
+                  fps: 30,
+                  robotType: "SO101",
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ datasets: [] }), { status: 200 });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<Home />);
+
+    expect(await screen.findByText("demo")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "删除 demo" }));
+
+    await waitFor(() => expect(screen.queryByText("demo")).toBeNull());
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/local-datasets/registry",
+      expect.objectContaining({
+        method: "DELETE",
+        body: JSON.stringify({ repoId: "local/demo", path: "/mnt/d/demo" }),
+      }),
+    );
+  });
 });
