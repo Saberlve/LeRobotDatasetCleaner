@@ -1246,6 +1246,62 @@ function SpeedVarianceSection({
 
 // ─── State–Action Temporal Alignment ────────────────────────────
 
+const EXPECTED_LEROBOT_ACTION_STATE_LAG = 1;
+
+export function getStateActionAlignmentInterpretation({
+  meanPeakLag,
+  fps,
+  lagRangeMin,
+  lagRangeMax,
+}: {
+  meanPeakLag: number;
+  fps: number;
+  lagRangeMin: number;
+  lagRangeMax: number;
+}): {
+  extraLag: number;
+  tone: "ok" | "warn";
+  title: string;
+  detail: string;
+} {
+  const extraLag = meanPeakLag - EXPECTED_LEROBOT_ACTION_STATE_LAG;
+  const rangeDetail =
+    lagRangeMin !== lagRangeMax
+      ? ` Individual dimension peaks range from ${lagRangeMin} to ${lagRangeMax} raw lag steps.`
+      : "";
+
+  if (extraLag === 0) {
+    return {
+      extraLag,
+      tone: "ok",
+      title: "Expected one-step action/state offset",
+      detail:
+        "Peak lag 1 matches the LeRobot convention: state[t] is observed before action[t], and action[t] targets the transition toward state[t+1]. Extra delay: 0 frames." +
+        rangeDetail,
+    };
+  }
+
+  if (extraLag > 0) {
+    return {
+      extraLag,
+      tone: "warn",
+      title: `Extra control delay: ${extraLag} step${extraLag !== 1 ? "s" : ""} (${(extraLag / fps).toFixed(3)}s)`,
+      detail:
+        `State changes appear ~${extraLag} frames later than the expected LeRobot one-step offset. Consider aligning action[t] with state[t+${meanPeakLag}] only if this is not caused by logging convention.` +
+        rangeDetail,
+    };
+  }
+
+  return {
+    extraLag,
+    tone: "warn",
+    title: `Earlier-than-expected response: ${Math.abs(extraLag)} step${Math.abs(extraLag) !== 1 ? "s" : ""} (${(Math.abs(extraLag) / fps).toFixed(3)}s)`,
+    detail:
+      `Peak lag ${meanPeakLag} is earlier than the expected LeRobot one-step offset. This often indicates predictive actions, naming mismatches, or a different dataset convention.` +
+      rangeDetail,
+  };
+}
+
 function StateActionAlignmentSection({
   data,
   fps,
@@ -1400,6 +1456,12 @@ function StateActionAlignmentSection({
   const scopeLabel = fromAgg
     ? `${numEpisodes} episodes sampled`
     : "current episode";
+  const alignment = getStateActionAlignmentInterpretation({
+    meanPeakLag,
+    fps,
+    lagRangeMin,
+    lagRangeMax,
+  });
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700 space-y-4">
@@ -1419,9 +1481,10 @@ function StateActionAlignmentSection({
               <span className="text-slate-200">mean</span>, and
               <span className="text-blue-400"> min</span> across all matched
               action–state pairs. The{" "}
-              <span className="text-orange-400">peak lag</span> reveals the
-              effective control delay — the time between when an action is
-              commanded and when the corresponding state changes.
+              <span className="text-orange-400">peak lag</span> reveals the raw
+              offset between action changes and state changes. In LeRobot
+              datasets, lag 1 is usually expected because state[t] is observed
+              before action[t], and action[t] targets state[t+1].
               <br />
               <span className="text-slate-500">
                 Central to ACT (
@@ -1460,27 +1523,35 @@ function StateActionAlignmentSection({
         </div>
       </div>
 
-      {meanPeakLag !== 0 && (
-        <div className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/30 rounded-md px-4 py-2.5">
-          <span className="text-orange-400 font-bold text-lg tabular-nums">
-            {meanPeakLag}
-          </span>
-          <div>
-            <p className="text-sm text-orange-300 font-medium">
-              Mean control delay: {meanPeakLag} step
-              {Math.abs(meanPeakLag) !== 1 ? "s" : ""} (
-              {(meanPeakLag / fps).toFixed(3)}s)
-            </p>
-            <p className="text-xs text-slate-400">
-              {meanPeakLag > 0
-                ? `State changes lag behind actions by ~${meanPeakLag} frames on average. Consider aligning action[t] with state[t+${meanPeakLag}].`
-                : `Actions lag behind state changes by ~${-meanPeakLag} frames on average (predictive actions).`}
-              {lagRangeMin !== lagRangeMax &&
-                ` Individual dimension peaks range from ${lagRangeMin} to ${lagRangeMax} steps.`}
-            </p>
-          </div>
+      <div
+        className={`flex items-center gap-3 rounded-md px-4 py-2.5 ${
+          alignment.tone === "ok"
+            ? "bg-emerald-500/10 border border-emerald-500/30"
+            : "bg-orange-500/10 border border-orange-500/30"
+        }`}
+      >
+        <span
+          className={`font-bold text-lg tabular-nums ${
+            alignment.tone === "ok" ? "text-emerald-400" : "text-orange-400"
+          }`}
+        >
+          {alignment.extraLag}
+        </span>
+        <div>
+          <p
+            className={`text-sm font-medium ${
+              alignment.tone === "ok" ? "text-emerald-300" : "text-orange-300"
+            }`}
+          >
+            {alignment.title}
+          </p>
+          <p className="text-xs text-slate-400">
+            {alignment.detail} Raw mean peak lag: {meanPeakLag} step
+            {Math.abs(meanPeakLag) !== 1 ? "s" : ""} (
+            {(meanPeakLag / fps).toFixed(3)}s).
+          </p>
         </div>
-      )}
+      </div>
 
       <div className={isFs ? "h-[500px]" : "h-56"}>
         <ResponsiveContainer width="100%" height="100%">

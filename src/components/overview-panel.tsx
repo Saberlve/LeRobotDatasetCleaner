@@ -6,6 +6,10 @@ import type {
   EpisodeFramesData,
 } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
+import {
+  filterEpisodeIdsByMode,
+  type EpisodeFilterMode,
+} from "@/components/episode-filter-mode";
 
 const PAGE_SIZE = 48;
 
@@ -136,15 +140,15 @@ function FrameThumbnail({
 interface OverviewPanelProps {
   data: EpisodeFramesData | null;
   loading: boolean;
-  flaggedOnly?: boolean;
-  onFlaggedOnlyChange?: (v: boolean) => void;
+  episodeFilterMode?: EpisodeFilterMode;
+  onEpisodeFilterModeChange?: (mode: EpisodeFilterMode) => void;
 }
 
 export default function OverviewPanel({
   data,
   loading,
-  flaggedOnly = false,
-  onFlaggedOnlyChange,
+  episodeFilterMode = "all",
+  onEpisodeFilterModeChange,
 }: OverviewPanelProps) {
   const { flagged, count: flagCount } = useFlaggedEpisodes();
   const [selectedCamera, setSelectedCamera] = useState<string>("");
@@ -190,21 +194,31 @@ export default function OverviewPanel({
   }
 
   const allFrames = data.framesByCamera[selectedCamera] ?? [];
-  const frames = flaggedOnly
-    ? allFrames.filter((f) => flagged.has(f.episodeIndex))
-    : allFrames;
+  const unflaggedCount = Math.max(0, allFrames.length - flagCount);
+  const frameEpisodeSet = new Set(
+    filterEpisodeIdsByMode(
+      allFrames.map((frame) => frame.episodeIndex),
+      flagged,
+      episodeFilterMode,
+    ),
+  );
+  const frames = allFrames.filter((frame) =>
+    frameEpisodeSet.has(frame.episodeIndex),
+  );
 
   if (frames.length === 0) {
     return (
       <div className="text-center py-8 space-y-2">
         <p className="text-slate-500 italic">
-          {flaggedOnly
+          {episodeFilterMode === "flagged"
             ? "No flagged episodes to show."
-            : "No episode frames available."}
+            : episodeFilterMode === "unflagged"
+              ? "No unflagged episodes to show."
+              : "No episode frames available."}
         </p>
-        {flaggedOnly && onFlaggedOnlyChange && (
+        {episodeFilterMode !== "all" && onEpisodeFilterModeChange && (
           <button
-            onClick={() => onFlaggedOnlyChange(false)}
+            onClick={() => onEpisodeFilterModeChange("all")}
             className="text-xs text-orange-400 hover:text-orange-300 underline"
           >
             Show all episodes
@@ -243,35 +257,30 @@ export default function OverviewPanel({
             </select>
           )}
 
-          {/* Flagged only toggle */}
-          {flagCount > 0 && onFlaggedOnlyChange && (
-            <button
-              onClick={() => {
-                onFlaggedOnlyChange(!flaggedOnly);
-                setPage(0);
-              }}
-              className={`text-xs px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
-                flaggedOnly
-                  ? "bg-orange-500/20 text-orange-400 border border-orange-500/40"
-                  : "text-slate-400 hover:text-slate-200 border border-slate-700"
-              }`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill={flaggedOnly ? "currentColor" : "none"}
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                <line x1="4" y1="22" x2="4" y2="15" />
-              </svg>
-              Flagged only ({flagCount})
-            </button>
+          {/* Episode filter */}
+          {onEpisodeFilterModeChange && (
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                ["all", "All"] as const,
+                ["flagged", `Flagged (${flagCount})`] as const,
+                ["unflagged", `Unflagged (${unflaggedCount})`] as const,
+              ].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    onEpisodeFilterModeChange(mode);
+                    setPage(0);
+                  }}
+                  className={`text-xs px-2.5 py-1 rounded transition-colors ${
+                    episodeFilterMode === mode
+                      ? "bg-orange-500/20 text-orange-400 border border-orange-500/40"
+                      : "text-slate-400 hover:text-slate-200 border border-slate-700"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
 
           {/* First / Last toggle */}
