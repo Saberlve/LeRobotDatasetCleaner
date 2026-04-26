@@ -1,11 +1,38 @@
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import type { EpisodeSelectionPlan } from "@/server/dataset-export/selection";
 import { PADDING } from "@/utils/constants";
 import { formatStringWithVars } from "@/utils/parquetUtils";
 
 import type { DatasetExportInspection } from "./inspect";
+
+const execFileAsync = promisify(execFile);
+const PARQUET_REWRITE_SCRIPT = path.join(
+  process.cwd(),
+  "src/server/dataset-export/rewrite_episode_parquet.py",
+);
+
+type OutputFile =
+  | {
+      outputPath: string;
+      kind: "write";
+      data: string | Buffer;
+    }
+  | {
+      outputPath: string;
+      kind: "copy";
+      sourcePath: string;
+    }
+  | {
+      outputPath: string;
+      kind: "rewrite-parquet";
+      sourcePath: string;
+      nextEpisodeIndex: number;
+      globalIndexStart: number;
+    };
 
 async function assertOutputPathDoesNotExist(outputPath: string): Promise<void> {
   try {
@@ -19,6 +46,48 @@ async function assertOutputPathDoesNotExist(outputPath: string): Promise<void> {
   }
 
   throw new Error("输出目录已存在");
+}
+
+function getEpisodeLength(rawEpisode: Record<string, unknown>): number | null {
+  const length = rawEpisode.length;
+  if (typeof length === "number" && Number.isInteger(length) && length >= 0) {
+    return length;
+  }
+
+  return null;
+}
+
+async function isParquetFile(filePath: string): Promise<boolean> {
+  const stat = await fs.stat(filePath);
+  if (stat.size < 8) return false;
+
+  const file = await fs.open(filePath, "r");
+  try {
+    const header = Buffer.alloc(4);
+    const footer = Buffer.alloc(4);
+    await file.read(header, 0, 4, 0);
+    await file.read(footer, 0, 4, stat.size - 4);
+    return (
+      header.toString("ascii") === "PAR1" && footer.toString("ascii") === "PAR1"
+    );
+  } finally {
+    await file.close();
+  }
+}
+
+async function rewriteParquetEpisodeData(input: {
+  sourcePath: string;
+  outputPath: string;
+  nextEpisodeIndex: number;
+  globalIndexStart: number;
+}): Promise<void> {
+  await execFileAsync("python3", [
+    PARQUET_REWRITE_SCRIPT,
+    input.sourcePath,
+    input.outputPath,
+    String(input.nextEpisodeIndex),
+    String(input.globalIndexStart),
+  ]);
 }
 
 function buildTempOutputPath(outputPath: string): string {
@@ -161,6 +230,57 @@ function shouldSkipMetaFile(relativePath: string): boolean {
   return /^stats(?:_|\.|$)/.test(baseName);
 }
 
+function rewriteInfoJson(input: {
+  info: Record<string, unknown>;
+  rewrittenEpisodes: Array<Record<string, unknown>>;
+  totalVideos: number;
+}): Record<string, unknown> {
+  const totalFrames = input.rewrittenEpisodes.reduce((sum, episode) => {
+    const length = getEpisodeLength(episode);
+    return length == null ? sum : sum + length;
+  }, 0);
+  const allEpisodesHaveLengths = input.rewrittenEpisodes.every(
+    (episode) => getEpisodeLength(episode) != null,
+  );
+  const nextInfo: Record<string, unknown> = {
+    ...input.info,
+    total_episodes: input.rewrittenEpisodes.length,
+  };
+
+  if (typeof input.info.total_frames === "number" || allEpisodesHaveLengths) {
+    nextInfo.total_frames = totalFrames;
+  }
+
+  if (typeof input.info.total_videos === "number") {
+    nextInfo.total_videos = input.totalVideos;
+  }
+
+  if (typeof input.info.total_chunks === "number") {
+    const chunksSize =
+      typeof input.info.chunks_size === "number" &&
+      Number.isFinite(input.info.chunks_size)
+        ? Math.max(1, input.info.chunks_size)
+        : 1000;
+    nextInfo.total_chunks = Math.max(
+      1,
+      Math.ceil(input.rewrittenEpisodes.length / chunksSize),
+    );
+  }
+
+  if (
+    input.info.splits &&
+    typeof input.info.splits === "object" &&
+    !Array.isArray(input.info.splits)
+  ) {
+    nextInfo.splits = {
+      ...(input.info.splits as Record<string, unknown>),
+      train: `0:${input.rewrittenEpisodes.length}`,
+    };
+  }
+
+  return nextInfo;
+}
+
 function rewriteEpisodeIndexedJsonl(input: {
   text: string;
   episodeIdMap: Record<number, number>;
@@ -238,77 +358,98 @@ export async function writeFilteredDataset(input: {
 }): Promise<void> {
   await assertOutputPathDoesNotExist(input.outputPath);
 
-  const preparedEpisodes = await Promise.all(
-    input.selection.keptEpisodeIds.map(async (sourceEpisodeId) => {
-      const episode = input.inspection.episodes.find(
-        (item) => item.episodeIndex === sourceEpisodeId,
-      );
-      if (!episode) {
-        throw new Error(`Missing episode metadata for ${sourceEpisodeId}`);
-      }
+  const preparedEpisodes: Array<{
+    outputFiles: OutputFile[];
+    rewrittenEpisode: Record<string, unknown>;
+  }> = [];
+  let globalFrameStart = 0;
 
-      const nextEpisodeIndex = input.selection.episodeIdMap[sourceEpisodeId];
-      const nextDataFile = buildNextDataFile({
-        info: input.inspection.info,
-        rawEpisode: episode.raw,
-        sourceDataFile: episode.dataFile,
-        nextEpisodeIndex,
+  for (const sourceEpisodeId of input.selection.keptEpisodeIds) {
+    const episode = input.inspection.episodes.find(
+      (item) => item.episodeIndex === sourceEpisodeId,
+    );
+    if (!episode) {
+      throw new Error(`Missing episode metadata for ${sourceEpisodeId}`);
+    }
+
+    const nextEpisodeIndex = input.selection.episodeIdMap[sourceEpisodeId];
+    const nextDataFile = buildNextDataFile({
+      info: input.inspection.info,
+      rawEpisode: episode.raw,
+      sourceDataFile: episode.dataFile,
+      nextEpisodeIndex,
+    });
+    const extension = path.extname(nextDataFile) || ".json";
+    const sourceDataPath = await resolveEpisodeDataPath(
+      input.inspection.datasetPath,
+      episode.dataFile,
+    );
+    const isJsonData = extension.toLowerCase() === ".json";
+    const isParquetData =
+      extension.toLowerCase() === ".parquet" &&
+      (await isParquetFile(sourceDataPath));
+    const episodeLength = getEpisodeLength(episode.raw);
+    const outputFiles: OutputFile[] = [];
+
+    if (isJsonData) {
+      const rawEpisodeData = await fs.readFile(sourceDataPath, "utf8");
+      outputFiles.push({
+        outputPath: path.join(input.outputPath, nextDataFile),
+        kind: "write",
+        data: JSON.stringify(
+          {
+            ...(JSON.parse(rawEpisodeData) as Record<string, unknown>),
+            episode_index: nextEpisodeIndex,
+            source_episode_index: sourceEpisodeId,
+          },
+          null,
+          2,
+        ),
       });
-      const extension = path.extname(nextDataFile) || ".json";
-      const sourceDataPath = await resolveEpisodeDataPath(
-        input.inspection.datasetPath,
-        episode.dataFile,
-      );
-      const rawEpisodeData = await fs.readFile(sourceDataPath);
-      const isJsonData = extension.toLowerCase() === ".json";
-      const outputData = isJsonData
-        ? JSON.stringify(
-            {
-              ...(JSON.parse(rawEpisodeData.toString("utf8")) as Record<
-                string,
-                unknown
-              >),
-              episode_index: nextEpisodeIndex,
-              source_episode_index: sourceEpisodeId,
-            },
-            null,
-            2,
-          )
-        : rawEpisodeData;
-
-      const outputFiles = [
-        {
-          outputPath: path.join(input.outputPath, nextDataFile),
-          data: outputData,
-        },
-      ];
-
-      for (const { sourceFile, nextFile } of buildVideoFilePairs({
-        info: input.inspection.info,
-        sourceEpisodeIndex: sourceEpisodeId,
+    } else if (isParquetData) {
+      outputFiles.push({
+        outputPath: path.join(input.outputPath, nextDataFile),
+        kind: "rewrite-parquet",
+        sourcePath: sourceDataPath,
         nextEpisodeIndex,
-      })) {
-        const sourceVideoPath = await resolveEpisodeDataPath(
-          input.inspection.datasetPath,
-          sourceFile,
-        );
-        outputFiles.push({
-          outputPath: path.join(input.outputPath, nextFile),
-          data: await fs.readFile(sourceVideoPath),
-        });
-      }
+        globalIndexStart: globalFrameStart,
+      });
+    } else {
+      outputFiles.push({
+        outputPath: path.join(input.outputPath, nextDataFile),
+        kind: "copy",
+        sourcePath: sourceDataPath,
+      });
+    }
 
-      return {
-        outputFiles,
-        rewrittenEpisode: {
-          ...episode.raw,
-          episode_index: nextEpisodeIndex,
-          ...(episode.raw.data_file ? { data_file: nextDataFile } : {}),
-          source_episode_index: sourceEpisodeId,
-        },
-      };
-    }),
-  );
+    for (const { sourceFile, nextFile } of buildVideoFilePairs({
+      info: input.inspection.info,
+      sourceEpisodeIndex: sourceEpisodeId,
+      nextEpisodeIndex,
+    })) {
+      const sourceVideoPath = await resolveEpisodeDataPath(
+        input.inspection.datasetPath,
+        sourceFile,
+      );
+      outputFiles.push({
+        outputPath: path.join(input.outputPath, nextFile),
+        kind: "copy",
+        sourcePath: sourceVideoPath,
+      });
+    }
+
+    preparedEpisodes.push({
+      outputFiles,
+      rewrittenEpisode: {
+        ...episode.raw,
+        episode_index: nextEpisodeIndex,
+        ...(episode.raw.data_file ? { data_file: nextDataFile } : {}),
+        source_episode_index: sourceEpisodeId,
+      },
+    });
+
+    globalFrameStart += episodeLength ?? 0;
+  }
 
   const tempOutputPath = buildTempOutputPath(input.outputPath);
 
@@ -322,14 +463,29 @@ export async function writeFilteredDataset(input: {
 
     await Promise.all(
       preparedEpisodes.flatMap(({ outputFiles }) =>
-        outputFiles.map(async ({ outputPath, data }) => {
+        outputFiles.map(async (outputFile) => {
           const relativeOutputPath = path.relative(
             input.outputPath,
-            outputPath,
+            outputFile.outputPath,
           );
           const tempDataPath = path.join(tempOutputPath, relativeOutputPath);
           await fs.mkdir(path.dirname(tempDataPath), { recursive: true });
-          await fs.writeFile(tempDataPath, data);
+          if (outputFile.kind === "write") {
+            await fs.writeFile(tempDataPath, outputFile.data);
+            return;
+          }
+
+          if (outputFile.kind === "rewrite-parquet") {
+            await rewriteParquetEpisodeData({
+              sourcePath: outputFile.sourcePath,
+              outputPath: tempDataPath,
+              nextEpisodeIndex: outputFile.nextEpisodeIndex,
+              globalIndexStart: outputFile.globalIndexStart,
+            });
+            return;
+          }
+
+          await fs.copyFile(outputFile.sourcePath, tempDataPath);
         }),
       ),
     );
@@ -347,10 +503,19 @@ export async function writeFilteredDataset(input: {
     await fs.writeFile(
       path.join(tempOutputPath, "meta", "info.json"),
       JSON.stringify(
-        {
-          ...input.inspection.info,
-          total_episodes: input.selection.newTotalEpisodes,
-        },
+        rewriteInfoJson({
+          info: input.inspection.info,
+          rewrittenEpisodes,
+          totalVideos: preparedEpisodes.reduce(
+            (sum, episode) =>
+              sum +
+              episode.outputFiles.filter((file) => {
+                const normalized = file.outputPath.split(path.sep).join("/");
+                return normalized.startsWith("videos/");
+              }).length,
+            0,
+          ),
+        }),
         null,
         2,
       ),
