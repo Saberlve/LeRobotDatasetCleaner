@@ -1,10 +1,61 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { exportFilteredDataset } from "@/server/dataset-export/exporter";
 import { loadLocalDatasetRegistry } from "@/server/local-datasets/registry";
+
+const execFileAsync = promisify(execFile);
+
+async function writeParquetFixture(
+  filePath: string,
+  rows: Array<Record<string, number>>,
+): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await execFileAsync("python3", [
+    "-c",
+    [
+      "import json, sys",
+      "import pyarrow as pa",
+      "import pyarrow.parquet as pq",
+      "output_path = sys.argv[1]",
+      "rows = json.loads(sys.argv[2])",
+      "columns = {key: [row[key] for row in rows] for key in rows[0]}",
+      "table = pa.table(columns).replace_schema_metadata({",
+      '    b\'huggingface\': b\'{"features":{"action":{"_type":"List"}}}\',',
+      "})",
+      "pq.write_table(table, output_path)",
+    ].join("\n"),
+    filePath,
+    JSON.stringify(rows),
+  ]);
+}
+
+async function readParquetFixture(
+  filePath: string,
+): Promise<{ columns: Record<string, number[]>; huggingfaceMetadata: string }> {
+  const { stdout } = await execFileAsync("python3", [
+    "-c",
+    [
+      "import json, sys",
+      "import pyarrow.parquet as pq",
+      "table = pq.read_table(sys.argv[1])",
+      "metadata = table.schema.metadata or {}",
+      "print(json.dumps({",
+      "    'columns': {name: table[name].to_pylist() for name in table.column_names},",
+      "    'huggingfaceMetadata': metadata.get(b'huggingface', b'').decode('utf-8'),",
+      "}))",
+    ].join("\n"),
+    filePath,
+  ]);
+  return JSON.parse(stdout) as {
+    columns: Record<string, number[]>;
+    huggingfaceMetadata: string;
+  };
+}
 
 describe("exportFilteredDataset", () => {
   let tempRoot: string;
@@ -276,6 +327,107 @@ describe("exportFilteredDataset", () => {
         mean: 0.2,
       }),
     ]);
+  });
+
+  test("rewrites parquet episode row indexes and aggregate metadata after filtering", async () => {
+    const outputPath = path.join(tempRoot, "demo_v21_parquet_unflagged");
+    await fs.mkdir(path.join(datasetRoot, "data", "chunk-000"), {
+      recursive: true,
+    });
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "info.json"),
+      JSON.stringify(
+        {
+          codebase_version: "v2.1",
+          robot_type: "SO101",
+          total_episodes: 3,
+          total_frames: 7,
+          total_tasks: 1,
+          total_videos: 0,
+          total_chunks: 1,
+          chunks_size: 1000,
+          fps: 30,
+          splits: { train: "0:3" },
+          data_path:
+            "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+          video_path: null,
+          features: {
+            action: {
+              dtype: "float32",
+              shape: [1],
+              names: ["motor"],
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(datasetRoot, "meta", "episodes.jsonl"),
+      [
+        JSON.stringify({ episode_index: 0, length: 2 }),
+        JSON.stringify({ episode_index: 1, length: 2 }),
+        JSON.stringify({ episode_index: 2, length: 3 }),
+      ].join("\n") + "\n",
+      "utf8",
+    );
+    await writeParquetFixture(
+      path.join(datasetRoot, "data", "chunk-000", "episode_000000.parquet"),
+      [
+        { episode_index: 0, index: 0, frame_index: 0, timestamp: 0 },
+        { episode_index: 0, index: 1, frame_index: 1, timestamp: 1 },
+      ],
+    );
+    await writeParquetFixture(
+      path.join(datasetRoot, "data", "chunk-000", "episode_000002.parquet"),
+      [
+        { episode_index: 2, index: 4, frame_index: 0, timestamp: 0 },
+        { episode_index: 2, index: 5, frame_index: 1, timestamp: 1 },
+        { episode_index: 2, index: 6, frame_index: 2, timestamp: 2 },
+      ],
+    );
+
+    await exportFilteredDataset({
+      repoId: "local/demo_v21",
+      datasetPath: datasetRoot,
+      flaggedEpisodeIds: [1],
+      mode: "unflagged",
+      outputPath,
+      alias: "demo_v21_parquet_unflagged",
+    });
+
+    const exportedInfo = JSON.parse(
+      await fs.readFile(path.join(outputPath, "meta", "info.json"), "utf8"),
+    );
+    const exportedEpisodeZero = await readParquetFixture(
+      path.join(outputPath, "data", "chunk-000", "episode_000000.parquet"),
+    );
+    const exportedEpisodeOne = await readParquetFixture(
+      path.join(outputPath, "data", "chunk-000", "episode_000001.parquet"),
+    );
+
+    expect(exportedInfo).toMatchObject({
+      total_episodes: 2,
+      total_frames: 5,
+      total_videos: 0,
+      total_chunks: 1,
+      splits: { train: "0:2" },
+    });
+    expect(exportedEpisodeZero.columns).toMatchObject({
+      episode_index: [0, 0],
+      index: [0, 1],
+      frame_index: [0, 1],
+    });
+    expect(exportedEpisodeOne.columns).toMatchObject({
+      episode_index: [1, 1, 1],
+      index: [2, 3, 4],
+      frame_index: [0, 1, 2],
+    });
+    expect(exportedEpisodeOne.huggingfaceMetadata).toContain(
+      '"_type": "Sequence"',
+    );
   });
 
   test("rejects aliases that resolve to the source repo id before writing output", async () => {
