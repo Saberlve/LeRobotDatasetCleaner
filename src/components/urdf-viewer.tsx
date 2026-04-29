@@ -24,6 +24,7 @@ import { useTime } from "@/context/time-context";
 import { CHART_CONFIG } from "@/utils/constants";
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
+import { BiLeftArrow } from "react-icons/bi";
 
 const SERIES_DELIM = CHART_CONFIG.SERIES_NAME_DELIMITER;
 const DEG2RAD = Math.PI / 180;
@@ -34,8 +35,26 @@ const stlGeometryCache = new Map<string, THREE.BufferGeometry>();
 // In-flight promise cache — prevents duplicate simultaneous fetches
 const stlGeometryLoading = new Map<string, Promise<THREE.BufferGeometry>>();
 
-function getRobotConfig(robotType: string | null) {
+type ViewConfig = {
+  cameraPosition: [number, number, number];
+  orbitTarget: [number, number, number];
+  gridCellSize: number;
+  gridSectionSize: number;
+  gridFadeDistance: number;
+};
+
+type MeshMaterialOptions = {
+  color: string;
+  metalness: number;
+  roughness: number;
+  side?: THREE.Side;
+};
+
+export function getRobotConfig(robotType: string | null) {
   const lower = (robotType ?? "").toLowerCase();
+  if (lower.includes("acone") || lower.includes("ac one")) {
+    return { urdfUrl: "/urdf/acone/acone.urdf", scale: 1 };
+  }
   if (lower.includes("g1") || lower.includes("unitree")) {
     return { urdfUrl: "/urdf/g1/g1_body29_hand14.urdf", scale: 1 };
   }
@@ -46,6 +65,36 @@ function getRobotConfig(robotType: string | null) {
     return { urdfUrl: "/urdf/so101/so100.urdf", scale: 10 };
   }
   return { urdfUrl: "/urdf/so101/so101_new_calib.urdf", scale: 10 };
+}
+
+export function getViewConfig(urdfUrl: string, scale: number): ViewConfig {
+  if (urdfUrl.includes("g1")) {
+    return {
+      cameraPosition: [1.5, 1.0, 1.5],
+      orbitTarget: [0, 0.5, 0],
+      gridCellSize: 0.5,
+      gridSectionSize: 2,
+      gridFadeDistance: 20,
+    };
+  }
+
+  if (urdfUrl.includes("acone")) {
+    return {
+      cameraPosition: [0.75, 0.45, 0.35],
+      orbitTarget: [0, 0.08, 0.1],
+      gridCellSize: 0.1,
+      gridSectionSize: 0.5,
+      gridFadeDistance: 5,
+    };
+  }
+
+  return {
+    cameraPosition: [0.3 * scale, 0.25 * scale, 0.3 * scale],
+    orbitTarget: [0, 0.8, 0],
+    gridCellSize: 0.2,
+    gridSectionSize: 1,
+    gridFadeDistance: 10,
+  };
 }
 
 // Detect unit: servo ticks (0-4096), degrees (>6.28), or radians
@@ -102,7 +151,24 @@ const G1_SDK_TO_URDF: Record<string, string> = {
   "krightwristyaw.q": "right_wrist_yaw_joint",
 };
 
-function autoMatchJoints(
+const ACONE_DATASET_TO_URDF: Record<string, string[]> = {
+  left_waist: ["left_joint1"],
+  left_shoulder: ["left_joint2"],
+  left_elbow: ["left_joint3"],
+  left_forearm_roll: ["left_joint4"],
+  left_wrist_angle: ["left_joint5"],
+  left_wrist_rotate: ["left_joint6"],
+  left_gripper: ["left_joint7", "left_joint8"],
+  right_waist: ["right_joint11"],
+  right_shoulder: ["right_joint12"],
+  right_elbow: ["right_joint13"],
+  right_forearm_roll: ["right_joint14"],
+  right_wrist_angle: ["right_joint15"],
+  right_wrist_rotate: ["right_joint16"],
+  right_gripper: ["right_joint17", "right_joint18"],
+};
+
+export function autoMatchJoints(
   urdfJointNames: string[],
   columnKeys: string[],
 ): Record<string, string> {
@@ -116,6 +182,13 @@ function autoMatchJoints(
   for (let i = 0; i < suffixes.length; i++) {
     const urdfName = G1_SDK_TO_URDF[suffixes[i]];
     if (urdfName) g1Reverse.set(urdfName, columnKeys[i]);
+  }
+
+  const aconeReverse = new Map<string, string>();
+  for (let i = 0; i < suffixes.length; i++) {
+    for (const urdfName of ACONE_DATASET_TO_URDF[suffixes[i]] ?? []) {
+      aconeReverse.set(urdfName, columnKeys[i]);
+    }
   }
 
   for (const jointName of urdfJointNames) {
@@ -132,6 +205,12 @@ function autoMatchJoints(
     const g1Col = g1Reverse.get(lower);
     if (g1Col) {
       mapping[jointName] = g1Col;
+      continue;
+    }
+
+    const aconeCol = aconeReverse.get(lower);
+    if (aconeCol) {
+      mapping[jointName] = aconeCol;
       continue;
     }
 
@@ -175,9 +254,183 @@ const SINGLE_ARM_TIP_NAMES = [
 ];
 const DUAL_ARM_TIP_NAMES = ["openarm_left_hand_tcp", "openarm_right_hand_tcp"];
 const G1_TIP_NAMES = ["left_hand_palm_link", "right_hand_palm_link"];
+const ACONE_TIP_NAMES = ["left_link7", "right_link17"];
 const TRAIL_DURATION = 1.0;
 const TRAIL_COLORS = [new THREE.Color("#ff6600"), new THREE.Color("#00aaff")];
 const MAX_TRAIL_POINTS = 300;
+
+function isGripperRangeJoint(jointName: string) {
+  const lower = jointName.toLowerCase();
+  return (
+    lower.includes("finger_joint1") ||
+    lower === "left_joint7" ||
+    lower === "left_joint8" ||
+    lower === "right_joint17" ||
+    lower === "right_joint18"
+  );
+}
+
+function isAconeGripperJoint(jointName: string) {
+  const lower = jointName.toLowerCase();
+  return (
+    lower === "left_joint7" ||
+    lower === "left_joint8" ||
+    lower === "right_joint17" ||
+    lower === "right_joint18"
+  );
+}
+
+export function getGripperJointValue(
+  jointName: string,
+  raw: number,
+  range?: { min: number; max: number },
+) {
+  if (range) {
+    const t = (raw - range.min) / (range.max - range.min);
+    return (isAconeGripperJoint(jointName) ? 1 - t : t) * 0.044;
+  }
+  return (raw / 100) * 0.044;
+}
+
+type RobotMaterialKind = "acone" | "g1" | "openarm" | "generic";
+
+export function getMeshMaterialOptions(
+  url: string,
+  robotKind?: RobotMaterialKind,
+): MeshMaterialOptions {
+  const lower = url.toLowerCase();
+
+  if (robotKind === "acone" || lower.includes("acone")) {
+    const aconeColors: Record<string, string> = {
+      base_link: "#949494",
+      left_link1: "#0c0d14",
+      left_link2: "#080708",
+      left_link3: "#a0a0a0",
+      left_link4: "#000000",
+      left_link5: "#000000",
+      left_link6: "#000000",
+      left_link7: "#373737",
+      left_link8: "#444444",
+      right_link11: "#0c0d14",
+      right_link12: "#080708",
+      right_link13: "#a0a0a0",
+      right_link14: "#000000",
+      right_link15: "#000000",
+      right_link16: "#000000",
+      right_link17: "#373737",
+      right_link18: "#444444",
+    };
+    const entry = Object.entries(aconeColors).find(([name]) =>
+      lower.includes(name),
+    );
+    return {
+      color: entry?.[1] ?? "#ffffff",
+      metalness: 0.35,
+      roughness: 0.28,
+    };
+  }
+
+  if (robotKind === "g1" || lower.includes("g1")) {
+    const isWhitePart =
+      lower.includes("contour") ||
+      lower.includes("roll_link") ||
+      lower.includes("logo") ||
+      lower.includes("rubber") ||
+      lower.includes("constraint") ||
+      lower.includes("support");
+    return {
+      color: isWhitePart ? "#c0c0c0" : "#2a2a2a",
+      metalness: 0.3,
+      roughness: 0.5,
+    };
+  }
+
+  if (lower.includes("sts3215")) {
+    return { color: "#1a1a1a", metalness: 0.7, roughness: 0.3 };
+  }
+
+  if (robotKind === "openarm" || lower.includes("openarm")) {
+    return {
+      color: lower.includes("body_link0") ? "#3a3a4a" : "#f5f5f5",
+      metalness: 0.15,
+      roughness: 0.6,
+      side: THREE.DoubleSide,
+    };
+  }
+
+  return { color: "#FFD700", metalness: 0.1, roughness: 0.6 };
+}
+
+function createMeshMaterial(options: MeshMaterialOptions) {
+  return new THREE.MeshStandardMaterial({
+    color: options.color,
+    metalness: options.metalness,
+    roughness: options.roughness,
+    side: options.side ?? THREE.FrontSide,
+  });
+}
+
+function applyMaterialToObject(
+  object: THREE.Object3D,
+  materialOptions: MeshMaterialOptions,
+) {
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+
+    if (Array.isArray(child.material)) {
+      child.material.forEach((material) => material.dispose());
+    } else {
+      child.material?.dispose();
+    }
+    child.material = createMeshMaterial(materialOptions);
+  });
+}
+
+export function applyRobotMaterial(
+  robot: THREE.Object3D,
+  robotKind: RobotMaterialKind,
+) {
+  const robotWithMaps = robot as THREE.Object3D & {
+    links?: Record<string, THREE.Object3D>;
+    visual?: Record<string, THREE.Object3D>;
+  };
+
+  if (robotKind === "acone") {
+    const namedObjects = {
+      ...(robotWithMaps.links ?? {}),
+      ...(robotWithMaps.visual ?? {}),
+    };
+
+    if (Object.keys(namedObjects).length > 0) {
+      for (const [name, object] of Object.entries(namedObjects)) {
+        applyMaterialToObject(object, getMeshMaterialOptions(name, robotKind));
+      }
+      return;
+    }
+  }
+
+  robot.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+
+    // Search up the tree for a name that matches our color map (links or base_link)
+    let name = "";
+    let curr: THREE.Object3D | null = child;
+    while (curr && curr !== robot) {
+      const n = curr.name?.toLowerCase() || "";
+      if (n.includes("link") || n.includes("base")) {
+        name = curr.name;
+        break;
+      }
+      curr = curr.parent;
+    }
+
+    // Fallback to the child's name or geometry name (which might be the STL filename)
+    if (!name) name = child.name || child.geometry.name || "";
+
+    const materialOptions = getMeshMaterialOptions(name, robotKind);
+    applyMaterialToObject(child, materialOptions);
+  });
+}
 
 // ─── Robot scene (imperative, inside Canvas) ───
 function RobotScene({
@@ -270,6 +523,14 @@ function RobotScene({
     setError(null);
     const isOpenArm = urdfUrl.includes("openarm");
     const isG1 = urdfUrl.includes("g1");
+    const isAcone = urdfUrl.includes("acone");
+    const robotMaterialKind: RobotMaterialKind = isAcone
+      ? "acone"
+      : isG1
+        ? "g1"
+        : isOpenArm
+          ? "openarm"
+          : "generic";
     const manager = new THREE.LoadingManager();
     const loader = new URDFLoader(manager);
     loader.loadMeshCb = (url, mgr, onLoad) => {
@@ -301,38 +562,10 @@ function RobotScene({
       }
       // STL files — apply custom materials, with module-level geometry cache
       const makeMesh = (geometry: THREE.BufferGeometry) => {
-        let color = "#FFD700";
-        let metalness = 0.1;
-        let roughness = 0.6;
-        if (isG1) {
-          const lower = url.toLowerCase();
-          const isWhitePart =
-            lower.includes("contour") ||
-            lower.includes("roll_link") ||
-            lower.includes("logo") ||
-            lower.includes("rubber") ||
-            lower.includes("constraint") ||
-            lower.includes("support");
-          color = isWhitePart ? "#c0c0c0" : "#2a2a2a";
-          metalness = 0.3;
-          roughness = 0.5;
-        } else if (url.includes("sts3215")) {
-          color = "#1a1a1a";
-          metalness = 0.7;
-          roughness = 0.3;
-        } else if (isOpenArm) {
-          color = url.includes("body_link0") ? "#3a3a4a" : "#f5f5f5";
-          metalness = 0.15;
-          roughness = 0.6;
-        }
+        const materialOptions = getMeshMaterialOptions(url, robotMaterialKind);
         return new THREE.Mesh(
           geometry,
-          new THREE.MeshStandardMaterial({
-            color,
-            metalness,
-            roughness,
-            side: isOpenArm ? THREE.DoubleSide : THREE.FrontSide,
-          }),
+          createMeshMaterial(materialOptions),
         );
       };
 
@@ -362,6 +595,7 @@ function RobotScene({
       urdfUrl,
       (robot) => {
         robotRef.current = robot;
+        applyRobotMaterial(robot, robotMaterialKind);
         robot.rotateOnAxis(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
         robot.traverse((c) => {
           c.castShadow = true;
@@ -372,13 +606,15 @@ function RobotScene({
 
         const tipNames = isG1
           ? G1_TIP_NAMES
-          : isOpenArm
-            ? DUAL_ARM_TIP_NAMES
-            : SINGLE_ARM_TIP_NAMES;
+          : isAcone
+            ? ACONE_TIP_NAMES
+            : isOpenArm
+              ? DUAL_ARM_TIP_NAMES
+              : SINGLE_ARM_TIP_NAMES;
         const tips: THREE.Object3D[] = [];
         for (const name of tipNames) {
           if (robot.frames[name]) tips.push(robot.frames[name]);
-          if (!isOpenArm && !isG1 && tips.length === 1) break;
+          if (!isOpenArm && !isG1 && !isAcone && tips.length === 1) break;
         }
         tipLinksRef.current = tips;
         ensureTrails(tips.length);
@@ -558,7 +794,10 @@ export default function URDFViewer({
     [datasetInfo.robot_type],
   );
   const { urdfUrl, scale } = robotConfig;
-  const isG1 = urdfUrl.includes("g1");
+  const viewConfig = useMemo(
+    () => getViewConfig(urdfUrl, scale),
+    [scale, urdfUrl],
+  );
   const repoId = org && dataset ? `${org}/${dataset}` : null;
   const datasetInfoRef = useRef<{
     version: string;
@@ -701,7 +940,7 @@ export default function URDFViewer({
   const gripperRanges = useMemo(() => {
     const ranges: Record<string, { min: number; max: number }> = {};
     for (const jn of urdfJointNames) {
-      if (!jn.toLowerCase().includes("finger_joint1")) continue;
+      if (!isGripperRangeJoint(jn)) continue;
       const col = mapping[jn];
       if (!col) continue;
       let min = Infinity,
@@ -732,15 +971,10 @@ export default function URDFViewer({
       if (!col || typeof row[col] !== "number") continue;
       const raw = row[col];
 
-      if (jn.toLowerCase().includes("finger_joint1")) {
+      if (isGripperRangeJoint(jn)) {
         // Map gripper range → 0-0.044m using auto-detected min/max
         const range = gripperRanges[jn];
-        if (range) {
-          const t = (raw - range.min) / (range.max - range.min);
-          values[jn] = t * 0.044;
-        } else {
-          values[jn] = (raw / 100) * 0.044; // fallback: assume 0-100
-        }
+        values[jn] = getGripperJointValue(jn, raw, range);
       } else {
         revoluteValues.push(raw);
         revoluteNames.push(jn);
@@ -773,7 +1007,7 @@ export default function URDFViewer({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* 3D Viewport */}
-      <div className="flex-1 min-h-0 bg-slate-950 rounded-lg overflow-hidden border border-slate-700 relative">
+      <div className="flex-1 min-h-0 bg-white rounded-lg overflow-hidden border border-slate-300 relative">
         {episodeLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/70">
             <span className="text-white text-lg animate-pulse">
@@ -783,18 +1017,16 @@ export default function URDFViewer({
         )}
         <Canvas
           camera={{
-            position: isG1
-              ? [1.5, 1.0, 1.5]
-              : [0.3 * scale, 0.25 * scale, 0.3 * scale],
+            position: viewConfig.cameraPosition,
             fov: 45,
             near: 0.01,
             far: 100,
           }}
         >
-          <ambientLight intensity={0.7} />
-          <directionalLight position={[3, 5, 4]} intensity={1.5} />
-          <directionalLight position={[-2, 3, -2]} intensity={0.6} />
-          <hemisphereLight args={["#b1e1ff", "#666666", 0.5]} />
+          <ambientLight intensity={1.0} />
+          <directionalLight position={[3, 5, 4]} intensity={1.8} />
+          <directionalLight position={[-2, 3, -2]} intensity={0.9} />
+          <hemisphereLight args={["#ffffff", "#cbd5e1", 0.7]} />
           <RobotScene
             urdfUrl={urdfUrl}
             jointValues={jointValues}
@@ -805,16 +1037,16 @@ export default function URDFViewer({
           />
           <Grid
             args={[10, 10]}
-            cellSize={isG1 ? 0.5 : 0.2}
+            cellSize={viewConfig.gridCellSize}
             cellThickness={0.5}
-            cellColor="#334155"
-            sectionSize={isG1 ? 2 : 1}
+            cellColor="#d1d5db"
+            sectionSize={viewConfig.gridSectionSize}
             sectionThickness={1}
-            sectionColor="#475569"
-            fadeDistance={isG1 ? 20 : 10}
+            sectionColor="#94a3b8"
+            fadeDistance={viewConfig.gridFadeDistance}
             position={[0, 0, 0]}
           />
-          <OrbitControls target={isG1 ? [0, 0.5, 0] : [0, 0.8, 0]} />
+          <OrbitControls target={viewConfig.orbitTarget} />
           <PlaybackDriver
             playing={playing}
             fps={fps}

@@ -2,7 +2,7 @@
 
 ## 目标
 
-在 `lerobot-dataset-visualizer` 中增加“按 flag 导出过滤后数据集”的能力：
+在 `LeRobotDatasetCleaner` 中增加“按 flag 导出过滤后数据集”的能力：
 
 1. 用户在现有 Filtering 面板中继续按 episode 打 `flag`。
 2. 用户可以选择把 `flagged` episode 或 `unflagged` episode 导出到指定目录。

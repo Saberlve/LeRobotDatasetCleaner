@@ -52,7 +52,7 @@ if [ "${1:-}" = "help" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   ./run_local_v21.sh
 
 说明：
-  这个脚本用于在本地 v2.1 数据集上启动 lerobot-dataset-visualizer。
+  这个脚本用于在本地 v2.1 数据集上启动 LeRobotDatasetCleaner。
 
 默认配置：
   DATASET_ALIAS=${DATASET_ALIAS}

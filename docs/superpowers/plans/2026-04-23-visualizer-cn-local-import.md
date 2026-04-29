@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a Chinese landing page plus persistent local dataset folder import to `lerobot-dataset-visualizer` while keeping the existing dataset detail routes and data loading pipeline intact.
+**Goal:** Add a Chinese landing page plus persistent local dataset folder import to `LeRobotDatasetCleaner` while keeping the existing dataset detail routes and data loading pipeline intact.
 
 **Architecture:** Introduce a server-side local dataset registry stored in a JSON file, expose minimal API routes for listing/registering/picking folders, extend the existing local dataset resolution utilities to read the persistent registry in addition to environment variables, and replace the current English landing page with a Chinese dual-entry page for remote and local datasets. Keep detail pages and existing `/api/local-datasets/...` asset serving behavior unchanged.
 

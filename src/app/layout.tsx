@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LeRobot Dataset Tool and Visualizer",
-  description: "Tool and Visualizer for LeRobot Datasets",
+  title: "LeRobotDatasetCleaner",
+  description: "Tool and Visualizer for LeRobot Datasets curation and cleaning",
 };
 
 export default function RootLayout({

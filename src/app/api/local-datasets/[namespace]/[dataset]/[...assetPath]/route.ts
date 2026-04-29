@@ -77,10 +77,23 @@ type RouteParams = {
 
 function buildBaseHeaders(filePath: string, size: number): HeadersInit {
   return {
+    "access-control-allow-headers": "range, content-type",
+    "access-control-allow-methods": "GET, HEAD, OPTIONS",
+    "access-control-allow-origin": "*",
     "accept-ranges": "bytes",
     "cache-control": "no-store",
     "content-length": String(size),
     "content-type": getContentType(filePath),
+    "cross-origin-resource-policy": "cross-origin",
+  };
+}
+
+function buildCorsHeaders(): HeadersInit {
+  return {
+    "access-control-allow-headers": "range, content-type",
+    "access-control-allow-methods": "GET, HEAD, OPTIONS",
+    "access-control-allow-origin": "*",
+    "cross-origin-resource-policy": "cross-origin",
   };
 }
 
@@ -187,7 +200,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   if (!resolved) {
     return NextResponse.json(
       { error: "Local dataset asset not found" },
-      { status: 404 },
+      { status: 404, headers: buildCorsHeaders() },
     );
   }
 
@@ -233,7 +246,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   } catch {
     return NextResponse.json(
       { error: "Local dataset asset not found" },
-      { status: 404 },
+      { status: 404, headers: buildCorsHeaders() },
     );
   }
 }
@@ -242,7 +255,7 @@ export async function HEAD(_: Request, { params }: RouteParams) {
   const { namespace, dataset, assetPath } = await params;
   const resolved = await resolveAssetPath(namespace, dataset, assetPath);
   if (!resolved) {
-    return new NextResponse(null, { status: 404 });
+    return new NextResponse(null, { status: 404, headers: buildCorsHeaders() });
   }
 
   try {
@@ -252,6 +265,13 @@ export async function HEAD(_: Request, { params }: RouteParams) {
       headers: buildBaseHeaders(resolved.filePath, fileInfo.size),
     });
   } catch {
-    return new NextResponse(null, { status: 404 });
+    return new NextResponse(null, { status: 404, headers: buildCorsHeaders() });
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: buildCorsHeaders(),
+  });
 }

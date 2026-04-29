@@ -7,17 +7,7 @@
     "robotType": "Acone",
     "repoId": "local/pick_X_times_filterd_twice",
     "displayName": "pick_X_times_filterd_twice",
-    "lastOpenedAt": "2026-04-24T09:10:15.794Z"
-  },
-  {
-    "path": "/mnt/d/pickXtimes_v21_filtered",
-    "version": "v2.1",
-    "totalEpisodes": 42,
-    "fps": 30,
-    "robotType": "Acone",
-    "repoId": "local/pickXtimes_v21_filtered",
-    "displayName": "pickXtimes_v21_filtered",
-    "lastOpenedAt": "2026-04-24T06:47:52.933Z"
+    "lastOpenedAt": "2026-04-29T04:43:47.906Z"
   },
   {
     "path": "/mnt/d/straighten_the_box",

@@ -1,8 +1,8 @@
-# Lerobot Dataset Visualizer 中文入口与本地数据文件夹导入设计
+# LeRobotDatasetCleaner 中文入口与本地数据文件夹导入设计
 
 ## 目标
 
-为 `lerobot-dataset-visualizer` 增加两项能力：
+为 `LeRobotDatasetCleaner` 增加两项能力：
 
 1. 将首页入口改成中文界面。
 2. 支持在网页中选择本地 LeRobot 数据集文件夹导入，并在后续刷新或重开页面后保留最近导入记录。

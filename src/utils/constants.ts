@@ -1,5 +1,5 @@
 /**
- * Centralized constants for the lerobot-dataset-visualizer
+ * Centralized constants for the LeRobotDatasetCleaner
  * Eliminates magic numbers and provides single source of truth for configuration
  */
 

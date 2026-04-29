@@ -1,4 +1,4 @@
-# CLAUDE.md — LeRobot Dataset Visualizer
+# CLAUDE.md — LeRobotDatasetCleaner
 
 ## Package manager
 
