@@ -132,6 +132,23 @@ describe("EpisodeViewer replay tab", () => {
     expect(await screen.findByRole("button", { name: "Replay" })).toBeDefined();
   });
 
+  test("shows Replay for Acone datasets", async () => {
+    mocks.getEpisodeDataSafe.mockResolvedValueOnce({
+      data: makeEpisodeData("Acone", "v2.1"),
+      error: null,
+    });
+
+    render(
+      <EpisodeViewer
+        org="local"
+        dataset="pick_X_times_filterd_twice"
+        episodeId={0}
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: "Replay" })).toBeDefined();
+  });
+
   test("routes ArrowDown from replay to the next episode and keeps replay tab", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 

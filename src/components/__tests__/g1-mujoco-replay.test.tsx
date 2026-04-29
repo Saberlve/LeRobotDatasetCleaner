@@ -119,6 +119,20 @@ describe("G1MujocoReplay", () => {
     expect(screen.queryByTestId("urdf-viewer")).toBeNull();
   });
 
+  test("renders the URDF replay for Acone trajectories without G1 validation", async () => {
+    renderReplay(
+      <G1MujocoReplay
+        datasetInfo={{ robot_type: "Acone", fps: 30 } as never}
+        episodeId={0}
+        initialChartData={[{ "observation.state | 0": 0 }]}
+        fallbackData={{ source: "acone" }}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("urdf-viewer")).toBeDefined());
+    expect(screen.queryByText(/Missing G1 state column/)).toBeNull();
+  });
+
   test("supports play, pause, and reset controls", async () => {
     renderReplay(
       <G1MujocoReplay

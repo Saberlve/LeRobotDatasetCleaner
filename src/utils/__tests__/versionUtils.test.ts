@@ -224,6 +224,77 @@ describe("buildVersionedUrl", () => {
       }
     }
   });
+
+  test("client-side local dataset urls ignore server base URL to stay same-origin", () => {
+    const previousPublicBaseUrl =
+      process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+    const previousServerBaseUrl = process.env.LOCAL_DATASET_BASE_URL;
+
+    delete process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+    process.env.LOCAL_DATASET_BASE_URL = "http://127.0.0.1:3001";
+    vi.stubGlobal("window", {} as Window & typeof globalThis);
+
+    try {
+      expect(
+        buildLocalDatasetUrl(
+          "local/pick_X_times_filterd_twice",
+          "meta/info.json",
+        ),
+      ).toBe(
+        "/api/local-datasets/local/pick_X_times_filterd_twice/meta/info.json",
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      if (previousPublicBaseUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL = previousPublicBaseUrl;
+      }
+      if (previousServerBaseUrl === undefined) {
+        delete process.env.LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.LOCAL_DATASET_BASE_URL = previousServerBaseUrl;
+      }
+    }
+  });
+
+  test("server-side local dataset urls use PORT when no base URL is configured", () => {
+    const previousPublicBaseUrl =
+      process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+    const previousServerBaseUrl = process.env.LOCAL_DATASET_BASE_URL;
+    const previousPort = process.env.PORT;
+
+    delete process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+    delete process.env.LOCAL_DATASET_BASE_URL;
+    process.env.PORT = "3001";
+
+    try {
+      expect(
+        buildLocalDatasetUrl(
+          "local/pick_X_times_filterd_twice",
+          "meta/info.json",
+        ),
+      ).toBe(
+        "http://127.0.0.1:3001/api/local-datasets/local/pick_X_times_filterd_twice/meta/info.json",
+      );
+    } finally {
+      if (previousPublicBaseUrl === undefined) {
+        delete process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL = previousPublicBaseUrl;
+      }
+      if (previousServerBaseUrl === undefined) {
+        delete process.env.LOCAL_DATASET_BASE_URL;
+      } else {
+        process.env.LOCAL_DATASET_BASE_URL = previousServerBaseUrl;
+      }
+      if (previousPort === undefined) {
+        delete process.env.PORT;
+      } else {
+        process.env.PORT = previousPort;
+      }
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

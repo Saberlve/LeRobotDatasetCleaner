@@ -9,6 +9,10 @@ export function isLocalDatasetRepoId(repoId: string): boolean {
 }
 
 export function getLocalDatasetBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
   const configuredBaseUrl =
     process.env.NEXT_PUBLIC_LOCAL_DATASET_BASE_URL ||
     process.env.LOCAL_DATASET_BASE_URL;
@@ -17,11 +21,7 @@ export function getLocalDatasetBaseUrl(): string {
     return configuredBaseUrl;
   }
 
-  if (typeof window !== "undefined") {
-    return "";
-  }
-
-  return "http://127.0.0.1:3000";
+  return `http://127.0.0.1:${process.env.PORT || "3000"}`;
 }
 
 export function buildLocalDatasetUrl(

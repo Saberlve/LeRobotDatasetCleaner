@@ -1,5 +1,5 @@
 {
-  "name": "lerobot-viewer",
+  "name": "lerobot-dataset-cleaner",
   "version": "0.1.0",
   "private": true,
   "scripts": {

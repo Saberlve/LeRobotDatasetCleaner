@@ -260,7 +260,7 @@ function HomeInner() {
             <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
               Dataset
             </span>{" "}
-            Visualizer
+            Cleaner
           </h1>
 
           <form

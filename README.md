@@ -1,5 +1,5 @@
 ---
-title: Visualize Dataset (v2.0+ latest dataset format)
+title: LeRobotDatasetCleaner
 emoji: 💻
 colorFrom: blue
 colorTo: green
@@ -9,19 +9,20 @@ pinned: false
 license: apache-2.0
 ---
 
-# LeRobot Dataset Visualizer
+# LeRobotDatasetCleaner
 
-LeRobot Dataset Tool and Visualizer is a web application for interactive exploration and visualization of robotics datasets, particularly those in the LeRobot format. It enables users to browse, view, and analyze episodes from large-scale robotics datasets, combining synchronized video playback with rich, interactive data graphs.
+LeRobotDatasetCleaner is a web application for interactive exploration, visualization, and cleaning of robotics datasets, particularly those in the LeRobot format. It enables users to browse, view, and analyze episodes from large-scale robotics datasets, combining synchronized video playback with rich, interactive data graphs and powerful filtering tools for dataset curation.
 
 ## Project Overview
 
-This tool is designed to help robotics researchers and practitioners quickly inspect and understand large, complex datasets. It fetches dataset metadata and episode data (including video and sensor/telemetry data), and provides a unified interface for:
+This tool is designed to help robotics researchers and practitioners quickly inspect, understand, and clean large, complex datasets. It fetches dataset metadata and episode data (including video and sensor/telemetry data), and provides a unified interface for:
 
 - Navigating between organizations, datasets, and episodes
 - Watching episode videos
 - Exploring synchronized time-series data with interactive charts
 - Analyzing action quality and identifying problematic episodes
 - Visualizing robot poses in 3D using URDF models
+- **Filtering and cleaning datasets by flagging problematic episodes and exporting curated subsets**
 - Paginating through large datasets efficiently
 
 ## Key Features
@@ -31,7 +32,7 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 - **Overview Panel:** At-a-glance summary of dataset metadata, camera info, and episode details.
 - **Statistics Panel:** Dataset-level statistics including episode count, total recording time, frames-per-second, and an episode-length histogram.
 - **Action Insights Panel:** Data-driven analysis tools to guide training configuration — includes autocorrelation, state-action alignment, speed distribution, and cross-episode variance heatmap.
-- **Filtering Panel:** Identify and flag problematic episodes (low movement, jerky motion, outlier length) for removal. Supports in-app export of `flagged` or `unflagged` local dataset subsets into a new LeRobot-format dataset directory, and still exposes flagged episode IDs as a ready-to-run LeRobot CLI command.
+- **Filtering & Cleaning Panel:** Identify and flag problematic episodes (low movement, jerky motion, outlier length) for removal. Supports in-app export of `flagged` or `unflagged` local dataset subsets into a new LeRobot-format dataset directory, and still exposes flagged episode IDs as a ready-to-run LeRobot CLI command.
 - **3D URDF Viewer:** Visualize robot joint poses frame-by-frame in an interactive 3D scene, with end-effector trail rendering. Supports SO-100, SO-101, and OpenArm bimanual robots.
 - **Efficient Data Loading:** Uses parquet and JSON loading for large dataset support, with pagination, chunking, and lazy-loaded panels for fast initial load.
 - **Responsive UI:** Built with React, Next.js, and Tailwind CSS for a fast, modern user experience.
@@ -60,7 +61,8 @@ npm -v
 Install project dependencies:
 
 ```bash
-cd lerobot-dataset-visualizer
+git clone https://github.com/Saberlve/LeRobotDatasetCleaner.git
+cd LeRobotDatasetCleaner
 npm ci
 ```
 

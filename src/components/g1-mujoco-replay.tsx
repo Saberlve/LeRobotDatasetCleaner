@@ -4,11 +4,13 @@ import React from "react";
 import { useEffect, useState } from "react";
 import type { EpisodeData } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import MujocoSimViewer from "@/components/mujoco-sim-viewer";
+import URDFViewer from "@/components/urdf-viewer";
 import { useTime } from "@/context/time-context";
 import {
   buildG1QposFrame,
   extractOrderedG1StateColumns,
 } from "@/components/g1-mujoco-replay-helpers";
+import { isG1Robot } from "@/lib/so101-robot";
 
 type ChartRow = Record<string, unknown>;
 
@@ -31,6 +33,7 @@ export default function G1MujocoReplay({
   const [error, setError] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
   const { isPlaying, setIsPlaying } = useTime();
+  const isG1 = isG1Robot(datasetInfo.robot_type);
 
   useEffect(() => {
     setStatus("loading");
@@ -44,6 +47,16 @@ export default function G1MujocoReplay({
 
     function init() {
       try {
+        if (!isG1) {
+          if (!fallbackData) {
+            throw new Error("Replay unavailable: no URDF trajectory data");
+          }
+          if (!cancelled) {
+            setStatus("ready");
+          }
+          return;
+        }
+
         const firstRow = initialChartData[0];
         if (!firstRow) {
           throw new Error("Replay unavailable: no trajectory data");
@@ -68,7 +81,7 @@ export default function G1MujocoReplay({
     return () => {
       cancelled = true;
     };
-  }, [initialChartData]);
+  }, [fallbackData, initialChartData, isG1]);
 
   useEffect(() => {
     if (!isPlaying || status !== "ready") return;
@@ -89,6 +102,10 @@ export default function G1MujocoReplay({
 
   if (status === "error") {
     return <div className="p-6 text-red-400">Replay unavailable: {error}</div>;
+  }
+
+  if (!isG1 && fallbackData) {
+    return <URDFViewer data={fallbackData} />;
   }
 
   if (fallbackData) {

@@ -24,7 +24,7 @@ import StatsPanel from "@/components/stats-panel";
 import OverviewPanel from "@/components/overview-panel";
 import Loading from "@/components/loading-component";
 import LocalDoctorPanel from "@/components/local-doctor-panel";
-import { isG1Robot } from "@/lib/so101-robot";
+import { hasReplaySupport } from "@/lib/so101-robot";
 import {
   getAdjacentEpisodesVideoInfo,
   computeColumnMinMax,
@@ -186,7 +186,7 @@ function EpisodeViewerInner({
   const searchParamString = searchParams.toString();
   const tabParam = searchParams.get("tab");
 
-  const canShowReplay = isG1Robot(datasetInfo.robot_type);
+  const canShowReplay = hasReplaySupport(datasetInfo.robot_type);
 
   // Tab state & lazy stats
   const [activeTab, setActiveTab] = useState<ActiveTab>(
