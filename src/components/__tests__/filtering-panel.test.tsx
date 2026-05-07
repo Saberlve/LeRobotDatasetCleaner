@@ -16,7 +16,7 @@ describe("getFilteringExportState", () => {
       }),
     ).toMatchObject({
       disabled: true,
-      reason: "Flag at least one episode before exporting flagged data.",
+      reason: "导出已标记数据前，至少标记一个回合。",
     });
   });
 
@@ -51,7 +51,7 @@ describe("getFilteringExportState", () => {
       }),
     ).toMatchObject({
       disabled: true,
-      reason: "Only local datasets can be exported.",
+      reason: "仅本地数据集可导出。",
     });
   });
 
@@ -68,7 +68,7 @@ describe("getFilteringExportState", () => {
       }),
     ).toMatchObject({
       disabled: true,
-      reason: "Choose an output parent directory before exporting.",
+      reason: "导出前请选择输出父目录。",
     });
   });
 
@@ -85,7 +85,7 @@ describe("getFilteringExportState", () => {
       }),
     ).toMatchObject({
       disabled: true,
-      reason: "Enter a dataset name before exporting.",
+      reason: "导出前请输入数据集名称。",
     });
   });
 
@@ -102,7 +102,7 @@ describe("getFilteringExportState", () => {
       }),
     ).toMatchObject({
       disabled: true,
-      reason: "Dataset name cannot contain path separators.",
+      reason: "数据集名称不能包含路径分隔符。",
     });
   });
 });

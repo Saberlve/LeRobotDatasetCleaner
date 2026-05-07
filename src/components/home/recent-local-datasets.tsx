@@ -134,8 +134,8 @@ export function RecentLocalDatasets() {
                     {entry.path}
                   </p>
                   <p className="mt-2 text-xs text-slate-300">
-                    {entry.version} · {entry.totalEpisodes} episodes ·{" "}
-                    {entry.fps} FPS
+                    {entry.version} · {entry.totalEpisodes} 个回合 · {entry.fps}{" "}
+                    FPS
                     {entry.robotType ? ` · ${entry.robotType}` : ""}
                   </p>
                 </div>

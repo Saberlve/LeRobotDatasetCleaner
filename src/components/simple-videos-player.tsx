@@ -236,12 +236,12 @@ export const SimpleVideosPlayer = ({
             className="flex items-center gap-2 rounded bg-slate-800 px-3 py-2 text-sm text-slate-100 hover:bg-slate-700 border border-slate-500"
             onClick={() => setShowHiddenMenu(!showHiddenMenu)}
           >
-            <FaEye /> Show Hidden Videos ({hiddenVideos.length})
+            <FaEye /> 显示隐藏的视频 ({hiddenVideos.length})
           </button>
           {showHiddenMenu && (
             <div className="absolute left-0 mt-2 w-max rounded border border-slate-500 bg-slate-900 shadow-lg p-2 z-50">
               <div className="mb-2 text-xs text-slate-300">
-                Restore hidden videos:
+                恢复隐藏的视频：
               </div>
               {hiddenVideos.map((filename) => (
                 <button
@@ -282,7 +282,7 @@ export const SimpleVideosPlayer = ({
                 <span>{info.filename}</span>
                 <span className="flex gap-1">
                   <button
-                    title={isEnlarged ? "Minimize" : "Enlarge"}
+                    title={isEnlarged ? "最小化" : "放大"}
                     className="ml-2 p-1 hover:bg-slate-700 rounded"
                     onClick={() =>
                       setEnlargedVideo(isEnlarged ? null : info.filename)
@@ -291,7 +291,7 @@ export const SimpleVideosPlayer = ({
                     {isEnlarged ? <FaCompress /> : <FaExpand />}
                   </button>
                   <button
-                    title="Hide Video"
+                    title="隐藏视频"
                     className="ml-1 p-1 hover:bg-slate-700 rounded"
                     onClick={() =>
                       setHiddenVideos((prev) => [...prev, info.filename])
@@ -322,7 +322,7 @@ export const SimpleVideosPlayer = ({
                 }
               >
                 <source src={info.url} type="video/mp4" />
-                Your browser does not support the video tag.
+                您的浏览器不支持视频标签。
               </video>
             </div>
           );

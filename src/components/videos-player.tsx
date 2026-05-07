@@ -292,7 +292,7 @@ export const VideosPlayer = ({
       {videoCodecError && (
         <div className="font-medium text-orange-700">
           <p>
-            Videos could NOT play because{" "}
+            视频无法播放，因为您的浏览器不支持{" "}
             <a
               href="https://en.wikipedia.org/wiki/AV1"
               target="_blank"
@@ -300,26 +300,24 @@ export const VideosPlayer = ({
             >
               AV1
             </a>{" "}
-            decoding is not available on your browser.
+            解码。
           </p>
           <ul className="list-inside list-decimal">
             <li>
-              If iPhone:{" "}
+              如果是 iPhone:{" "}
+              <span className="italic">需要 A17 芯片或更高版本。</span>
+            </li>
+            <li>
+              如果是 Mac + Safari:{" "}
               <span className="italic">
-                It is supported with A17 chip or higher.
+                大多数浏览器支持，Safari 需要 M1 芯片或更高版本（M3
+                及以上完全支持）。
               </span>
             </li>
             <li>
-              If Mac with Safari:{" "}
+              其他情况:{" "}
               <span className="italic">
-                It is supported on most browsers except Safari with M1 chip or
-                higher and on Safari with M3 chip or higher.
-              </span>
-            </li>
-            <li>
-              Other:{" "}
-              <span className="italic">
-                Contact the maintainers on LeRobot discord channel:
+                请在 LeRobot Discord 频道联系维护者：
               </span>
               <a
                 href="https://discord.com/invite/s3KuuzsPFb"
@@ -341,7 +339,7 @@ export const VideosPlayer = ({
             className="flex items-center gap-2 rounded bg-slate-800 px-3 py-2 text-sm text-slate-100 hover:bg-slate-700 border border-slate-500"
             onClick={() => setShowHiddenMenu((prev) => !prev)}
           >
-            <FaEye /> Show Hidden Videos ({hiddenVideos.length})
+            <FaEye /> 显示隐藏的视频 ({hiddenVideos.length})
           </button>
           {showHiddenMenu && (
             <div
@@ -349,7 +347,7 @@ export const VideosPlayer = ({
               className="absolute left-0 mt-2 w-max rounded border border-slate-500 bg-slate-900 shadow-lg p-2 z-50"
             >
               <div className="mb-2 text-xs text-slate-300">
-                Restore hidden videos:
+                恢复隐藏的视频：
               </div>
               {hiddenVideos.map((filename) => (
                 <button
@@ -388,7 +386,7 @@ export const VideosPlayer = ({
                 <span>{video.filename}</span>
                 <span className="flex gap-1">
                   <button
-                    title={isEnlarged ? "Minimize" : "Enlarge"}
+                    title={isEnlarged ? "最小化" : "放大"}
                     className="ml-2 p-1 hover:bg-slate-700 rounded focus:outline-none focus:ring-0"
                     onClick={() =>
                       setEnlargedVideo(isEnlarged ? null : video.filename)
@@ -397,7 +395,7 @@ export const VideosPlayer = ({
                     {isEnlarged ? <FaCompress /> : <FaExpand />}
                   </button>
                   <button
-                    title="Hide Video"
+                    title="隐藏视频"
                     className="ml-1 p-1 hover:bg-slate-700 rounded focus:outline-none focus:ring-0"
                     onClick={() =>
                       setHiddenVideos((prev: string[]) => [
@@ -428,7 +426,7 @@ export const VideosPlayer = ({
                 style={isEnlarged ? { zIndex: 41 } : {}}
               >
                 <source src={video.url} type="video/mp4" />
-                Your browser does not support the video tag.
+                您的浏览器不支持视频标签。
               </video>
             </div>
           );

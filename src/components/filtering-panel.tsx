@@ -78,15 +78,11 @@ function LowMovementSection({ episodes }: { episodes: LowMovementEpisode[] }) {
   return (
     <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-200">
-          Lowest-Movement Episodes
-        </h3>
+        <h3 className="text-sm font-semibold text-slate-200">最低运动回合</h3>
         <FlagAllBtn ids={episodes.map((e) => e.episodeIndex)} />
       </div>
       <p className="text-xs text-slate-400">
-        Episodes with the lowest average action change per frame. Very low
-        values may indicate the robot was standing still or the episode was
-        recorded incorrectly.
+        每帧平均动作变化最小的回合。数值极低可能表示机器人静止不动或该回合录制有误。
       </p>
       <div
         className="grid gap-2"
@@ -159,9 +155,7 @@ function EpisodeLengthFilter({ episodes }: { episodes: EpisodeLengthInfo[] }) {
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700 space-y-4">
-      <h3 className="text-sm font-semibold text-slate-200">
-        Episode Length Filter
-      </h3>
+      <h3 className="text-sm font-semibold text-slate-200">回合长度筛选</h3>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-slate-400">
@@ -205,15 +199,14 @@ function EpisodeLengthFilter({ episodes }: { episodes: EpisodeLengthInfo[] }) {
       {rangeChanged && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-400">
-            {outsideIds.length} episode{outsideIds.length !== 1 ? "s" : ""}{" "}
-            outside range
+            {outsideIds.length} 个回合在范围外
           </span>
           {outsideIds.length > 0 && (
             <button
               onClick={() => addMany(outsideIds)}
               className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/40 rounded px-2 py-1 hover:bg-orange-500/30 transition-colors"
             >
-              Flag {outsideIds.length} outside range
+              标记 {outsideIds.length} 个范围外回合
             </button>
           )}
         </div>
@@ -260,22 +253,21 @@ export function getFilteringExportState(input: {
 
   let reason: string | null = null;
   if (!isLocalRepo) {
-    reason = "Only local datasets can be exported.";
+    reason = "仅本地数据集可导出。";
   } else if (input.mode === "flagged" && input.flaggedCount === 0) {
-    reason = "Flag at least one episode before exporting flagged data.";
+    reason = "导出已标记数据前，至少标记一个回合。";
   } else if (
     input.mode === "unflagged" &&
     input.totalEpisodes != null &&
     input.flaggedCount >= input.totalEpisodes
   ) {
-    reason =
-      "All episodes are flagged, so there is no unflagged subset to export.";
+    reason = "所有回合均已标记，没有未标记子集可导出。";
   } else if (!input.outputParentDirectory.trim()) {
-    reason = "Choose an output parent directory before exporting.";
+    reason = "导出前请选择输出父目录。";
   } else if (!input.datasetName.trim()) {
-    reason = "Enter a dataset name before exporting.";
+    reason = "导出前请输入数据集名称。";
   } else if (/[\\/]/.test(input.datasetName)) {
-    reason = "Dataset name cannot contain path separators.";
+    reason = "数据集名称不能包含路径分隔符。";
   }
 
   return {
@@ -432,16 +424,15 @@ function FlaggedExportCard({
   return (
     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700/60 space-y-4">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-slate-200">Export Dataset</h3>
+        <h3 className="text-sm font-semibold text-slate-200">导出数据集</h3>
         <p className="text-xs text-slate-400">
-          Export the flagged or unflagged episode subset into a new local
-          dataset directory while preserving the source dataset.
+          将已标记或未标记的回合子集导出到新的本地数据集目录，同时保留源数据集。
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1.5">
-          <span className="text-xs text-slate-400">Export mode</span>
+          <span className="text-xs text-slate-400">导出模式</span>
           <select
             aria-label="导出模式"
             value={mode}
@@ -454,7 +445,7 @@ function FlaggedExportCard({
         </label>
 
         <label className="space-y-1.5">
-          <span className="text-xs text-slate-400">Dataset name</span>
+          <span className="text-xs text-slate-400">数据集名称</span>
           <input
             aria-label="数据集名称"
             value={datasetName}
@@ -466,7 +457,7 @@ function FlaggedExportCard({
       </div>
 
       <label className="space-y-1.5 block">
-        <span className="text-xs text-slate-400">Output parent directory</span>
+        <span className="text-xs text-slate-400">输出父目录</span>
         <div className="flex gap-2">
           <input
             aria-label="输出父目录"
@@ -496,7 +487,7 @@ function FlaggedExportCard({
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs text-slate-400">
           {exportState.reason ??
-            `Ready to export ${mode} episodes as ${effectiveDatasetName}.`}
+            `准备导出 ${mode === "flagged" ? "已标记" : "未标记"} 回合为 ${effectiveDatasetName}。`}
         </div>
         <button
           type="button"
@@ -504,7 +495,7 @@ function FlaggedExportCard({
           disabled={exportState.disabled}
           className="rounded-md bg-orange-500 px-3 py-2 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
         >
-          {submitting ? "Exporting..." : "导出数据集"}
+          {submitting ? "正在导出..." : "导出数据集"}
         </button>
       </div>
 
@@ -517,9 +508,8 @@ function FlaggedExportCard({
       {result && (
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-200 space-y-2">
           <div>
-            Exported <span className="font-semibold">{result.repoId}</span> with{" "}
-            {result.totalEpisodes} episode
-            {result.totalEpisodes === 1 ? "" : "s"}.
+            已导出 <span className="font-semibold">{result.repoId}</span>，共{" "}
+            {result.totalEpisodes} 个回合。
           </div>
           <div className="text-emerald-100/80">{result.path}</div>
           <Link
@@ -559,7 +549,7 @@ function FlaggedIdsCopyBar({
     <div className="bg-slate-800/60 rounded-lg p-4 border border-orange-500/30 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-orange-400">
-          Flagged Episodes
+          已标记回合
           <span className="text-xs text-slate-500 ml-2 font-normal">
             ({count})
           </span>
@@ -568,7 +558,7 @@ function FlaggedIdsCopyBar({
           <button
             onClick={handleCopy}
             className="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1"
-            title="Copy IDs"
+            title="复制 ID"
           >
             {copied ? (
               <svg
@@ -597,13 +587,13 @@ function FlaggedIdsCopyBar({
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
             )}
-            Copy
+            复制
           </button>
           <button
             onClick={clear}
             className="text-xs text-slate-500 hover:text-red-400 transition-colors"
           >
-            Clear
+            清除
           </button>
         </div>
       </div>
@@ -629,7 +619,7 @@ function FlaggedIdsCopyBar({
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
             <line x1="4" y1="22" x2="4" y2="15" />
           </svg>
-          View flagged episodes
+          查看已标记回合
         </button>
       )}
       <div className="bg-slate-900/60 rounded-md px-3 py-2 border border-slate-700/60 space-y-2.5">
@@ -642,10 +632,10 @@ function FlaggedIdsCopyBar({
           >
             LeRobot CLI
           </a>{" "}
-          — delete flagged episodes:
+          — 删除已标记回合：
         </p>
-        <pre className="text-xs text-slate-300 bg-slate-950/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# Delete episodes (modifies original dataset)\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
-        <pre className="text-xs text-slate-300 bg-slate-950/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# Delete episodes and save to a new dataset (preserves original)\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --new_repo_id ${repoId}_filtered \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
+        <pre className="text-xs text-slate-300 bg-slate-950/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# 删除回合（修改原数据集）\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
+        <pre className="text-xs text-slate-300 bg-slate-950/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# 删除回合并保存为新数据集（保留原数据集）\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --new_repo_id ${repoId}_filtered \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
       </div>
     </div>
   );
@@ -667,10 +657,10 @@ function FilteringPanel({
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-slate-100">Filtering</h2>
+        <h2 className="text-xl font-bold text-slate-100">筛选</h2>
         <p className="text-sm text-slate-400 mt-1">
-          Identify and flag problematic episodes for removal. Flagged episodes
-          appear in the sidebar and can be exported as a CLI command.
+          识别并标记有问题的回合以便删除。已标记的回合会显示在侧边栏，
+          也可以导出为 CLI 命令。
         </p>
       </div>
 
@@ -707,7 +697,7 @@ function FilteringPanel({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               />
             </svg>
-            Loading cross-episode data…
+            正在加载跨回合数据…
           </div>
         </div>
       )}

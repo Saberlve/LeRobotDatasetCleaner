@@ -290,10 +290,8 @@ function MujocoScene({
     return (
       <Html center>
         <div className="text-white text-lg">
-          <div>Loading MuJoCo WASM...</div>
-          <div className="text-sm text-slate-400 mt-2">
-            This may take a few seconds
-          </div>
+          <div>正在加载 MuJoCo WASM...</div>
+          <div className="text-sm text-slate-400 mt-2">可能需要几秒钟</div>
         </div>
       </Html>
     );
@@ -301,7 +299,7 @@ function MujocoScene({
   if (error) {
     return (
       <Html center>
-        <div className="text-red-400">Failed to load MuJoCo: {error}</div>
+        <div className="text-red-400">加载 MuJoCo 失败: {error}</div>
       </Html>
     );
   }
@@ -312,7 +310,7 @@ function MujocoScene({
     return (
       <Html position={[0, 1.35, 0]} center>
         <div className="rounded bg-slate-950/80 px-3 py-1 text-sm text-slate-200">
-          Loading G1 visual mesh {visualProgress.loaded}/{visualProgress.total}
+          正在加载 G1 视觉网格 {visualProgress.loaded}/{visualProgress.total}
         </div>
       </Html>
     );

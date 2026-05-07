@@ -19,7 +19,7 @@ describe("PlaybackBar playback rate control", () => {
       </TimeProvider>,
     );
 
-    const select = screen.getByLabelText("Playback speed") as HTMLSelectElement;
+    const select = screen.getByLabelText("播放速度") as HTMLSelectElement;
     expect(select.value).toBe("1");
 
     fireEvent.change(select, { target: { value: "2" } });

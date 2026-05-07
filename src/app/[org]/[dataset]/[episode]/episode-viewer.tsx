@@ -104,7 +104,7 @@ export default function EpisodeViewer({
 
   useEffect(() => {
     if (Number.isNaN(episodeId)) {
-      setError("Invalid episode id.");
+      setError("无效的回合 ID。");
       setData(null);
       return;
     }
@@ -133,7 +133,7 @@ export default function EpisodeViewer({
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950 text-red-400">
         <div className="max-w-xl p-8 rounded bg-slate-900 border border-red-500 shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">Something went wrong</h2>
+          <h2 className="text-2xl font-bold mb-4">出错了</h2>
           <p className="text-lg font-mono whitespace-pre-wrap mb-4">{error}</p>
         </div>
       </div>
@@ -563,7 +563,7 @@ function EpisodeViewerInner({
           }`}
           onClick={() => handleTabChange("episodes")}
         >
-          Episodes
+          回合
           {activeTab === "episodes" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
@@ -576,7 +576,7 @@ function EpisodeViewerInner({
           }`}
           onClick={() => handleTabChange("statistics")}
         >
-          Statistics
+          统计
           {activeTab === "statistics" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
@@ -589,7 +589,7 @@ function EpisodeViewerInner({
           }`}
           onClick={() => handleTabChange("filtering")}
         >
-          Filtering
+          筛选
           {activeTab === "filtering" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
@@ -602,7 +602,7 @@ function EpisodeViewerInner({
           }`}
           onClick={() => handleTabChange("frames")}
         >
-          Frames
+          帧概览
           {activeTab === "frames" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
@@ -615,7 +615,7 @@ function EpisodeViewerInner({
           }`}
           onClick={() => handleTabChange("insights")}
         >
-          Action Insights
+          动作洞察
           {activeTab === "insights" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
@@ -627,9 +627,9 @@ function EpisodeViewerInner({
               : "text-slate-400 hover:text-slate-200"
           }`}
           onClick={() => handleTabChange("doctor")}
-          title="Dataset quality diagnostics (powered by lerobot-doctor)"
+          title="数据集质量诊断（由 lerobot-doctor 提供）"
         >
-          Doctor
+          诊断
           {activeTab === "doctor" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
           )}
@@ -643,7 +643,7 @@ function EpisodeViewerInner({
             }`}
             onClick={() => handleTabChange("replay")}
           >
-            Replay
+            回放
             {activeTab === "replay" && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
             )}
@@ -719,7 +719,7 @@ function EpisodeViewerInner({
                 <div className="mb-6 p-4 bg-slate-800 rounded-lg border border-slate-600">
                   <p className="text-slate-300">
                     <span className="font-semibold text-slate-100">
-                      Language Instruction:
+                      语言指令：
                     </span>
                   </p>
                   <div className="mt-2 text-slate-300">
@@ -802,7 +802,7 @@ function EpisodeViewerInner({
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between px-1 pb-2 text-xs text-slate-400">
                   <span>
-                    Dataset quality diagnostics &mdash; powered by{" "}
+                    数据集质量诊断 — 由{" "}
                     <a
                       href="https://github.com/jashshah999/lerobot-doctor"
                       target="_blank"
@@ -818,7 +818,7 @@ function EpisodeViewerInner({
                     rel="noopener noreferrer"
                     className="underline hover:text-slate-200"
                   >
-                    Open in new tab
+                    在新标签页中打开
                   </a>
                 </div>
                 <iframe

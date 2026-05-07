@@ -24,7 +24,6 @@ import { useTime } from "@/context/time-context";
 import { CHART_CONFIG } from "@/utils/constants";
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
-import { BiLeftArrow } from "react-icons/bi";
 
 const SERIES_DELIM = CHART_CONFIG.SERIES_NAME_DELIMITER;
 const DEG2RAD = Math.PI / 180;
@@ -563,10 +562,7 @@ function RobotScene({
       // STL files — apply custom materials, with module-level geometry cache
       const makeMesh = (geometry: THREE.BufferGeometry) => {
         const materialOptions = getMeshMaterialOptions(url, robotMaterialKind);
-        return new THREE.Mesh(
-          geometry,
-          createMeshMaterial(materialOptions),
-        );
+        return new THREE.Mesh(geometry, createMeshMaterial(materialOptions));
       };
 
       const cached = stlGeometryCache.get(url);
@@ -714,13 +710,13 @@ function RobotScene({
   if (loading)
     return (
       <Html center>
-        <span className="text-white text-lg">Loading robot…</span>
+        <span className="text-white text-lg">正在加载机器人…</span>
       </Html>
     );
   if (error)
     return (
       <Html center>
-        <span className="text-red-400">Failed to load URDF</span>
+        <span className="text-red-400">加载 URDF 失败</span>
       </Html>
     );
   return null;
@@ -998,9 +994,7 @@ export default function URDFViewer({
 
   if (data.flatChartData.length === 0) {
     return (
-      <div className="text-slate-400 p-8 text-center">
-        No trajectory data available.
-      </div>
+      <div className="text-slate-400 p-8 text-center">没有可用的轨迹数据。</div>
     );
   }
 
@@ -1011,7 +1005,7 @@ export default function URDFViewer({
         {episodeLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/70">
             <span className="text-white text-lg animate-pulse">
-              Loading episode {selectedEpisode}…
+              正在加载回合 {selectedEpisode}…
             </span>
           </div>
         )}
@@ -1081,17 +1075,17 @@ export default function URDFViewer({
           >
             ▶
           </span>
-          Joint Mapping
+          关节映射
           <span className="text-slate-600">
             ({Object.keys(mapping).filter((k) => mapping[k]).length}/
-            {displayJointNames.length} mapped)
+            {displayJointNames.length} 已映射))
           </span>
         </button>
 
         {showMapping && (
           <div className="flex gap-4 items-start">
             <div className="space-y-1 shrink-0">
-              <label className="text-xs text-slate-400">Data source</label>
+              <label className="text-xs text-slate-400">数据源</label>
               <div className="flex gap-1 flex-wrap">
                 {groupNames.map((name) => (
                   <button
@@ -1113,12 +1107,10 @@ export default function URDFViewer({
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-slate-800">
                   <tr className="text-slate-500">
-                    <th className="text-left font-normal px-1">URDF Joint</th>
+                    <th className="text-left font-normal px-1">URDF 关节</th>
                     <th className="text-left font-normal px-1">→</th>
-                    <th className="text-left font-normal px-1">
-                      Dataset Column
-                    </th>
-                    <th className="text-right font-normal px-1">Value</th>
+                    <th className="text-left font-normal px-1">数据列</th>
+                    <th className="text-right font-normal px-1">数值</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1142,7 +1134,7 @@ export default function URDFViewer({
                           }
                           className="bg-slate-900 text-slate-200 text-xs rounded px-1 py-0.5 border border-slate-600 w-full max-w-[200px]"
                         >
-                          <option value="">-- unmapped --</option>
+                          <option value="">-- 未映射 --</option>
                           {selectedColumns.map((col) => {
                             const label = col.split(SERIES_DELIM).pop() ?? col;
                             return (

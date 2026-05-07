@@ -30,8 +30,8 @@ export default function Loading() {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <h1 className="text-2xl font-bold mb-2">Loading...</h1>
-      <p className="text-slate-400">preparing data & videos</p>
+      <h1 className="text-2xl font-bold mb-2">加载中...</h1>
+      <p className="text-slate-400">正在准备数据和视频</p>
     </div>
   );
 }

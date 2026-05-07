@@ -83,7 +83,7 @@ export function LocalDatasetCard() {
 
       const nextSummary = payload.summary;
       setSummary(
-        `已导入 ${nextSummary.path}（${nextSummary.version}，${nextSummary.totalEpisodes} episodes，${nextSummary.fps} FPS）。`,
+        `已导入 ${nextSummary.path}（${nextSummary.version}，${nextSummary.totalEpisodes} 个回合，${nextSummary.fps} FPS）。`,
       );
       router.push(payload.entryRoute);
     } catch (submitError) {
@@ -101,7 +101,7 @@ export function LocalDatasetCard() {
     <section className="rounded-3xl border border-white/12 bg-slate-950/55 p-6 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="space-y-2">
         <p className="text-sm font-medium tracking-[0.25em] text-emerald-300/85 uppercase">
-          Local
+          本地
         </p>
         <h2 className="text-2xl font-semibold text-white">本地数据集</h2>
       </div>

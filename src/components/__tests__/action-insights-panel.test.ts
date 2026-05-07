@@ -12,10 +12,10 @@ describe("getStateActionAlignmentInterpretation", () => {
         lagRangeMax: 1,
       }),
     ).toMatchObject({
-      title: "Expected one-step action/state offset",
+      title: "符合预期的单步动作/状态偏移",
       tone: "ok",
       detail:
-        "Peak lag 1 matches the LeRobot convention: state[t] is observed before action[t], and action[t] targets the transition toward state[t+1]. Extra delay: 0 frames.",
+        "峰值滞后 1 符合 LeRobot 约定：state[t] 在 action[t] 之前被观测，action[t] 目标为 state[t+1] 的过渡。额外延迟：0 帧。",
     });
   });
 
@@ -28,7 +28,7 @@ describe("getStateActionAlignmentInterpretation", () => {
         lagRangeMax: 3,
       }),
     ).toMatchObject({
-      title: "Extra control delay: 2 steps (0.067s)",
+      title: "额外控制延迟：2 步 (0.067秒)",
       tone: "warn",
     });
   });

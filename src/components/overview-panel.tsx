@@ -109,7 +109,7 @@ function FrameThumbnail({
               ? "opacity-100 text-orange-400"
               : "opacity-0 group-hover:opacity-100 text-slate-400 hover:text-orange-400"
           }`}
-          title={isFlagged ? "Unflag episode" : "Flag episode"}
+          title={isFlagged ? "取消标记回合" : "标记回合"}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -188,7 +188,7 @@ export default function OverviewPanel({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        Loading episode frames…
+        正在加载回合帧…
       </div>
     );
   }
@@ -211,17 +211,17 @@ export default function OverviewPanel({
       <div className="text-center py-8 space-y-2">
         <p className="text-slate-500 italic">
           {episodeFilterMode === "flagged"
-            ? "No flagged episodes to show."
+            ? "没有已标记的回合可显示。"
             : episodeFilterMode === "unflagged"
-              ? "No unflagged episodes to show."
-              : "No episode frames available."}
+              ? "没有未标记的回合可显示。"
+              : "没有可用的回合帧。"}
         </p>
         {episodeFilterMode !== "all" && onEpisodeFilterModeChange && (
           <button
             onClick={() => onEpisodeFilterModeChange("all")}
             className="text-xs text-orange-400 hover:text-orange-300 underline"
           >
-            Show all episodes
+            显示全部回合
           </button>
         )}
       </div>
@@ -234,9 +234,8 @@ export default function OverviewPanel({
   return (
     <div className="max-w-7xl mx-auto py-6 space-y-5">
       <p className="text-sm text-slate-500">
-        Use first/last frame views to spot episodes with bad end states or other
-        anomalies. Hover over a thumbnail and click the flag icon to mark
-        episodes with wrong outcomes for review.
+        使用首帧/末帧视图来发现终止状态异常或其他问题的回合。
+        悬停在缩略图上并点击标记图标，将有问题的回合标记出来以供审查。
       </p>
 
       {/* Controls row */}
@@ -261,9 +260,9 @@ export default function OverviewPanel({
           {onEpisodeFilterModeChange && (
             <div className="flex flex-wrap gap-1.5">
               {[
-                ["all", "All"] as const,
-                ["flagged", `Flagged (${flagCount})`] as const,
-                ["unflagged", `Unflagged (${unflaggedCount})`] as const,
+                ["all", "全部"] as const,
+                ["flagged", `已标记 (${flagCount})`] as const,
+                ["unflagged", `未标记 (${unflaggedCount})`] as const,
               ].map(([mode, label]) => (
                 <button
                   key={mode}
@@ -288,12 +287,12 @@ export default function OverviewPanel({
             <span
               className={`text-sm ${!showLast ? "text-slate-100 font-medium" : "text-slate-500"}`}
             >
-              First Frame
+              首帧
             </span>
             <button
               onClick={() => setShowLast((v) => !v)}
               className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors shrink-0 ${showLast ? "bg-orange-500" : "bg-slate-600"}`}
-              aria-label="Toggle first/last frame"
+              aria-label="切换首帧/末帧"
             >
               <span
                 className={`inline-block w-3.5 h-3.5 bg-white rounded-full transition-transform ${showLast ? "translate-x-[18px]" : "translate-x-[3px]"}`}
@@ -302,7 +301,7 @@ export default function OverviewPanel({
             <span
               className={`text-sm ${showLast ? "text-slate-100 font-medium" : "text-slate-500"}`}
             >
-              Last Frame
+              末帧
             </span>
           </div>
         </div>
@@ -315,7 +314,7 @@ export default function OverviewPanel({
               onClick={() => setPage((p) => p - 1)}
               className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              ← Prev
+              ← 上一页
             </button>
             <span className="tabular-nums">
               {page + 1} / {totalPages}
@@ -325,7 +324,7 @@ export default function OverviewPanel({
               onClick={() => setPage((p) => p + 1)}
               className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              Next →
+              下一页 →
             </button>
           </div>
         )}

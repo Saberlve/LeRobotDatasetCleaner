@@ -92,13 +92,13 @@ describe("G1MujocoReplay", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Episode 4").textContent).toBe("Episode 4"),
+      expect(screen.getByText("回合 4").textContent).toBe("回合 4"),
     );
 
-    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
-      "Play",
+    expect(screen.getByRole("button", { name: "播放" }).textContent).toBe(
+      "播放",
     );
-    expect(screen.getByText("Frame 0/1").textContent).toBe("Frame 0/1");
+    expect(screen.getByText("帧 0/1").textContent).toBe("帧 0/1");
   });
 
   test("renders an explicit error instead of falling back to URDF when trajectory mapping fails", async () => {
@@ -112,7 +112,7 @@ describe("G1MujocoReplay", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText(/Replay unavailable:/).textContent).toContain(
+      expect(screen.getByText(/回放不可用:/).textContent).toContain(
         "Missing G1 state column",
       ),
     );
@@ -129,7 +129,9 @@ describe("G1MujocoReplay", () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByTestId("urdf-viewer")).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByTestId("urdf-viewer")).toBeDefined(),
+    );
     expect(screen.queryByText(/Missing G1 state column/)).toBeNull();
   });
 
@@ -143,23 +145,23 @@ describe("G1MujocoReplay", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
-        "Play",
+      expect(screen.getByRole("button", { name: "播放" }).textContent).toBe(
+        "播放",
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Play" }));
-    expect(screen.getByRole("button", { name: "Pause" }).textContent).toBe(
-      "Pause",
+    fireEvent.click(screen.getByRole("button", { name: "播放" }));
+    expect(screen.getByRole("button", { name: "暂停" }).textContent).toBe(
+      "暂停",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
-    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
-      "Play",
+    fireEvent.click(screen.getByRole("button", { name: "暂停" }));
+    expect(screen.getByRole("button", { name: "播放" }).textContent).toBe(
+      "播放",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
-    expect(screen.getByText("Frame 0/1").textContent).toBe("Frame 0/1");
+    fireEvent.click(screen.getByRole("button", { name: "重置" }));
+    expect(screen.getByText("帧 0/1").textContent).toBe("帧 0/1");
   });
 
   test("uses the shared playback state", async () => {
@@ -174,20 +176,20 @@ describe("G1MujocoReplay", () => {
       </TimeProvider>,
     );
 
-    await screen.findByRole("button", { name: "Play" });
+    await screen.findByRole("button", { name: "播放" });
 
     fireEvent.click(
       screen.getByRole("button", { name: "Toggle shared playback" }),
     );
-    expect(screen.getByRole("button", { name: "Pause" }).textContent).toBe(
-      "Pause",
+    expect(screen.getByRole("button", { name: "暂停" }).textContent).toBe(
+      "暂停",
     );
 
     fireEvent.click(
       screen.getByRole("button", { name: "Toggle shared playback" }),
     );
-    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
-      "Play",
+    expect(screen.getByRole("button", { name: "播放" }).textContent).toBe(
+      "播放",
     );
   });
 
@@ -202,9 +204,9 @@ describe("G1MujocoReplay", () => {
       </TimeProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "Play" }));
+    fireEvent.click(await screen.findByRole("button", { name: "播放" }));
     await waitFor(() =>
-      expect(screen.getByText("Frame 1/1").textContent).toBe("Frame 1/1"),
+      expect(screen.getByText("帧 1/1").textContent).toBe("帧 1/1"),
     );
 
     rerender(
@@ -218,11 +220,11 @@ describe("G1MujocoReplay", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Episode 5").textContent).toBe("Episode 5"),
+      expect(screen.getByText("回合 5").textContent).toBe("回合 5"),
     );
-    expect(screen.getByRole("button", { name: "Play" }).textContent).toBe(
-      "Play",
+    expect(screen.getByRole("button", { name: "播放" }).textContent).toBe(
+      "播放",
     );
-    expect(screen.getByText("Frame 0/1").textContent).toBe("Frame 0/1");
+    expect(screen.getByText("帧 0/1").textContent).toBe("帧 0/1");
   });
 });

@@ -68,18 +68,18 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label="Sidebar navigation"
       >
         <ul className="text-sm text-slate-300 space-y-0.5">
-          <li>Frames: {datasetInfo.total_frames.toLocaleString()}</li>
-          <li>Episodes: {datasetInfo.total_episodes.toLocaleString()}</li>
-          <li>FPS: {datasetInfo.fps}</li>
+          <li>帧数: {datasetInfo.total_frames.toLocaleString()}</li>
+          <li>回合数: {datasetInfo.total_episodes.toLocaleString()}</li>
+          <li>帧率: {datasetInfo.fps}</li>
         </ul>
 
         <div className="mt-4 space-y-2">
-          <p className="text-sm font-semibold text-slate-200">Episodes:</p>
+          <p className="text-sm font-semibold text-slate-200">回合列表:</p>
           <div className="flex flex-wrap gap-1">
             {[
-              ["all", "All"] as const,
-              ["flagged", `Flagged (${count})`] as const,
-              ["unflagged", `Unflagged (${unflaggedCount})`] as const,
+              ["all", "全部"] as const,
+              ["flagged", `已标记 (${count})`] as const,
+              ["unflagged", `未标记 (${unflaggedCount})`] as const,
             ].map(([mode, label]) => (
               <button
                 key={mode}
@@ -108,14 +108,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => onEpisodeSelect(episode)}
                     className={`underline text-left cursor-pointer ${episode === episodeId ? "-ml-1 font-bold text-orange-400" : ""}`}
                   >
-                    Episode {episode}
+                    回合 {episode}
                   </button>
                 ) : (
                   <Link
                     href={`./episode_${episode}`}
                     className={`underline ${episode === episodeId ? "-ml-1 font-bold" : ""}`}
                   >
-                    Episode {episode}
+                    回合 {episode}
                   </Link>
                 )}
                 <button
@@ -125,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       ? "text-orange-400 hover:text-orange-300"
                       : "text-slate-600 hover:text-slate-400"
                   }`}
-                  title={flagged.has(episode) ? "Unflag" : "Flag"}
+                  title={flagged.has(episode) ? "取消标记" : "标记"}
                 >
                   ⚑
                 </button>
@@ -142,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }`}
                 disabled={currentPage === 1}
               >
-                « Prev
+                « 上一页
               </button>
               <span className="mr-2 font-mono">
                 {currentPage} / {totalPages}
@@ -156,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }`}
                 disabled={currentPage === totalPages}
               >
-                Next »
+                下一页 »
               </button>
             </div>
           )}
@@ -166,7 +166,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <button
         className="mx-1 flex items-center opacity-50 hover:opacity-100 focus:outline-none focus:ring-0 md:hidden"
         onClick={() => setMobileVisible((prev) => !prev)}
-        title="Toggle sidebar"
+        title="切换侧边栏"
       >
         <div className="h-10 w-2 rounded-full bg-slate-500" />
       </button>

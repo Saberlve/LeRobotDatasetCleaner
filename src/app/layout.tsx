@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "LeRobotDatasetCleaner",
-  description: "Tool and Visualizer for LeRobot Datasets curation and cleaning",
+  description: "LeRobot 数据集清洗与可视化工具",
 };
 
 export default function RootLayout({

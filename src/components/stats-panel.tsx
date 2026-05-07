@@ -48,7 +48,7 @@ function EpisodeLengthHistogram({
         width={svgWidth}
         height={topPad + chartHeight + labelHeight}
         className="block"
-        aria-label="Episode length distribution histogram"
+        aria-label="回合长度分布直方图"
       >
         {data.map((bin, i) => {
           const barH = Math.max(1, (bin.count / maxCount) * chartHeight);
@@ -56,7 +56,7 @@ function EpisodeLengthHistogram({
           const y = topPad + chartHeight - barH;
           return (
             <g key={i}>
-              <title>{`${bin.binLabel}: ${bin.count} episode${bin.count !== 1 ? "s" : ""}`}</title>
+              <title>{`${bin.binLabel}: ${bin.count} 个回合`}</title>
               <rect
                 x={x}
                 y={y}
@@ -122,7 +122,7 @@ function StatsPanel({
     <div className="max-w-4xl mx-auto py-6 space-y-8">
       <div>
         <h2 className="text-xl text-slate-100">
-          <span className="font-bold">Dataset Statistics:</span>{" "}
+          <span className="font-bold">数据集统计:</span>{" "}
           <span className="font-normal text-slate-400">
             {datasetInfo.repoId}
           </span>
@@ -131,23 +131,23 @@ function StatsPanel({
 
       {/* Overview cards */}
       <div className="grid grid-cols-3 gap-4">
-        <Card label="Robot Type" value={datasetInfo.robot_type ?? "unknown"} />
-        <Card label="Dataset Version" value={datasetInfo.codebase_version} />
-        <Card label="Tasks" value={datasetInfo.total_tasks} />
+        <Card label="机器人类型" value={datasetInfo.robot_type ?? "unknown"} />
+        <Card label="数据集版本" value={datasetInfo.codebase_version} />
+        <Card label="任务数" value={datasetInfo.total_tasks} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card
-          label="Total Frames"
+          label="总帧数"
           value={datasetInfo.total_frames.toLocaleString()}
         />
         <Card
-          label="Total Episodes"
+          label="总回合数"
           value={datasetInfo.total_episodes.toLocaleString()}
         />
-        <Card label="FPS" value={datasetInfo.fps} />
+        <Card label="帧率" value={datasetInfo.fps} />
         <Card
-          label="Total Recording Time"
+          label="总录制时长"
           value={formatTotalTime(datasetInfo.total_frames, datasetInfo.fps)}
         />
       </div>
@@ -156,7 +156,7 @@ function StatsPanel({
       {datasetInfo.cameras.length > 0 && (
         <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700">
           <h3 className="text-sm font-semibold text-slate-200 mb-3">
-            Camera Resolutions
+            相机分辨率
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {datasetInfo.cameras.map((cam: CameraInfo) => (
@@ -194,7 +194,7 @@ function StatsPanel({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          Computing episode statistics…
+          正在计算回合统计…
         </div>
       )}
 
@@ -203,30 +203,29 @@ function StatsPanel({
         <>
           <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700">
             <h3 className="text-sm font-semibold text-slate-200 mb-4">
-              Episode Lengths
+              回合长度
             </h3>
             <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-4">
               <Card
-                label="Shortest"
+                label="最短"
                 value={`${els.shortestEpisodes[0]?.lengthSeconds ?? "–"}s`}
               />
               <Card
-                label="Longest"
+                label="最长"
                 value={`${els.longestEpisodes[els.longestEpisodes.length - 1]?.lengthSeconds ?? "–"}s`}
               />
-              <Card label="Mean" value={`${els.meanEpisodeLength}s`} />
-              <Card label="Median" value={`${els.medianEpisodeLength}s`} />
-              <Card label="Std Dev" value={`${els.stdEpisodeLength}s`} />
+              <Card label="均值" value={`${els.meanEpisodeLength}s`} />
+              <Card label="中位数" value={`${els.medianEpisodeLength}s`} />
+              <Card label="标准差" value={`${els.stdEpisodeLength}s`} />
             </div>
           </div>
 
           {els.episodeLengthHistogram.length > 0 && (
             <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700">
               <h3 className="text-sm font-semibold text-slate-200 mb-4">
-                Episode Length Distribution
+                回合长度分布
                 <span className="text-xs text-slate-500 ml-2 font-normal">
-                  {els.episodeLengthHistogram.length} bin
-                  {els.episodeLengthHistogram.length !== 1 ? "s" : ""}
+                  {els.episodeLengthHistogram.length} 个区间
                 </span>
               </h3>
               <EpisodeLengthHistogram data={els.episodeLengthHistogram} />
