@@ -55,9 +55,9 @@ export default function UrdfPlaybackBar({
             ? "bg-orange-600/30 text-orange-400 border border-orange-500"
             : "bg-slate-700 text-slate-400 border border-slate-600"
         }`}
-        title={trailEnabled ? "Hide trail" : "Show trail"}
+        title={trailEnabled ? "隐藏轨迹" : "显示轨迹"}
       >
-        Trail
+        轨迹
       </button>
 
       {/* Scrubber */}
@@ -76,11 +76,11 @@ export default function UrdfPlaybackBar({
         F {frame}/{Math.max(totalFrames - 1, 0)}
       </span>
       <select
-        aria-label="Playback speed"
+        aria-label="播放速度"
         value={String(playbackRate)}
         onChange={(event) => setPlaybackRate(Number(event.target.value))}
         className="h-8 rounded border border-slate-600 bg-slate-800 px-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-orange-500 shrink-0"
-        title="Playback speed"
+        title="播放速度"
       >
         {PLAYBACK_RATE_OPTIONS.map((rate) => (
           <option key={rate} value={String(rate)}>
@@ -93,12 +93,12 @@ export default function UrdfPlaybackBar({
       <div className="text-xs text-slate-500 select-none hidden md:flex flex-col gap-y-0.5 ml-2 shrink-0">
         <p>
           <span className="px-1.5 py-0.5 rounded border border-slate-600 bg-slate-800 text-slate-400 text-xs">
-            Space
+            空格
           </span>{" "}
-          pause/unpause
+          暂停/播放
         </p>
         <p>
-          <span className="font-mono">↑/↓</span> prev/next episode
+          <span className="font-mono">↑/↓</span> 上/下一回合
         </p>
       </div>
     </div>

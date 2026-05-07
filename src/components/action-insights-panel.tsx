@@ -31,7 +31,7 @@ function InfoToggle({ children }: { children: React.ReactNode }) {
       <button
         onClick={() => setOpen((v) => !v)}
         className="p-0.5 rounded-full text-slate-500 hover:text-slate-300 transition-colors shrink-0"
-        title="Toggle description"
+        title="切换说明"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -71,7 +71,7 @@ function FullscreenWrapper({ children }: { children: React.ReactNode }) {
       <button
         onClick={() => setFs((v) => !v)}
         className="absolute top-3 right-3 z-10 p-1.5 rounded bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 transition-colors backdrop-blur-sm"
-        title={fs ? "Exit fullscreen" : "Fullscreen"}
+        title={fs ? "退出全屏" : "全屏"}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -106,7 +106,7 @@ function FullscreenWrapper({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setFs(false)}
             className="fixed top-4 right-4 z-50 p-2 rounded bg-slate-700/80 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors"
-            title="Exit fullscreen (Esc)"
+            title="退出全屏 (Esc)"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -144,7 +144,7 @@ function FlagBtn({ id }: { id: number }) {
   return (
     <button
       onClick={() => toggle(id)}
-      title={flagged ? "Unflag episode" : "Flag for review"}
+      title={flagged ? "取消标记" : "标记待审"}
       className={`p-0.5 rounded transition-colors ${flagged ? "text-orange-400" : "text-slate-600 hover:text-slate-400"}`}
     >
       <svg
@@ -186,7 +186,7 @@ function FlagAllBtn({ ids, label }: { ids: number[]; label?: string }) {
         <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
         <line x1="4" y1="22" x2="4" y2="15" />
       </svg>
-      {label ?? "Flag all"}
+      {label ?? "全部标记"}
     </button>
   );
 }
@@ -309,8 +309,8 @@ function AutocorrelationSection({
     fallback ?? { chartData: [], suggestedChunk: null, shortKeys: [] };
   const isAgg = !!agg;
   const numEpisodesLabel = isAgg
-    ? ` (${numEpisodes} episodes sampled)`
-    : " (current episode)";
+    ? ` (${numEpisodes} 个回合已采样)`
+    : " (当前回合)";
 
   const yDomain = useMemo(() => {
     if (chartData.length === 0 || shortKeys.length === 0)
@@ -326,32 +326,29 @@ function AutocorrelationSection({
   }, [chartData, shortKeys]);
 
   if (shortKeys.length === 0)
-    return <p className="text-slate-500 italic">No action columns found.</p>;
+    return <p className="text-slate-500 italic">未找到动作列。</p>;
 
   return (
     <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700 space-y-4">
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-200">
-            Action Autocorrelation
+            动作自相关
             <span className="text-xs text-slate-500 ml-2 font-normal">
               {numEpisodesLabel}
             </span>
           </h3>
           <InfoToggle>
             <p className="text-xs text-slate-400">
-              Shows how correlated each action dimension is with itself over
-              increasing time lags. Where autocorrelation drops below 0.5
-              suggests a{" "}
+              展示每个动作维度在递增时间滞后下与自身的相关性。自相关降至 0.5
+              以下的位置提示了一个{" "}
               <span className="text-orange-400 font-medium">
-                natural action chunk boundary
+                自然的动作块边界
               </span>{" "}
-              — actions beyond this lag are essentially independent, so
-              executing them open-loop offers diminishing returns.
+              — 超过该滞后的动作基本相互独立，因此开环执行带来的收益递减。
               <br />
               <span className="text-slate-500">
-                Grounded in the theoretical result that chunk length should
-                scale logarithmically with system stability constants (
+                理论基础：块长度应随系统稳定性常数对数缩放（
                 <a
                   href="https://arxiv.org/abs/2507.09061"
                   target="_blank"
@@ -360,7 +357,7 @@ function AutocorrelationSection({
                 >
                   Zhang et al., 2025
                 </a>
-                , Theorem 1).
+                ，定理 1）。
               </span>
             </p>
           </InfoToggle>
@@ -374,12 +371,11 @@ function AutocorrelationSection({
           </span>
           <div>
             <p className="text-sm text-orange-300 font-medium">
-              Suggested chunk length: {suggestedChunk} steps (
-              {(suggestedChunk / fps).toFixed(2)}s)
+              建议块长度: {suggestedChunk} 步 (
+              {(suggestedChunk / fps).toFixed(2)}秒)
             </p>
             <p className="text-xs text-slate-400">
-              Median lag where autocorrelation drops below 0.5 across action
-              dimensions
+              各动作维度自相关降至 0.5 以下的中位数滞后
             </p>
           </div>
         </div>
@@ -397,7 +393,7 @@ function AutocorrelationSection({
               dataKey="lag"
               stroke="#94a3b8"
               label={{
-                value: "Lag (steps)",
+                value: "滞后 (步)",
                 position: "insideBottom",
                 offset: -8,
                 fill: "#94a3b8",
@@ -416,7 +412,7 @@ function AutocorrelationSection({
                 borderRadius: 6,
               }}
               labelFormatter={(v) =>
-                `Lag ${v} (${(Number(v) / fps).toFixed(2)}s)`
+                `滞后 ${v} (${(Number(v) / fps).toFixed(2)}s)`
               }
               formatter={(v: number) => v.toFixed(3)}
             />
@@ -425,7 +421,7 @@ function AutocorrelationSection({
               stroke="#64748b"
               strokeDasharray="6 4"
               dot={false}
-              name="0.5 threshold"
+              name="0.5 阈值"
               legendType="none"
               isAnimationActive={false}
             />
@@ -578,64 +574,57 @@ function ActionVelocitySection({
     } else {
       const smoothRatio = smooth.length / active.length;
       if (smoothRatio >= 0.6 && jerkyNonGripper.length === 0)
-        verdict = { label: "Smooth", color: "text-green-400" };
+        verdict = { label: "平滑", color: "text-green-400" };
       else if (jerkyNonGripper.length <= 2 && smoothRatio >= 0.3)
-        verdict = { label: "Moderate", color: "text-yellow-400" };
-      else verdict = { label: "Jerky", color: "text-red-400" };
+        verdict = { label: "中等", color: "text-yellow-400" };
+      else verdict = { label: "抖动", color: "text-red-400" };
     }
 
     const lines: string[] = [];
     if (smooth.length > 0)
       lines.push(
-        `${smooth.length} smooth (${smooth.map((s) => s.name).join(", ")})`,
+        `${smooth.length} 平滑 (${smooth.map((s) => s.name).join(", ")})`,
       );
     if (moderate.length > 0)
       lines.push(
-        `${moderate.length} moderate (${moderate.map((s) => s.name).join(", ")})`,
+        `${moderate.length} 中等 (${moderate.map((s) => s.name).join(", ")})`,
       );
     if (jerkyNonGripper.length > 0)
       lines.push(
-        `${jerkyNonGripper.length} jerky (${jerkyNonGripper.map((s) => s.name).join(", ")})`,
+        `${jerkyNonGripper.length} 抖动 (${jerkyNonGripper.map((s) => s.name).join(", ")})`,
       );
     if (jerkyGripper.length > 0)
-      lines.push(
-        `${jerkyGripper.length} gripper${jerkyGripper.length > 1 ? "s" : ""} jerky — expected for binary open/close`,
-      );
+      lines.push(`${jerkyGripper.length} 夹爪抖动 — 二值开合动作的正常现象`);
     if (excluded.length > 0) {
       const discreteOnly = excluded.filter((s) => s.discrete);
       const inactiveOnly = excluded.filter((s) => s.inactive && !s.discrete);
       const parts: string[] = [];
       if (discreteOnly.length > 0)
         parts.push(
-          `${discreteOnly.length} discrete (${discreteOnly.map((s) => s.name).join(", ")})`,
+          `${discreteOnly.length} 离散 (${discreteOnly.map((s) => s.name).join(", ")})`,
         );
       if (inactiveOnly.length > 0)
         parts.push(
-          `${inactiveOnly.length} inactive (${inactiveOnly.map((s) => s.name).join(", ")})`,
+          `${inactiveOnly.length} 静止 (${inactiveOnly.map((s) => s.name).join(", ")})`,
         );
-      lines.push(`${parts.join("; ")} — excluded from verdict`);
+      lines.push(`${parts.join("; ")} — 不计入判定`);
     }
 
     let tip: string;
     if (verdict.label === "N/A")
-      tip = "All motors are inactive or discrete — no motors to evaluate.";
-    else if (verdict.label === "Smooth")
-      tip = "Actions are consistent — longer action chunks should work well.";
-    else if (verdict.label === "Moderate")
-      tip =
-        "Some dimensions show abrupt changes. Consider moderate chunk sizes.";
-    else
-      tip =
-        "Many dimensions are jerky. Use shorter action chunks and consider filtering outlier episodes.";
+      tip = "所有电机均为静止或离散类型 — 无可评估电机。";
+    else if (verdict.label === "平滑")
+      tip = "动作一致性良好 — 适合使用较长的动作块。";
+    else if (verdict.label === "中等")
+      tip = "部分维度存在突变。建议使用中等长度的动作块。";
+    else tip = "多个维度抖动明显。建议使用更短的动作块，并考虑过滤异常回合。";
 
     return { verdict, lines, tip };
   }, [stats, maxStd]);
 
   if (stats.length === 0)
     return (
-      <p className="text-slate-500 italic">
-        No action data for velocity analysis.
-      </p>
+      <p className="text-slate-500 italic">没有可用于速度分析的动作数据。</p>
     );
 
   return (
@@ -643,29 +632,22 @@ function ActionVelocitySection({
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-200">
-            Action Velocity (Δa) — Smoothness Proxy
+            动作速度 (Δa) — 平滑度代理
             <span className="text-xs text-slate-500 ml-2 font-normal">
-              {isAgg
-                ? `(${numEpisodes} episodes sampled)`
-                : "(current episode)"}
+              {isAgg ? `(${numEpisodes} 个回合已采样)` : "(当前回合)"}
             </span>
           </h3>
           <InfoToggle>
             <p className="text-xs text-slate-400">
-              Shows the distribution of frame-to-frame action changes (Δa = a
-              <sub>t+1</sub> − a<sub>t</sub>) for each dimension. A{" "}
-              <span className="text-green-400">
-                tight distribution around zero
-              </span>{" "}
-              means smooth, predictable control — the system is likely stable
-              and benefits from longer action chunks.
-              <span className="text-red-400"> Fat tails or high std</span>{" "}
-              indicate jerky demonstrations, suggesting shorter chunks and
-              potentially beneficial noise injection.
+              展示逐帧动作变化 (Δa = a<sub>t+1</sub> − a<sub>t</sub>)
+              在每个维度上的分布。{" "}
+              <span className="text-green-400">集中在零附近的紧分布</span>{" "}
+              意味着平滑、可预测的控制 — 系统可能稳定，适合使用较长的动作块。
+              <span className="text-red-400"> 厚尾或高标准差</span>{" "}
+              表示抖动较大的演示，建议使用更短的动作块，并考虑加入噪声注入。
               <br />
               <span className="text-slate-500">
-                Relates to the Lipschitz constant L<sub>π</sub> and smoothness C
-                <sub>π</sub> in{" "}
+                与 Lipschitz 常数 L<sub>π</sub> 和平滑度 C<sub>π</sub> 相关，见{" "}
                 <a
                   href="https://arxiv.org/abs/2507.09061"
                   target="_blank"
@@ -674,7 +656,7 @@ function ActionVelocitySection({
                 >
                   Zhang et al. (2025)
                 </a>
-                , which govern compounding error bounds (Assumptions 3.1, 4.1).
+                ，控制复合误差边界（假设 3.1、4.1）。
               </span>
             </p>
           </InfoToggle>
@@ -693,9 +675,9 @@ function ActionVelocitySection({
             s.inactive && s.discrete
               ? "inactive & discrete"
               : s.discrete
-                ? "discrete"
+                ? "离散"
                 : s.inactive
-                  ? "inactive"
+                  ? "静止"
                   : null;
           return (
             <div
@@ -766,7 +748,7 @@ function ActionVelocitySection({
       {insight && (
         <div className="bg-slate-900/60 rounded-md px-4 py-3 border border-slate-700/60 space-y-1.5">
           <p className="text-sm font-medium text-slate-200">
-            Overall:{" "}
+            总体:{""}
             <span className={insight.verdict.color}>
               {insight.verdict.label}
             </span>
@@ -795,9 +777,9 @@ function JerkyEpisodesList({ episodes }: { episodes: JerkyEpisode[] }) {
     <div className="bg-slate-900/60 rounded-md px-4 py-3 border border-slate-700/60 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-200">
-          Most Jerky Episodes{" "}
+          抖动最大的回合{" "}
           <span className="text-xs text-slate-500 font-normal">
-            sorted by mean |Δa|
+            按平均 |Δa| 排序
           </span>
         </p>
         <div className="flex items-center gap-3">
@@ -807,7 +789,7 @@ function JerkyEpisodesList({ episodes }: { episodes: JerkyEpisode[] }) {
               onClick={() => setShowAll((v) => !v)}
               className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
             >
-              {showAll ? "Show top 15" : `Show all ${episodes.length}`}
+              {showAll ? "显示前 15" : `显示全部 ${episodes.length}`}
             </button>
           )}
         </div>
@@ -817,8 +799,8 @@ function JerkyEpisodesList({ episodes }: { episodes: JerkyEpisode[] }) {
           <thead>
             <tr className="text-slate-500 border-b border-slate-700">
               <th className="w-5 py-1" />
-              <th className="text-left py-1 pr-3">Episode</th>
-              <th className="text-right py-1">Mean |Δa|</th>
+              <th className="text-left py-1 pr-3">回合</th>
+              <th className="text-right py-1">平均 |Δa|</th>
             </tr>
           </thead>
           <tbody>
@@ -858,7 +840,7 @@ function VarianceHeatmap({
     return (
       <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700">
         <h3 className="text-sm font-semibold text-slate-200 mb-2">
-          Cross-Episode Action Variance
+          跨回合动作方差
         </h3>
         <div className="flex items-center gap-2 text-slate-400 text-sm py-8 justify-center">
           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -876,7 +858,7 @@ function VarianceHeatmap({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          Loading cross-episode data (sampled up to 500 episodes)…
+          正在加载跨回合数据（最多采样 500 个回合）…
         </div>
       </div>
     );
@@ -886,10 +868,10 @@ function VarianceHeatmap({
     return (
       <div className="bg-slate-800/60 rounded-lg p-5 border border-slate-700">
         <h3 className="text-sm font-semibold text-slate-200 mb-2">
-          Cross-Episode Action Variance
+          跨回合动作方差
         </h3>
         <p className="text-slate-500 italic text-sm">
-          Not enough episodes or no action data to compute variance.
+          回合数不足或没有动作数据来计算方差。
         </p>
       </div>
     );
@@ -928,27 +910,22 @@ function VarianceHeatmap({
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-200">
-            Cross-Episode Action Variance
+            跨回合动作方差
             <span className="text-xs text-slate-500 ml-2 font-normal">
               ({numEpisodes} episodes sampled)
             </span>
           </h3>
           <InfoToggle>
             <p className="text-xs text-slate-400">
-              Shows how much each action dimension varies across episodes at
-              each point in time (normalized 0–100%).
-              <span className="text-orange-400">
-                {" "}
-                High-variance regions
-              </span>{" "}
-              indicate multi-modal or inconsistent demonstrations — generative
-              policies (diffusion, flow-matching) and action chunking help here
-              by modeling multiple modes.
-              <span className="text-blue-400"> Low-variance regions</span>{" "}
-              indicate consistent behavior across demonstrations.
+              展示每个动作维度在回合进程中各时间点的变化量（归一化 0–100%）。
+              <span className="text-orange-400"> 高方差区域</span>{" "}
+              表示多模态或不一致的演示 —
+              生成式策略（扩散、流匹配）和动作分块通过建模多模态来帮助解决此问题。
+              <span className="text-blue-400"> 低方差区域</span>{" "}
+              表示各演示之间行为一致。
               <br />
               <span className="text-slate-500">
-                Relates to the &quot;coverage&quot; discussion in{" "}
+                与 &quot;覆盖率&quot; 讨论相关，见{" "}
                 <a
                   href="https://arxiv.org/abs/2507.09061"
                   target="_blank"
@@ -957,8 +934,7 @@ function VarianceHeatmap({
                 >
                   Zhang et al. (2025)
                 </a>{" "}
-                — regions with low variance may lack the exploratory coverage
-                needed to prevent compounding errors (Section 4).
+                — 低方差区域可能缺乏防止复合误差所需的探索性覆盖（第 4 节）。
               </span>
             </p>
           </InfoToggle>
@@ -1023,7 +999,7 @@ function VarianceHeatmap({
             className="fill-slate-500"
             fontSize={10}
           >
-            Episode progress
+            回合进度
           </text>
 
           {/* Color bar */}
@@ -1049,7 +1025,7 @@ function VarianceHeatmap({
             fontSize={8}
             dominantBaseline="central"
           >
-            high
+            高
           </text>
           <text
             x={labelW + numBins * cellW + 34}
@@ -1058,7 +1034,7 @@ function VarianceHeatmap({
             fontSize={8}
             dominantBaseline="central"
           >
-            low
+            低
           </text>
         </svg>
       </div>
@@ -1098,21 +1074,21 @@ function SpeedVarianceSection({
       let v: { label: string; color: string; tip: string };
       if (c < 0.2)
         v = {
-          label: "Consistent",
+          label: "一致",
           color: "text-green-400",
-          tip: "Demonstrators execute at similar speeds — no velocity normalization needed.",
+          tip: "演示者执行速度相似 — 无需速度归一化。",
         };
       else if (c < 0.4)
         v = {
-          label: "Moderate variance",
+          label: "中等方差",
           color: "text-yellow-400",
-          tip: "Some speed variation across demonstrators. Consider velocity normalization for best results.",
+          tip: "演示者之间存在一定速度差异。建议考虑速度归一化以获得最佳效果。",
         };
       else
         v = {
-          label: "High variance",
+          label: "高方差",
           color: "text-red-400",
-          tip: "Large speed differences between demonstrations. Velocity normalization before training is strongly recommended.",
+          tip: "演示之间速度差异较大。强烈建议在训练前进行速度归一化。",
         };
 
       return {
@@ -1139,25 +1115,22 @@ function SpeedVarianceSection({
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold text-slate-200">
-            Demonstrator Speed Variance
+            演示者速度方差
             <span className="text-xs text-slate-500 ml-2 font-normal">
               ({numEpisodes} episodes)
             </span>
           </h3>
           <InfoToggle>
             <p className="text-xs text-slate-400">
-              Distribution of average execution speed (mean ‖Δa<sub>t</sub>‖ per
-              frame) across all episodes. Different human demonstrators often
-              execute at{" "}
-              <span className="text-orange-400">different speeds</span>,
-              creating artificial multimodality in the action distribution that
-              confuses the policy. A coefficient of variation (CV) above 0.3
-              strongly suggests normalizing trajectory speed before training.
+              所有回合的平均执行速度分布（每帧 mean ‖Δa<sub>t</sub>
+              ‖）。不同人类演示者往往以{" "}
+              <span className="text-orange-400">不同速度</span>
+              执行，在动作分布中造成人为的多模态，使策略困惑。变异系数 (CV) 超过
+              0.3 强烈建议在训练前对轨迹速度进行归一化。
               <br />
               <span className="text-slate-500">
-                Based on &quot;Is Diversity All You Need&quot; (AGI-Bot, 2025)
-                which shows velocity normalization dramatically improves
-                fine-tuning success rate.
+                基于 &quot;Is Diversity All You Need&quot; (AGI-Bot, 2025)
+                的研究，速度归一化显著提高了微调成功率。
               </span>
             </p>
           </InfoToggle>
@@ -1208,19 +1181,19 @@ function SpeedVarianceSection({
         </div>
         <div className="flex flex-col gap-2 text-xs shrink-0 min-w-[120px]">
           <div>
-            <span className="text-slate-500">Mean</span>{" "}
+            <span className="text-slate-500">均值</span>{" "}
             <span className="text-slate-200 tabular-nums ml-1">
               {mean.toFixed(4)}
             </span>
           </div>
           <div>
-            <span className="text-slate-500">Median</span>{" "}
+            <span className="text-slate-500">中位数</span>{" "}
             <span className="text-slate-200 tabular-nums ml-1">
               {median.toFixed(4)}
             </span>
           </div>
           <div>
-            <span className="text-slate-500">Std</span>{" "}
+            <span className="text-slate-500">标准差</span>{" "}
             <span className="text-slate-200 tabular-nums ml-1">
               {std.toFixed(4)}
             </span>
@@ -1267,16 +1240,16 @@ export function getStateActionAlignmentInterpretation({
   const extraLag = meanPeakLag - EXPECTED_LEROBOT_ACTION_STATE_LAG;
   const rangeDetail =
     lagRangeMin !== lagRangeMax
-      ? ` Individual dimension peaks range from ${lagRangeMin} to ${lagRangeMax} raw lag steps.`
+      ? ` 各维度峰值范围：${lagRangeMin} 到 ${lagRangeMax} 原始滞后步。`
       : "";
 
   if (extraLag === 0) {
     return {
       extraLag,
       tone: "ok",
-      title: "Expected one-step action/state offset",
+      title: "符合预期的单步动作/状态偏移",
       detail:
-        "Peak lag 1 matches the LeRobot convention: state[t] is observed before action[t], and action[t] targets the transition toward state[t+1]. Extra delay: 0 frames." +
+        `峰值滞后 1 符合 LeRobot 约定：state[t] 在 action[t] 之前被观测，action[t] 目标为 state[t+1] 的过渡。额外延迟：0 帧。` +
         rangeDetail,
     };
   }
@@ -1285,9 +1258,9 @@ export function getStateActionAlignmentInterpretation({
     return {
       extraLag,
       tone: "warn",
-      title: `Extra control delay: ${extraLag} step${extraLag !== 1 ? "s" : ""} (${(extraLag / fps).toFixed(3)}s)`,
+      title: `额外控制延迟：${extraLag} 步 (${(extraLag / fps).toFixed(3)}秒)`,
       detail:
-        `State changes appear ~${extraLag} frames later than the expected LeRobot one-step offset. Consider aligning action[t] with state[t+${meanPeakLag}] only if this is not caused by logging convention.` +
+        `状态变化比预期 LeRobot 单步偏移晚了约 ${extraLag} 帧。如非日志约定导致，可考虑将 action[t] 与 state[t+${meanPeakLag}] 对齐。` +
         rangeDetail,
     };
   }
@@ -1295,9 +1268,9 @@ export function getStateActionAlignmentInterpretation({
   return {
     extraLag,
     tone: "warn",
-    title: `Earlier-than-expected response: ${Math.abs(extraLag)} step${Math.abs(extraLag) !== 1 ? "s" : ""} (${(Math.abs(extraLag) / fps).toFixed(3)}s)`,
+    title: `早于预期的响应：${Math.abs(extraLag)} 步 (${(Math.abs(extraLag) / fps).toFixed(3)}秒)`,
     detail:
-      `Peak lag ${meanPeakLag} is earlier than the expected LeRobot one-step offset. This often indicates predictive actions, naming mismatches, or a different dataset convention.` +
+      `峰值滞后 ${meanPeakLag} 早于预期的 LeRobot 单步偏移。这通常表示预测性动作、命名不匹配或不同的数据集约定。` +
       rangeDetail,
   };
 }
@@ -1475,19 +1448,18 @@ function StateActionAlignmentSection({
           </h3>
           <InfoToggle>
             <p className="text-xs text-slate-400">
-              Per-dimension cross-correlation between Δaction<sub>d</sub>(t) and
-              Δstate<sub>d</sub>(t+lag), aggregated as
-              <span className="text-orange-400"> max</span>,{" "}
-              <span className="text-slate-200">mean</span>, and
-              <span className="text-blue-400"> min</span> across all matched
-              action–state pairs. The{" "}
-              <span className="text-orange-400">peak lag</span> reveals the raw
-              offset between action changes and state changes. In LeRobot
-              datasets, lag 1 is usually expected because state[t] is observed
-              before action[t], and action[t] targets state[t+1].
+              Δaction<sub>d</sub>(t) 与 Δstate<sub>d</sub>(t+lag)
+              的逐维度互相关， 聚合为所有匹配动作-状态对的
+              <span className="text-orange-400"> 最大</span>、
+              <span className="text-slate-200">均值</span> 和
+              <span className="text-blue-400"> 最小</span>。{" "}
+              <span className="text-orange-400">峰值滞后</span>{" "}
+              揭示了动作变化与状态变化之间的原始偏移。在 LeRobot 数据集中，滞后
+              1 通常是预期的，因为 state[t] 在 action[t] 之前被观测，而
+              action[t] 目标是 state[t+1]。
               <br />
               <span className="text-slate-500">
-                Central to ACT (
+                核心相关研究：ACT (
                 <a
                   href="https://arxiv.org/abs/2304.13705"
                   target="_blank"
@@ -1496,8 +1468,7 @@ function StateActionAlignmentSection({
                 >
                   Zhao et al., 2023
                 </a>{" "}
-                — action chunking compensates for delay), Real-Time Chunking
-                (RTC,{" "}
+                — 动作分块补偿延迟)、Real-Time Chunking (RTC,{" "}
                 <a
                   href="https://arxiv.org/abs/2506.07339"
                   target="_blank"
@@ -1506,7 +1477,7 @@ function StateActionAlignmentSection({
                 >
                   Black et al., 2025
                 </a>
-                ), and Training-Time RTC (
+                ) 和 Training-Time RTC (
                 <a
                   href="https://arxiv.org/abs/2512.05964"
                   target="_blank"
@@ -1515,8 +1486,7 @@ function StateActionAlignmentSection({
                 >
                   Black et al., 2025
                 </a>
-                ) — all address the timing mismatch between commanded actions
-                and observed state changes.
+                ) — 均解决指令动作与观测状态变化之间的时间不匹配问题。
               </span>
             </p>
           </InfoToggle>
@@ -1564,7 +1534,7 @@ function StateActionAlignmentSection({
               dataKey="lag"
               stroke="#94a3b8"
               label={{
-                value: "Lag (steps)",
+                value: "滞后 (步)",
                 position: "insideBottom",
                 offset: -8,
                 fill: "#94a3b8",
@@ -1593,7 +1563,7 @@ function StateActionAlignmentSection({
               dot={false}
               strokeWidth={2}
               isAnimationActive={false}
-              name="max"
+              name="最大"
             />
             <Line
               dataKey="mean"
@@ -1601,7 +1571,7 @@ function StateActionAlignmentSection({
               dot={false}
               strokeWidth={2}
               isAnimationActive={false}
-              name="mean"
+              name="均值"
             />
             <Line
               dataKey="min"
@@ -1609,14 +1579,14 @@ function StateActionAlignmentSection({
               dot={false}
               strokeWidth={2}
               isAnimationActive={false}
-              name="min"
+              name="最小"
             />
             <Line
               dataKey={() => 0}
               stroke="#64748b"
               strokeDasharray="6 4"
               dot={false}
-              name="zero"
+              name="零线"
               legendType="none"
               isAnimationActive={false}
             />
@@ -1628,27 +1598,27 @@ function StateActionAlignmentSection({
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-[3px] rounded-full shrink-0 bg-orange-500" />
           <span className="text-xs text-slate-400">
-            max (peak: lag {maxPeakLag}, r={maxPeakCorr.toFixed(3)})
+            最大 (峰值: 滞后 {maxPeakLag}, r={maxPeakCorr.toFixed(3)})
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-[3px] rounded-full shrink-0 bg-slate-400" />
           <span className="text-xs text-slate-400">
-            mean (peak: lag {meanPeakLag}, r={meanPeakCorr.toFixed(3)})
+            均值 (峰值: 滞后 {meanPeakLag}, r={meanPeakCorr.toFixed(3)})
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-[3px] rounded-full shrink-0 bg-blue-500" />
           <span className="text-xs text-slate-400">
-            min (peak: lag {minPeakLag}, r={minPeakCorr.toFixed(3)})
+            最小 (峰值: 滞后 {minPeakLag}, r={minPeakCorr.toFixed(3)})
           </span>
         </div>
       </div>
 
       {meanPeakLag === 0 && (
         <p className="text-xs text-green-400">
-          Mean peak correlation at lag 0 (r={meanPeakCorr.toFixed(3)}) — actions
-          and state changes are well-aligned in this episode.
+          均值峰值相关在滞后 0 处 (r={meanPeakCorr.toFixed(3)}) —
+          此回合中动作与状态变化对齐良好。
         </p>
       )}
     </div>
@@ -1677,24 +1647,23 @@ function ActionInsightsPanel({
     <div className="max-w-5xl mx-auto py-6 space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-100">Action Insights</h2>
+          <h2 className="text-xl font-bold text-slate-100">动作洞察</h2>
           <p className="text-sm text-slate-400 mt-1">
-            Data-driven analysis to guide action chunking, data quality
-            assessment, and training configuration.
+            数据驱动的分析，用于指导动作分块、数据质量评估和训练配置。
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span
             className={`text-sm ${mode === "episode" ? "text-slate-100 font-medium" : "text-slate-500"}`}
           >
-            Current Episode
+            当前回合
           </span>
           <button
             onClick={() =>
               setMode((m) => (m === "episode" ? "dataset" : "episode"))
             }
             className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors shrink-0 ${mode === "dataset" ? "bg-orange-500" : "bg-slate-600"}`}
-            aria-label="Toggle episode/dataset scope"
+            aria-label="切换回合/数据集范围"
           >
             <span
               className={`inline-block w-3.5 h-3.5 bg-white rounded-full transition-transform ${mode === "dataset" ? "translate-x-[18px]" : "translate-x-[3px]"}`}
@@ -1703,7 +1672,7 @@ function ActionInsightsPanel({
           <span
             className={`text-sm ${mode === "dataset" ? "text-slate-100 font-medium" : "text-slate-500"}`}
           >
-            All Episodes
+            全部回合
             {crossEpisodeData ? ` (${crossEpisodeData.numEpisodes})` : ""}
           </span>
         </div>

@@ -114,7 +114,7 @@ export const DataRecharts = React.memo(
                   </>
                 )}
               </svg>
-              {expanded ? "Split charts" : "Combine all"}
+              {expanded ? "拆分图表" : "合并全部"}
             </button>
           </div>
         )}

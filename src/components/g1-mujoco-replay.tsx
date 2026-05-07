@@ -49,7 +49,7 @@ export default function G1MujocoReplay({
       try {
         if (!isG1) {
           if (!fallbackData) {
-            throw new Error("Replay unavailable: no URDF trajectory data");
+            throw new Error("回放不可用: 没有 URDF 轨迹数据");
           }
           if (!cancelled) {
             setStatus("ready");
@@ -59,7 +59,7 @@ export default function G1MujocoReplay({
 
         const firstRow = initialChartData[0];
         if (!firstRow) {
-          throw new Error("Replay unavailable: no trajectory data");
+          throw new Error("回放不可用: 没有轨迹数据");
         }
 
         const orderedColumns = extractOrderedG1StateColumns(firstRow);
@@ -97,11 +97,11 @@ export default function G1MujocoReplay({
   }, [datasetInfo.fps, initialChartData.length, isPlaying, status]);
 
   if (status === "loading") {
-    return <div className="p-6 text-slate-200">Loading Replay…</div>;
+    return <div className="p-6 text-slate-200">正在加载回放…</div>;
   }
 
   if (status === "error") {
-    return <div className="p-6 text-red-400">Replay unavailable: {error}</div>;
+    return <div className="p-6 text-red-400">回放不可用: {error}</div>;
   }
 
   if (!isG1 && fallbackData) {
@@ -114,13 +114,13 @@ export default function G1MujocoReplay({
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="text-sm text-slate-200">Episode {episodeId}</div>
+      <div className="text-sm text-slate-200">回合 {episodeId}</div>
       <div className="text-xs text-slate-400">
-        Frame {frame}/{Math.max(initialChartData.length - 1, 0)}
+        帧 {frame}/{Math.max(initialChartData.length - 1, 0)}
       </div>
       <div className="flex gap-2">
         <button onClick={() => setIsPlaying((value) => !value)}>
-          {isPlaying ? "Pause" : "Play"}
+          {isPlaying ? "暂停" : "播放"}
         </button>
         <button
           onClick={() => {
@@ -128,7 +128,7 @@ export default function G1MujocoReplay({
             setFrame(0);
           }}
         >
-          Reset
+          重置
         </button>
       </div>
     </div>

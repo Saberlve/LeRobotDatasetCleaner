@@ -113,8 +113,8 @@ describe("EpisodeViewer replay tab", () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
     expect(
-      (await screen.findByRole("button", { name: "Replay" })).textContent,
-    ).toBe("Replay");
+      (await screen.findByRole("button", { name: "回放" })).textContent,
+    ).toBe("回放");
     expect(screen.queryByRole("button", { name: "3D Replay" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sim Replay" })).toBeNull();
   });
@@ -129,7 +129,7 @@ describe("EpisodeViewer replay tab", () => {
       <EpisodeViewer org="local" dataset="straighten_the_box" episodeId={0} />,
     );
 
-    expect(await screen.findByRole("button", { name: "Replay" })).toBeDefined();
+    expect(await screen.findByRole("button", { name: "回放" })).toBeDefined();
   });
 
   test("shows Replay for Acone datasets", async () => {
@@ -146,13 +146,13 @@ describe("EpisodeViewer replay tab", () => {
       />,
     );
 
-    expect(await screen.findByRole("button", { name: "Replay" })).toBeDefined();
+    expect(await screen.findByRole("button", { name: "回放" })).toBeDefined();
   });
 
   test("routes ArrowDown from replay to the next episode and keeps replay tab", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    const replayButton = await screen.findByRole("button", { name: "Replay" });
+    const replayButton = await screen.findByRole("button", { name: "回放" });
     replayButton.click();
 
     fireEvent.keyDown(window, { key: "ArrowDown" });
@@ -165,7 +165,7 @@ describe("EpisodeViewer replay tab", () => {
   test("toggles the current episode flag with f", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    await screen.findByRole("button", { name: "Replay" });
+    await screen.findByRole("button", { name: "回放" });
 
     fireEvent.keyDown(window, { key: "f" });
 
@@ -180,7 +180,7 @@ describe("EpisodeViewer replay tab", () => {
 
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    await screen.findByRole("button", { name: "Replay" });
+    await screen.findByRole("button", { name: "回放" });
 
     await waitFor(() => {
       fireEvent.keyDown(window, { key: "ArrowDown" });
@@ -193,7 +193,7 @@ describe("EpisodeViewer replay tab", () => {
 
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    await screen.findByRole("button", { name: "Replay" });
+    await screen.findByRole("button", { name: "回放" });
 
     expect(sessionStorage.getItem("sidebarFilterMode")).toBe("flagged");
   });
@@ -207,6 +207,6 @@ describe("EpisodeViewer replay tab", () => {
     render(<EpisodeViewer org="local" dataset="demo_aloha" episodeId={0} />);
 
     expect(await screen.findByTestId("sidebar")).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Replay" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "回放" })).toBeNull();
   });
 });

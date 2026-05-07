@@ -65,7 +65,7 @@ export function RemoteDatasetCard() {
     <section className="rounded-3xl border border-white/12 bg-slate-950/55 p-6 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="space-y-2">
         <p className="text-sm font-medium tracking-[0.25em] text-cyan-300/85 uppercase">
-          Remote
+          远程
         </p>
         <h2 className="text-2xl font-semibold text-white">远程数据集</h2>
         <p className="text-sm leading-6 text-slate-300">

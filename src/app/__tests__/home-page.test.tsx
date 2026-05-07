@@ -34,7 +34,7 @@ describe("home page", () => {
     const html = renderToStaticMarkup(<Home />);
 
     expect(html).toContain("LeRobot");
-    expect(html).toContain("Visualizer");
+    expect(html).toContain("Cleaner");
     expect(html).toContain("打开数据集");
     expect(html).toContain("选择本地文件夹");
     expect(html).toContain("最近导入");
