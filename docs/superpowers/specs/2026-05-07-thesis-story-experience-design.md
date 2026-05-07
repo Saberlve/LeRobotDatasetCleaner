@@ -26,11 +26,18 @@ This is a presentation surface. It should be readable from top to bottom without
 
 ### `/`
 
-The home page becomes the thesis story entry point, not a generic landing page and not a separate dashboard launcher.
+The home page becomes the thesis story entry point. It is not a generic landing page and not a separate dashboard launcher.
+
+Layout:
+
+- the page title is the paper title
+- a sticky left sidebar provides section entry points
+- the main content area scrolls through the thesis story in order
 
 First viewport:
 
-- thesis project title and one-sentence claim
+- paper title as the dominant headline
+- one-sentence claim under the title
 - direct access to the local ACONE dataset-cleaning demonstration
 - three compact evidence cards: cleaned dataset scale, SimplerEnv result, RMBench result
 
@@ -45,6 +52,7 @@ The page then continues with anchored sections:
 - Conclusion
 
 The top-level flow should remain linear. Dataset cleaning appears first because it is the user's own system contribution and the source of the real-robot training data.
+The sidebar should expose these sections directly so the user can jump between them during a defense.
 
 ### Existing Dataset Inspection Routes
 
@@ -149,7 +157,7 @@ Later iterations can add importers for W&B exports and benchmark logs.
 
 ### Thesis Entry
 
-The first viewport states the project plainly:
+The first viewport states the paper title plainly:
 
 > Memory-augmented vision-language-action policy for long-horizon robotic manipulation.
 
@@ -315,6 +323,7 @@ First implementation should not include:
 The visual style should feel like a research presentation interface:
 
 - dense enough to support evidence, but not like a production monitoring dashboard
+- a persistent sidebar should anchor the story and make section jumping obvious
 - Chinese UI text by default, matching the existing translated app
 - restrained cards for metrics and repeated video/result items
 - clear section anchors for defense navigation
