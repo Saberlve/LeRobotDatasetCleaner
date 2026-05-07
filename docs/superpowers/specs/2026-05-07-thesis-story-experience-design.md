@@ -1,19 +1,19 @@
-# Thesis Story Dashboard Design
+# Thesis Story Experience Design
 
 ## Goal
 
-Turn LeRobotDatasetCleaner into a thesis-facing visualization experience for the graduate project under `/mnt/d/share/docs/graduate`. The page should explain the project as a story rather than as an experiment-management backend.
+Turn LeRobotDatasetCleaner itself into the first part of a thesis-facing visualization experience for the graduate project under `/mnt/d/share/docs/graduate`. The existing data-cleaning application is not a side tool next to the thesis presentation; it is the opening evidence in the thesis story.
 
 The primary audience is a thesis defense viewer: advisor, reviewer, classmate, or visitor who needs to understand what problem the project solves, how the memory method works, what data was collected, how training/evaluation were performed, and what evidence supports the claims.
 
 ## Product Shape
 
-Add a thesis dashboard route, tentatively `/thesis`, alongside the existing dataset-cleaning routes. The existing LeRobot dataset viewer remains intact and is reused where it supports the story.
+Reshape the current app entry experience so the first visible product surface is the data-cleaning workflow as the foundation of the thesis project. The viewer should understand that the dataset cleaner produced the real-robot training data used by the memory model.
 
-The dashboard follows this narrative:
+After the data-cleaning story, the experience continues into the rest of the thesis evidence:
 
-1. Why VLA models need memory.
-2. How the ACONE real-robot dataset was collected and cleaned.
+1. How the ACONE real-robot dataset was collected, inspected, cleaned, and exported.
+2. Why the cleaned task requires memory.
 3. How the proposed memory system works.
 4. How training was monitored.
 5. How the method performs on SimplerEnv and RMBench.
@@ -24,24 +24,40 @@ This is a presentation surface. It should be readable from top to bottom without
 
 ## Routes
 
-### `/thesis`
+### `/`
 
-Single narrative page with anchored sections and compact navigation:
+The home page becomes the thesis story entry point, not a generic landing page and not a separate dashboard launcher.
 
-- Overview
-- Memory Motivation
+First viewport:
+
+- thesis project title and one-sentence claim
+- direct access to the local ACONE dataset-cleaning demonstration
+- three compact evidence cards: cleaned dataset scale, SimplerEnv result, RMBench result
+
+The page then continues with anchored sections:
+
 - Dataset Cleaning
+- Memory Motivation
 - Method Architecture
 - Training Curves
 - Benchmark Results
 - Rollout Videos
 - Conclusion
 
-The page may use tabs inside specific sections, but the top-level flow should remain linear.
+The top-level flow should remain linear. Dataset cleaning appears first because it is the user's own system contribution and the source of the real-robot training data.
 
-### Existing Dataset Routes
+### Existing Dataset Inspection Routes
 
-Existing dataset routes such as `/:org/:dataset/episode_:id` remain the detailed inspection tool. The thesis dashboard can link to a cleaned local dataset episode when the configured dataset path is available.
+Existing dataset routes such as `/:org/:dataset/episode_:id` remain the detailed inspection tool. In the thesis experience, these routes are treated as drill-down views for the first story section rather than as a separate product area.
+
+When a configured ACONE dataset path is available, the home page should expose clear calls to:
+
+- open a representative cleaned episode
+- inspect action curves and synchronized videos
+- inspect URDF replay
+- compare raw and cleaned dataset summaries
+
+Remote Hugging Face dataset search and generic local-folder import remain available, but visually secondary to the thesis dataset story.
 
 ## Data Contract
 
@@ -72,6 +88,7 @@ type ThesisProjectManifest = {
     actionDimensions: number;
     rawDatasetPath?: string;
     cleanedDatasetPath?: string;
+    representativeEpisodeRoute?: string;
   };
   methods: Array<{
     id: string;
@@ -130,41 +147,49 @@ Later iterations can add importers for W&B exports and benchmark logs.
 
 ## Page Sections
 
-### Overview
+### Thesis Entry
 
 The first viewport states the project plainly:
 
 > Memory-augmented vision-language-action policy for long-horizon robotic manipulation.
 
+It must also make the data-cleaning application visible immediately. The first screen should not hide the cleaner behind a generic dataset search box or a separate thesis route.
+
 Show three metric cards:
 
+- Cleaned ACONE dataset: `37 episodes`, `34205 frames`
 - Method: `pi0.5 + Gated Cross-Attention Memory`
 - SimplerEnv: average success rate `64.6%`
 - RMBench Swap Blocks: `20.0%`, five times the `pi0.5` LoRA baseline in the current result file
 
 Also show a concise contribution list:
 
+- The web app cleaned and inspected the real ACONE training dataset.
 - Learnable memory tokens compress current observations.
 - A temporal memory aggregator fuses sliding-window history.
 - Gated cross-attention injects memory into the action expert.
-- The same app supports real-robot dataset cleaning and evidence review.
+
+### Dataset Cleaning
+
+This is the first full section and should feel like the original app has become part of the thesis, not like a detached link.
+
+Reuse the existing dataset-cleaning strengths:
+
+- cleaned dataset statistics: LeRobot v2.1, ACONE, 37 episodes, 34205 frames, 30 FPS, average 924.5 frames, three camera views, 14 action dimensions
+- synchronized camera playback and action curves
+- ACONE URDF replay
+- before/after trajectory-length distribution
+- representative raw or problematic episode, when available
+- representative cleaned episode
+- export explanation: raw demonstrations were filtered and exported into the final LeRobot training dataset
+
+This section should present the data-cleaning app as the first research artifact in the pipeline.
 
 ### Memory Motivation
 
 Use the real ACONE task as the motivating example: pick up the black pouch three times, then touch the green ring.
 
-The section should show key frames or video clips for the repeated stages. The message is that a single image can look similar across repetitions, so the policy needs memory to infer the current stage.
-
-### Dataset Cleaning
-
-Reuse the existing dataset-cleaning strengths:
-
-- cleaned dataset statistics: LeRobot v2.1, ACONE, 37 episodes, 34205 frames, 30 FPS, average 924.5 frames, three camera views, 14 action dimensions
-- before/after trajectory-length distribution
-- representative episode playback
-- links to the existing detailed dataset viewer
-
-This section should present the data-cleaning app as part of the research pipeline, not as a separate tool.
+The section should build directly on the cleaned dataset section. It should show key frames or video clips for the repeated stages. The message is that a single image can look similar across repetitions, so the policy needs memory to infer the current stage.
 
 ### Method Architecture
 
@@ -265,10 +290,11 @@ The defense page should never crash because one artifact is missing.
 
 First implementation should include:
 
-- `/thesis` route
+- home-page restructuring around the thesis story
 - typed local manifest
 - overview cards
 - narrative section layout
+- data-cleaning-first section using existing viewer capabilities and links
 - method comparison table
 - static benchmark charts/tables
 - static training curve reader for local JSON/CSV exports
@@ -277,6 +303,7 @@ First implementation should include:
 
 First implementation should not include:
 
+- a separate thesis-dashboard route as the primary experience
 - live W&B API authentication
 - automatic benchmark execution
 - automatic checkpoint scanning
@@ -313,7 +340,7 @@ Component tests should cover:
 Manual verification should include:
 
 - desktop and mobile layout checks
-- opening `/thesis`
+- opening `/`
 - navigating section anchors
 - playing at least one local/static video
 - confirming existing dataset routes still work
