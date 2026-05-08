@@ -9,6 +9,7 @@ import {
   thesisSubtitle,
   thesisTitle,
 } from "@/content/thesis-site";
+import { HeroVideo } from "@/components/thesis/hero-video";
 
 const methodSteps = [
   "当前观察",
@@ -41,15 +42,7 @@ export function LandingPage() {
     <main className="bg-[#f8f3ea] text-[#2a211c]">
       <section className="relative isolate overflow-hidden bg-[#2a211c] text-white">
         <div className="absolute inset-0">
-          <video
-            className="h-full w-full object-cover"
-            src={thesisHeroVideoSrc}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-          />
+          <HeroVideo src={thesisHeroVideoSrc} playbackRate={0.5} />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.30)_0%,rgba(0,0,0,0.82)_100%)]" />
           <div className="absolute inset-0 bg-[#2a211c]/20" />
         </div>

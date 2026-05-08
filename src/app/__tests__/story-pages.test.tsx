@@ -43,7 +43,6 @@ describe("story pages", () => {
       pages[3].indexOf('href="/local/pick_X_times_filterd_twice/episode_0"'),
     ).toBeLessThan(pages[3].indexOf("画面证据"));
     expect(pages[3]).not.toContain('href="/dataset-cleaning"');
-    );
     expect(pages[4]).toContain("在三个平台上，我们分别问了三个不同的问题。");
     expect(pages[5]).toContain(
       "Comp 在平均分上接近 GCA，但它有一个根本性缺陷。",
@@ -106,10 +105,13 @@ describe("story pages", () => {
       "/local/pick_X_times_filterd_twice/episode_0",
     );
 
+    link.addEventListener("click", (event) => event.preventDefault());
     fireEvent.click(link);
 
     expect(
-      screen.getByRole("link", { name: "正在打开数据清洗工具" }),
-    ).toHaveAttribute("aria-busy", "true");
+      screen
+        .getByRole("link", { name: "正在打开数据清洗工具" })
+        .getAttribute("aria-busy"),
+    ).toBe("true");
   });
 });

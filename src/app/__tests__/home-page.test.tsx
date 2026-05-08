@@ -35,7 +35,8 @@ describe("home page", () => {
   test("keeps the required video hero and audience-facing evidence copy", () => {
     const html = renderToStaticMarkup(<Home />);
 
-    expect(html).toContain("/videos/level2.mp4");
+    expect(html).toContain("/videos/nice.mp4");
+    expect(html).toContain('data-playback-rate="0.5"');
     expect(html).not.toContain("huggingface.co/datasets");
     expect(html).toContain('preload="auto"');
     expect(html).toContain("radial-gradient(ellipse_at_center");

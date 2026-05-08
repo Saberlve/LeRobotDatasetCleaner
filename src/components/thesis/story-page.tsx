@@ -7,6 +7,7 @@ import {
   getNextStoryPage,
   thesisNavItems,
 } from "@/content/thesis-site";
+import { DatasetCleaningProjectLink } from "@/components/thesis/dataset-cleaning-project-link";
 
 type StoryPageProps = {
   page: ThesisStoryPage;
@@ -49,12 +50,7 @@ export function StoryPage({ page }: StoryPageProps) {
             ))}
           </div>
           {page.href === "/dataset-and-tooling" ? (
-            <Link
-              href={dataCleaningToolNavItem.href}
-              className="mt-6 inline-flex rounded-2xl bg-[#2a211c] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#3a3029]"
-            >
-              打开数据清洗工具
-            </Link>
+            <DatasetCleaningProjectLink href={dataCleaningToolNavItem.href} />
           ) : null}
         </article>
 

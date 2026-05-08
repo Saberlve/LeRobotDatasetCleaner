@@ -28,6 +28,12 @@ export function ThesisSiteShell({ children }: SiteShellProps) {
             >
               首页
             </Link>
+            <Link
+              href="/evaluation"
+              className="shrink-0 rounded-full border border-[#c15f3c]/35 bg-[#fffaf5] px-3.5 py-1.5 text-sm text-[#9b4328] transition hover:border-[#c15f3c] hover:text-[#2a211c]"
+            >
+              评测平台
+            </Link>
             {thesisNavItems.map((item) => (
               <Link
                 key={item.href}

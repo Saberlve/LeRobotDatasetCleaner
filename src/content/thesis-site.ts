@@ -19,14 +19,13 @@ export type ThesisStoryPage = {
 };
 
 export const thesisTitle = "面向长程任务的 VLM-VLA 通用记忆系统";
-export const thesisSubtitle =
-  "给 VLA 装上一个轻量、解耦、可插拔的记忆模块";
-export const thesisHeroVideoSrc = "/videos/level2.mp4";
+export const thesisSubtitle = "给 VLA 装上一个轻量、解耦、可插拔的记忆模块";
+export const thesisHeroVideoSrc = "/videos/nice.mp4";
 export const dataCleaningToolNavItem = {
-  href: "/dataset-cleaning",
+  href: "/local/pick_X_times_filterd_twice/episode_0",
   label: "数据清洗工具",
   shortLabel: "Tool",
-  hook: "打开本地或远程 LeRobot 数据集，进入同步视频、动作曲线和 URDF 回放检视。",
+  hook: "打开 pick_X_times_filterd_twice 数据集，进入同步视频、动作曲线和 URDF 回放检视。",
 };
 
 export const thesisMetrics = [
