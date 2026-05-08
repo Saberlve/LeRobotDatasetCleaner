@@ -20,6 +20,12 @@ export function ThesisSiteShell({ children }: SiteShellProps) {
             >
               {thesisTitle}
             </Link>
+            <Link
+              href="/evaluation"
+              className="shrink-0 rounded-full border border-[#c15f3c]/35 bg-[#fffaf5] px-3.5 py-1.5 text-sm font-medium text-[#9b4328] transition hover:border-[#c15f3c] hover:text-[#2a211c]"
+            >
+              进入评测平台
+            </Link>
           </div>
           <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
             <Link
@@ -27,12 +33,6 @@ export function ThesisSiteShell({ children }: SiteShellProps) {
               className="shrink-0 rounded-full border border-[#d9cec0] bg-[#fffaf5] px-3.5 py-1.5 text-sm text-[#2a211c] transition hover:border-[#c15f3c] hover:text-[#9b4328]"
             >
               首页
-            </Link>
-            <Link
-              href="/evaluation"
-              className="shrink-0 rounded-full border border-[#c15f3c]/35 bg-[#fffaf5] px-3.5 py-1.5 text-sm text-[#9b4328] transition hover:border-[#c15f3c] hover:text-[#2a211c]"
-            >
-              评测平台
             </Link>
             {thesisNavItems.map((item) => (
               <Link

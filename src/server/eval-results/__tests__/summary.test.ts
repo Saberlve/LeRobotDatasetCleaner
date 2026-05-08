@@ -51,4 +51,23 @@ describe("eval result summary", () => {
       ),
     ).toBe(true);
   });
+
+  test("flattens CSV and TXT evaluation scores into table rows and finds the current best", async () => {
+    const dashboard = await loadEvaluationDashboard();
+
+    expect(dashboard.results.rows.length).toBeGreaterThan(0);
+    expect(
+      dashboard.results.rows.some((row) => row.benchmark === "SimplerEnv"),
+    ).toBe(true);
+    expect(
+      dashboard.results.rows.some((row) => row.benchmark === "RMBench"),
+    ).toBe(true);
+    expect(dashboard.results.bestRow).not.toBeNull();
+
+    const scoredRows = dashboard.results.rows.filter(
+      (row) => row.score !== null,
+    );
+    const maxScore = Math.max(...scoredRows.map((row) => row.score ?? 0));
+    expect(dashboard.results.bestRow?.score).toBe(maxScore);
+  });
 });

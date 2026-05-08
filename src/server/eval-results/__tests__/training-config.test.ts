@@ -36,6 +36,21 @@ _CONFIGS = [
 ]
 `;
 
+const BASELINE_SAMPLE_CONFIG = `
+_CONFIGS = [
+    TrainConfig(
+        name="pi05_simpler_baseline",
+        batch_size=64,
+    ),
+    TrainConfig(
+        name="pi05_simpler_memory",
+        memory=MemoryConfig(
+            moment_token_count=4,
+        ),
+    ),
+]
+`;
+
 describe("training config parser and editor", () => {
   test("connects omitted values to TrainConfig and MemoryConfig defaults", () => {
     const [config] = parseTrainingConfigs(SAMPLE_CONFIG);
@@ -50,6 +65,21 @@ describe("training config parser and editor", () => {
     expect(config.memory.momentTokenCount).toBe("4");
     expect(config.memory.cacheSize).toBe("0");
     expect(config.memory.decisionStride).toBe("None");
+  });
+
+  test("marks configs without memory as baseline configs", () => {
+    const configs = parseTrainingConfigs(BASELINE_SAMPLE_CONFIG);
+    const baseline = configs.find(
+      (config) => config.name === "pi05_simpler_baseline",
+    );
+    const memory = configs.find(
+      (config) => config.name === "pi05_simpler_memory",
+    );
+
+    expect(baseline?.memory.enabled).toBe(false);
+    expect(baseline?.isBaseline).toBe(true);
+    expect(memory?.memory.enabled).toBe(true);
+    expect(memory?.isBaseline).toBe(false);
   });
 
   test("updates explicit and default-backed fields in config.py", async () => {

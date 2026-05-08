@@ -52,6 +52,8 @@ describe("story pages", () => {
     for (const html of pages) {
       expect(html).toContain('href="/why-memory"');
       expect(html).toContain('href="/conclusion"');
+      expect(html).toContain('href="/evaluation"');
+      expect(html).toContain("进入评测平台");
       expect(html.includes("下一页") || html.includes("返回首页")).toBe(true);
     }
 

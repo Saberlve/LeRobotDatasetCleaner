@@ -52,6 +52,20 @@ export type RmBenchRunSummary = {
   timestamps: RmBenchTimestampSummary[];
 };
 
+export type EvaluationResultRow = {
+  id: string;
+  benchmark: "SimplerEnv" | "RMBench";
+  configName: string;
+  expName: string;
+  checkpoint: string | null;
+  timestamp: string | null;
+  taskName: string;
+  metricName: string;
+  partial: number | null;
+  score: number | null;
+  source: "CSV" | "TXT";
+};
+
 export type EvaluationDashboard = {
   wandbUrl: string;
   simpler: {
@@ -62,6 +76,10 @@ export type EvaluationDashboard = {
   };
   training: {
     configs: TrainingConfigSummary[];
+  };
+  results: {
+    rows: EvaluationResultRow[];
+    bestRow: EvaluationResultRow | null;
   };
   acone: {
     datasetRoute: string;
@@ -420,6 +438,80 @@ async function loadRmBenchRuns(root: string): Promise<RmBenchRunSummary[]> {
   return runs;
 }
 
+function compareResultRows(
+  left: EvaluationResultRow,
+  right: EvaluationResultRow,
+) {
+  const rightScore = right.score ?? Number.NEGATIVE_INFINITY;
+  const leftScore = left.score ?? Number.NEGATIVE_INFINITY;
+  return (
+    rightScore - leftScore ||
+    left.benchmark.localeCompare(right.benchmark) ||
+    left.configName.localeCompare(right.configName) ||
+    (left.expName || "").localeCompare(right.expName || "") ||
+    (left.checkpoint || left.timestamp || "").localeCompare(
+      right.checkpoint || right.timestamp || "",
+      undefined,
+      { numeric: true },
+    )
+  );
+}
+
+function buildEvaluationResults(
+  simplerRuns: SimplerRunSummary[],
+  rmbenchRuns: RmBenchRunSummary[],
+): EvaluationDashboard["results"] {
+  const simplerRows = simplerRuns.flatMap((run) =>
+    run.steps.map<EvaluationResultRow>((step) => ({
+      id: [
+        "SimplerEnv",
+        run.configName,
+        run.expName,
+        step.step,
+        "avg-entire",
+      ].join("|"),
+      benchmark: "SimplerEnv",
+      configName: run.configName,
+      expName: run.expName,
+      checkpoint: step.step,
+      timestamp: null,
+      taskName: "Avg Entire",
+      metricName: "Avg-entire",
+      partial: null,
+      score: step.averageEntire,
+      source: "CSV",
+    })),
+  );
+
+  const rmbenchRows = rmbenchRuns.flatMap((run) =>
+    run.timestamps.map<EvaluationResultRow>((timestamp) => ({
+      id: [
+        "RMBench",
+        run.configName,
+        run.taskName,
+        run.expName,
+        timestamp.timestamp,
+        "score",
+      ].join("|"),
+      benchmark: "RMBench",
+      configName: run.configName,
+      expName: run.expName,
+      checkpoint: null,
+      timestamp: timestamp.timestamp,
+      taskName: run.taskName,
+      metricName: "score",
+      partial: null,
+      score: timestamp.score,
+      source: "TXT",
+    })),
+  );
+
+  const rows = [...simplerRows, ...rmbenchRows].sort(compareResultRows);
+  const bestRow = rows.find((row) => row.score !== null) ?? null;
+
+  return { rows, bestRow };
+}
+
 export async function loadEvaluationDashboard(
   root: string = EVAL_RESULTS_ROOT,
 ): Promise<EvaluationDashboard> {
@@ -434,6 +526,7 @@ export async function loadEvaluationDashboard(
     simpler: { runs: simplerRuns },
     rmbench: { runs: rmbenchRuns },
     training: { configs: trainingConfigs },
+    results: buildEvaluationResults(simplerRuns, rmbenchRuns),
     acone: {
       datasetRoute: "/local/pick_X_times_filterd_twice/episode_0",
       datasetName: "pick_X_times_filterd_twice",

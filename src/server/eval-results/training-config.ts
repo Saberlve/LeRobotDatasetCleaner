@@ -29,6 +29,7 @@ export type TrainingConfigSummary = {
   wandbEnabled: string;
   trainVisionEncoder: string;
   loraEnabled: boolean;
+  isBaseline: boolean;
   memory: {
     enabled: boolean;
     momentTokenCount: string;
@@ -326,6 +327,7 @@ function parseConfigBlock(block: string): TrainingConfigSummary | null {
   const lrSchedule = topLevelValue(block, "lr_schedule");
   const memory = topLevelValue(block, "memory");
   const loraConfig = topLevelValue(block, "lora_config");
+  const parsedMemory = parseMemory(memory);
 
   return {
     name,
@@ -399,7 +401,8 @@ function parseConfigBlock(block: string): TrainingConfigSummary | null {
     ),
     loraEnabled:
       cleanLiteral(nestedValue(loraConfig, "enabled"), "False") === "True",
-    memory: parseMemory(memory),
+    isBaseline: !parsedMemory.enabled,
+    memory: parsedMemory,
   };
 }
 
