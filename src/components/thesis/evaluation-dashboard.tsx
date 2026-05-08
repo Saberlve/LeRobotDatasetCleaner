@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { flushSync } from "react-dom";
 import type { IconType } from "react-icons";
 import {
   FiActivity,
@@ -14,16 +15,21 @@ import {
   FiDatabase,
   FiFileText,
   FiFilm,
+  FiLayers,
   FiPlayCircle,
   FiSliders,
   FiTarget,
   FiTrendingUp,
 } from "react-icons/fi";
 
-import type { EvaluationDashboard } from "@/server/eval-results/summary";
+import type {
+  EvaluationDashboard,
+  EvaluationResultRow,
+} from "@/server/eval-results/summary";
 import type { TrainingConfigSummary } from "@/server/eval-results/training-config";
 
 type WorkbenchMode = "overview" | "data" | "training" | "replay";
+type EvaluationBenchmark = EvaluationResultRow["benchmark"];
 
 type EvaluationDashboardProps = {
   dashboard: EvaluationDashboard;
@@ -68,11 +74,15 @@ const primaryButtonClass =
 const RMBENCH_VIDEO_SIDE_CROP_PERCENT = 1;
 const RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT =
   100 - RMBENCH_VIDEO_SIDE_CROP_PERCENT * 2;
-const RMBENCH_VIDEO_WIDTH_PERCENT =
-  10000 / RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT;
+const RMBENCH_VIDEO_WIDTH_PERCENT = 10000 / RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT;
 const RMBENCH_VIDEO_OFFSET_PERCENT =
-  (RMBENCH_VIDEO_SIDE_CROP_PERCENT * 100) /
-  RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT;
+  (RMBENCH_VIDEO_SIDE_CROP_PERCENT * 100) / RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT;
+const BASELINE_CONFIG_NAMES = [
+  "pi05_rmbench",
+  "pi05_rmbench_lora",
+  "pi05_simpler",
+  "pi05_simpler_lora_pytorch_baseline",
+];
 
 function croppedRmbenchAspectRatio(width: number, height: number) {
   return `${width * RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT} / ${height * 100}`;
@@ -170,7 +180,14 @@ export function EvaluationDashboardView({
 
   const [trainingConfigIndex, setTrainingConfigIndex] = useState(0);
   const selectedTrainingConfig = trainingConfigs[trainingConfigIndex];
-  const baselineConfigs = trainingConfigs.filter((config) => config.isBaseline);
+  const [baselineConfigIndex, setBaselineConfigIndex] = useState(0);
+  const baselineConfigs = BASELINE_CONFIG_NAMES.map((name) =>
+    trainingConfigs.find(
+      (config) => config.name === name && !config.memory.enabled,
+    ),
+  ).filter((config): config is TrainingConfigSummary => Boolean(config));
+  const selectedBaselineConfig =
+    baselineConfigs[baselineConfigIndex] ?? baselineConfigs[0];
   const [trainingEdit, setTrainingEdit] = useState(() =>
     trainingEditValues(selectedTrainingConfig),
   );
@@ -183,7 +200,10 @@ export function EvaluationDashboardView({
   const selectedRmbenchRun = dashboard.rmbench.runs[rmbenchRunIndex];
   const [timestampIndex, setTimestampIndex] = useState(0);
   const selectedTimestamp = selectedRmbenchRun?.timestamps[timestampIndex];
-  const firstVideo = selectedTimestamp?.videos[0];
+  const [rmbenchVideoIndex, setRmbenchVideoIndex] = useState(0);
+  const selectedRmbenchVideo =
+    selectedTimestamp?.videos[rmbenchVideoIndex] ??
+    selectedTimestamp?.videos[0];
   const [rmbenchVideoRatio, setRmbenchVideoRatio] = useState(() =>
     croppedRmbenchAspectRatio(16, 9),
   );
@@ -235,13 +255,20 @@ export function EvaluationDashboardView({
   const showTraining = mode === "training";
   const showReplay = mode === "replay";
   const resultRows = dashboard.results.rows;
-  const bestResultRow = dashboard.results.bestRow;
+  const [selectedResultBenchmark, setSelectedResultBenchmark] =
+    useState<EvaluationBenchmark>("SimplerEnv");
 
   useEffect(() => {
     setTrainingEdit(trainingEditValues(selectedTrainingConfig));
     setTrainingSaveState("idle");
     setTrainingSaveMessage("");
   }, [selectedTrainingConfig]);
+
+  useEffect(() => {
+    if (baselineConfigIndex >= baselineConfigs.length) {
+      setBaselineConfigIndex(0);
+    }
+  }, [baselineConfigIndex, baselineConfigs.length]);
 
   useEffect(() => {
     setSimplerStepIndex(
@@ -256,7 +283,11 @@ export function EvaluationDashboardView({
 
   useEffect(() => {
     setRmbenchVideoRatio(croppedRmbenchAspectRatio(16, 9));
-  }, [firstVideo]);
+  }, [selectedRmbenchVideo]);
+
+  useEffect(() => {
+    setRmbenchVideoIndex(0);
+  }, [selectedTimestamp]);
 
   function updateTrainingEdit(key: keyof TrainingEditValues, value: string) {
     setTrainingEdit((current) => ({ ...current, [key]: value }));
@@ -272,6 +303,79 @@ export function EvaluationDashboardView({
       memory: { ...current.memory, [key]: value },
     }));
     setTrainingSaveState("idle");
+  }
+
+  function preserveWindowScroll(update: () => void) {
+    if (typeof window === "undefined") {
+      update();
+      return;
+    }
+
+    const scrollPosition = { x: window.scrollX, y: window.scrollY };
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootScrollBehavior = root.style.scrollBehavior;
+    const previousBodyScrollBehavior = body.style.scrollBehavior;
+
+    root.style.scrollBehavior = "auto";
+    body.style.scrollBehavior = "auto";
+    try {
+      flushSync(update);
+      window.scrollTo({
+        left: scrollPosition.x,
+        top: scrollPosition.y,
+        behavior: "instant",
+      });
+    } finally {
+      root.style.scrollBehavior = previousRootScrollBehavior;
+      body.style.scrollBehavior = previousBodyScrollBehavior;
+    }
+  }
+
+  function selectTrainingConfig(index: number) {
+    preserveWindowScroll(() => setTrainingConfigIndex(index));
+  }
+
+  function selectBaselineConfig(index: number) {
+    preserveWindowScroll(() => setBaselineConfigIndex(index));
+  }
+
+  function selectSimplerRun(index: number) {
+    preserveWindowScroll(() => setSimplerRunIndex(index));
+  }
+
+  function selectSimplerStep(index: number) {
+    preserveWindowScroll(() => {
+      setSimplerStepIndex(index);
+      setSimplerVideoIndex(0);
+    });
+  }
+
+  function selectSimplerVideo(index: number) {
+    preserveWindowScroll(() => setSimplerVideoIndex(index));
+  }
+
+  function selectRmbenchRun(index: number) {
+    preserveWindowScroll(() => {
+      setRmbenchRunIndex(index);
+      setTimestampIndex(0);
+      setRmbenchVideoIndex(0);
+    });
+  }
+
+  function selectRmbenchTimestamp(index: number) {
+    preserveWindowScroll(() => {
+      setTimestampIndex(index);
+      setRmbenchVideoIndex(0);
+    });
+  }
+
+  function selectRmbenchVideo(index: number) {
+    preserveWindowScroll(() => setRmbenchVideoIndex(index));
+  }
+
+  function selectResultBenchmark(benchmark: EvaluationBenchmark) {
+    preserveWindowScroll(() => setSelectedResultBenchmark(benchmark));
   }
 
   async function saveTrainingConfig() {
@@ -517,7 +621,11 @@ export function EvaluationDashboardView({
   }) {
     return (
       <section className={panelClass} data-workspace-cue={workspace}>
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.38fr)] lg:items-stretch">
+        <div
+          className={`grid gap-5 lg:items-stretch ${
+            image ? "lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.38fr)]" : ""
+          }`}
+        >
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
               {eyebrow}
@@ -599,11 +707,6 @@ export function EvaluationDashboardView({
             icon: FiCpu,
           },
         ]}
-        image={{
-          src: "/images/acone-data-preview.jpg",
-          alt: "ACONE 预览图",
-          label: "ACONE 预览图",
-        }}
       />
     );
   }
@@ -700,6 +803,7 @@ export function EvaluationDashboardView({
     const fieldGroups: Array<{
       title: string;
       caption: string;
+      icon: React.ReactNode;
       fields: Array<{
         label: string;
         key: Exclude<keyof TrainingEditValues, "memory">;
@@ -708,105 +812,189 @@ export function EvaluationDashboardView({
     }> = [
       {
         title: "训练规模",
-        caption: "控制 batch、梯度累积、训练步数和 checkpoint 保存频率。",
+        caption:
+          "控制 batch size、梯度累积步数、总训练步数和 checkpoint 保存频率。",
+        icon: <FiLayers aria-hidden="true" className="h-3.5 w-3.5" />,
         fields: [
-          { label: "batch", key: "batchSize", value: trainingEdit.batchSize },
           {
-            label: "accum",
+            label: "Batch Size",
+            key: "batchSize",
+            value: trainingEdit.batchSize,
+          },
+          {
+            label: "Gradient Accum",
             key: "gradientAccumulationSteps",
             value: trainingEdit.gradientAccumulationSteps,
           },
           {
-            label: "steps",
+            label: "Train Steps",
             key: "numTrainSteps",
             value: trainingEdit.numTrainSteps,
           },
           {
-            label: "save",
+            label: "Save Interval",
             key: "saveInterval",
             value: trainingEdit.saveInterval,
           },
         ],
       },
       {
-        title: "学习率 schedule",
+        title: "学习率 Schedule",
         caption: "把 warmup、peak、decay 和分组学习率放在同一处对齐。",
+        icon: <FiTrendingUp aria-hidden="true" className="h-3.5 w-3.5" />,
         fields: [
           {
-            label: "warmup",
+            label: "Warmup Steps",
             key: "warmupSteps",
             value: trainingEdit.warmupSteps,
           },
-          { label: "peak lr", key: "peakLr", value: trainingEdit.peakLr },
+          { label: "Peak LR", key: "peakLr", value: trainingEdit.peakLr },
           {
-            label: "decay steps",
+            label: "Decay Steps",
             key: "decaySteps",
             value: trainingEdit.decaySteps,
           },
-          { label: "decay lr", key: "decayLr", value: trainingEdit.decayLr },
-          { label: "base lr", key: "baseLr", value: trainingEdit.baseLr },
-          { label: "memory lr", key: "memoryLr", value: trainingEdit.memoryLr },
+          { label: "Decay LR", key: "decayLr", value: trainingEdit.decayLr },
+          { label: "Base LR", key: "baseLr", value: trainingEdit.baseLr },
+          { label: "Memory LR", key: "memoryLr", value: trainingEdit.memoryLr },
         ],
       },
     ];
+
     const memoryFields: Array<{
       label: string;
       key: keyof TrainingEditValues["memory"];
       value: string;
     }> = [
       {
-        label: "moment tokens",
+        label: "Moment Tokens",
         key: "momentTokenCount",
         value: trainingEdit.memory.momentTokenCount,
       },
       {
-        label: "cache",
+        label: "Cache Size",
         key: "cacheSize",
         value: trainingEdit.memory.cacheSize,
       },
       {
-        label: "stride",
+        label: "Decision Stride",
         key: "decisionStride",
         value: trainingEdit.memory.decisionStride,
       },
     ];
 
     function BaselineConfigModule() {
+      function baselineSummary(config: TrainingConfigSummary) {
+        return `batch ${config.batchSize} / peak lr ${config.peakLr} / memory off`;
+      }
+
       return (
-        <section className={`${insetClass} p-4`}>
-          <div className="flex flex-col gap-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              Fixed Baseline
-            </p>
-            <h3 className="text-base font-semibold text-[oklch(0.25_0.025_62)]">
-              Baseline 配置
-            </h3>
-            <p className="text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-              不带 memory 的配置会固定归入 baseline，用来和 memory
+        <section className={`${insetClass} overflow-hidden`}>
+          <div className="border-b border-[oklch(0.88_0.02_72)] bg-[oklch(0.975_0.016_75)] px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.41_0.095_42)]">
+                <FiTarget aria-hidden="true" className="h-3.5 w-3.5" />
+              </span>
+              <h3 className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">
+                Baseline 对照
+              </h3>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-[oklch(0.47_0.03_65)]">
+              不带 memory 的配置固定归入 baseline，用来和 memory
               版本对照训练曲线。
             </p>
           </div>
 
-          <div className="mt-4 grid gap-2">
-            {baselineConfigs.length > 0 ? (
-              baselineConfigs.map((config) => (
+          <div className="p-5">
+            {baselineConfigs.length > 0 && selectedBaselineConfig ? (
+              <div className="grid gap-4">
+                <label className="block">
+                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[oklch(0.49_0.02_68)]">
+                    选择 Baseline
+                  </span>
+                  <select
+                    value={baselineConfigs.indexOf(selectedBaselineConfig)}
+                    onChange={(event) =>
+                      selectBaselineConfig(Number(event.target.value))
+                    }
+                    data-baseline-selector="training-baseline"
+                    className={`${selectClass} mt-1.5 w-full`}
+                  >
+                    {baselineConfigs.map((config, index) => (
+                      <option
+                        key={config.name}
+                        value={index}
+                        data-baseline-option={config.name}
+                      >
+                        {config.name} - {baselineSummary(config)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
                 <div
-                  key={config.name}
-                  data-baseline-config={config.name}
-                  className="rounded-xl border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] px-3 py-2"
+                  data-baseline-config={selectedBaselineConfig.name}
+                  className="rounded-lg border border-[oklch(0.86_0.023_72)] bg-[oklch(0.985_0.012_76)] p-4"
                 >
-                  <p className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">
-                    {config.name}
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[oklch(0.47_0.055_54)]">
+                    完整配置
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-[oklch(0.43_0.025_68)]">
-                    batch {config.batchSize} / peak lr {config.peakLr} / memory
-                    off
+                  <p className="mt-1 text-xs text-[oklch(0.43_0.025_68)]">
+                    {selectedBaselineConfig.name}
                   </p>
+                  <dl className="mt-3 grid gap-x-5 gap-y-3 text-xs text-[oklch(0.43_0.025_68)] lg:grid-cols-2">
+                    {[
+                      ["config", selectedBaselineConfig.name],
+                      ["project", selectedBaselineConfig.projectName],
+                      ["exp", selectedBaselineConfig.expName],
+                      ["data", selectedBaselineConfig.dataFactory],
+                      ["repo", selectedBaselineConfig.repoId],
+                      ["model", selectedBaselineConfig.model],
+                      ["action horizon", selectedBaselineConfig.actionHorizon],
+                      [
+                        "discrete state",
+                        selectedBaselineConfig.discreteStateInput,
+                      ],
+                      ["batch", selectedBaselineConfig.batchSize],
+                      [
+                        "gradient accum",
+                        selectedBaselineConfig.gradientAccumulationSteps,
+                      ],
+                      ["steps", selectedBaselineConfig.numTrainSteps],
+                      ["save interval", selectedBaselineConfig.saveInterval],
+                      ["warmup", selectedBaselineConfig.warmupSteps],
+                      ["peak lr", selectedBaselineConfig.peakLr],
+                      ["decay steps", selectedBaselineConfig.decaySteps],
+                      ["decay lr", selectedBaselineConfig.decayLr],
+                      ["base lr", selectedBaselineConfig.baseLr],
+                      ["memory lr", selectedBaselineConfig.memoryLr],
+                      ["ema", selectedBaselineConfig.emaDecay],
+                      ["wandb", selectedBaselineConfig.wandbEnabled],
+                      [
+                        "train vision",
+                        selectedBaselineConfig.trainVisionEncoder,
+                      ],
+                      [
+                        "lora",
+                        selectedBaselineConfig.loraEnabled ? "on" : "off",
+                      ],
+                      ["memory", "off"],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt className="text-[10px] font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
+                          {label}
+                        </dt>
+                        <dd className="mt-0.5 break-words font-medium text-[oklch(0.25_0.025_62)]">
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                 </div>
-              ))
+              </div>
             ) : (
-              <p className="rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.985_0.012_76)] px-3 py-2 text-sm text-[oklch(0.43_0.025_68)]">
-                暂未发现不带 memory 的配置。
+              <p className="rounded-lg border border-[oklch(0.84_0.025_72)] bg-[oklch(0.985_0.012_76)] px-4 py-3 text-sm text-[oklch(0.43_0.025_68)]">
+                暂未发现指定的 baseline 配置。
               </p>
             )}
           </div>
@@ -814,109 +1002,198 @@ export function EvaluationDashboardView({
       );
     }
 
+    function ConfigSummaryModule() {
+      return (
+        <section className={`${insetClass} overflow-hidden`}>
+          <div className="border-b border-[oklch(0.88_0.02_72)] bg-[oklch(0.975_0.016_75)] px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.41_0.095_42)]">
+                <FiFileText aria-hidden="true" className="h-3.5 w-3.5" />
+              </span>
+              <h3 className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">
+                配置摘要
+              </h3>
+            </div>
+          </div>
+          <div className="p-5">
+            <dl className="grid gap-x-4 gap-y-3 text-sm text-[oklch(0.43_0.025_68)]">
+              {[
+                ["Config", selectedTrainingConfig?.name],
+                ["Project", selectedTrainingConfig?.projectName],
+                ["Exp", selectedTrainingConfig?.expName],
+                ["Data Factory", selectedTrainingConfig?.dataFactory],
+                ["Repo", selectedTrainingConfig?.repoId],
+                ["Model", selectedTrainingConfig?.model],
+                ["Action Horizon", selectedTrainingConfig?.actionHorizon],
+                ["Discrete State", selectedTrainingConfig?.discreteStateInput],
+                ["EMA Decay", selectedTrainingConfig?.emaDecay],
+                ["W&B", selectedTrainingConfig?.wandbEnabled],
+                ["Train Vision", selectedTrainingConfig?.trainVisionEncoder],
+                ["LoRA", selectedTrainingConfig?.loraEnabled ? "on" : "off"],
+                [
+                  "Memory",
+                  selectedTrainingConfig?.memory.enabled ? "on" : "off",
+                ],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex items-baseline justify-between gap-3 border-b border-[oklch(0.9_0.018_74)] pb-2 last:border-b-0 last:pb-0"
+                >
+                  <dt className="text-xs font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
+                    {label}
+                  </dt>
+                  <dd className="break-words text-right font-medium text-[oklch(0.25_0.025_62)]">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <div className="mt-4 border-t border-[oklch(0.88_0.02_72)] pt-4">
+              <p className="text-xs font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
+                Memory 详情
+              </p>
+              <dl className="mt-2 grid gap-x-4 gap-y-2 text-xs text-[oklch(0.43_0.025_68)]">
+                {[
+                  ["Layers", selectedTrainingConfig?.memory.layerIndices],
+                  [
+                    "Initialization",
+                    selectedTrainingConfig?.memory.initialization,
+                  ],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-baseline justify-between gap-3 border-b border-[oklch(0.9_0.018_74)] pb-2 last:border-b-0 last:pb-0"
+                  >
+                    <dt className="text-[10px] font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
+                      {label}
+                    </dt>
+                    <dd className="break-words text-right font-medium text-[oklch(0.25_0.025_62)]">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    const paramGroupClass =
+      "rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.98_0.014_76)] overflow-hidden";
+    const paramFieldClass =
+      "w-full rounded-lg border border-[oklch(0.82_0.02_72)] bg-[oklch(0.995_0.008_76)] px-3 py-2.5 text-sm text-[oklch(0.25_0.025_62)] outline-none transition hover:border-[oklch(0.68_0.05_55)] focus:border-[oklch(0.56_0.11_42)] focus:ring-[3px] focus:ring-[oklch(0.76_0.08_50_/_0.18)]";
+
     return (
       <section className={panelClass}>
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
               OpenPI Training Config
             </p>
-            <h2 className="mt-2 text-xl font-semibold">训练超参数配置</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
+            <h2 className="mt-2 text-xl font-semibold text-[oklch(0.25_0.025_62)]">
+              训练超参数配置
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
               从 ~/code/openpi-simpler/src/openpi/training/config.py
               同步。保存时写回当前配置块。
             </p>
           </div>
-          <select
-            value={trainingConfigIndex}
-            onChange={(event) =>
-              setTrainingConfigIndex(Number(event.target.value))
-            }
-            className={`${selectClass} min-w-0 md:min-w-96`}
-          >
-            {trainingConfigs.map((config, index) => (
-              <option key={config.name} value={index}>
-                {config.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex shrink-0 items-center gap-3">
+            <select
+              value={trainingConfigIndex}
+              onChange={(event) =>
+                selectTrainingConfig(Number(event.target.value))
+              }
+              data-training-config-selector="preserve-scroll"
+              className={`${selectClass} min-w-0 md:min-w-72`}
+            >
+              {trainingConfigs.map((config, index) => (
+                <option key={config.name} value={index}>
+                  {config.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={saveTrainingConfig}
+              disabled={trainingSaveState === "saving"}
+              className={primaryButtonClass}
+            >
+              {trainingSaveState === "saving" ? "保存中..." : "保存配置"}
+            </button>
+          </div>
         </div>
 
         {selectedTrainingConfig ? (
-          <div className="mt-5 grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="mt-6 grid gap-5 xl:grid-cols-[1.2fr_1fr]">
             <div className="grid gap-4">
               {fieldGroups.map((group) => (
-                <section key={group.title} className={`${insetClass} p-4`}>
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-base font-semibold text-[oklch(0.25_0.025_62)]">
-                      {group.title}
-                    </h3>
-                    <p className="text-sm leading-6 text-[oklch(0.43_0.025_68)]">
+                <div key={group.title} className={paramGroupClass}>
+                  <div className="border-b border-[oklch(0.88_0.02_72)] bg-[oklch(0.975_0.016_75)] px-5 py-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.41_0.095_42)]">
+                        {group.icon}
+                      </span>
+                      <h3 className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">
+                        {group.title}
+                      </h3>
+                    </div>
+                    <p className="mt-1.5 text-xs leading-5 text-[oklch(0.47_0.03_65)]">
                       {group.caption}
                     </p>
                   </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    {group.fields.map((field) => (
-                      <label key={field.key} className="block">
-                        <span className="text-xs uppercase text-[oklch(0.49_0.02_68)]">
-                          {field.label}
-                        </span>
-                        <input
-                          value={field.value}
-                          onChange={(event) =>
-                            updateTrainingEdit(field.key, event.target.value)
-                          }
-                          className={`${fieldClass} mt-1`}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-
-            <div className="grid gap-4">
-              <BaselineConfigModule />
-              <div className={`${insetClass} p-4`}>
-                <div className="grid gap-x-4 gap-y-2 text-sm text-[oklch(0.43_0.025_68)] md:grid-cols-2">
-                  <span>config: {selectedTrainingConfig.name}</span>
-                  <span>data: {selectedTrainingConfig.dataFactory}</span>
-                  <span>repo: {selectedTrainingConfig.repoId}</span>
-                  <span>model: {selectedTrainingConfig.model}</span>
-                  <span>
-                    discrete state: {selectedTrainingConfig.discreteStateInput}
-                  </span>
-                  <span>wandb: {selectedTrainingConfig.wandbEnabled}</span>
-                  <span>ema: {selectedTrainingConfig.emaDecay}</span>
-                  <span>
-                    train vision: {selectedTrainingConfig.trainVisionEncoder}
-                  </span>
-                </div>
-
-                <section className="mt-4 border-t border-[oklch(0.84_0.025_72)] pt-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-[oklch(0.25_0.025_62)]">
-                        Memory 参数
-                      </h3>
-                      <p className="mt-1 text-sm text-[oklch(0.43_0.025_68)]">
-                        当前 memory{" "}
-                        {selectedTrainingConfig.memory.enabled ? "on" : "off"}
-                      </p>
+                  <div className="p-5">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {group.fields.map((field) => (
+                        <label key={field.key} className="block">
+                          <span className="text-xs font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
+                            {field.label}
+                          </span>
+                          <input
+                            value={field.value}
+                            onChange={(event) =>
+                              updateTrainingEdit(field.key, event.target.value)
+                            }
+                            className={`${paramFieldClass} mt-1.5`}
+                          />
+                        </label>
+                      ))}
                     </div>
-                    <button
-                      type="button"
-                      onClick={saveTrainingConfig}
-                      disabled={trainingSaveState === "saving"}
-                      className={primaryButtonClass}
-                    >
-                      {trainingSaveState === "saving" ? "保存中" : "保存配置"}
-                    </button>
                   </div>
-                  <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
+                </div>
+              ))}
+
+              <div className={paramGroupClass}>
+                <div className="border-b border-[oklch(0.88_0.02_72)] bg-[oklch(0.975_0.016_75)] px-5 py-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.41_0.095_42)]">
+                      <FiCpu aria-hidden="true" className="h-3.5 w-3.5" />
+                    </span>
+                    <h3 className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">
+                      Memory 参数
+                    </h3>
+                    <span
+                      className={`ml-auto rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${
+                        selectedTrainingConfig.memory.enabled
+                          ? "bg-[oklch(0.93_0.04_62)] text-[oklch(0.35_0.06_52)]"
+                          : "bg-[oklch(0.9_0.02_72)] text-[oklch(0.47_0.03_65)]"
+                      }`}
+                    >
+                      {selectedTrainingConfig.memory.enabled
+                        ? "已启用"
+                        : "已禁用"}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs leading-5 text-[oklch(0.47_0.03_65)]">
+                    Memory 模块的 token 数量、缓存大小和决策步幅。
+                  </p>
+                </div>
+                <div className="p-5">
+                  <div className="grid gap-4 md:grid-cols-3">
                     {memoryFields.map((field) => (
                       <label key={field.key} className="block">
-                        <span className="text-xs uppercase text-[oklch(0.49_0.02_68)]">
+                        <span className="text-xs font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
                           {field.label}
                         </span>
                         <input
@@ -924,65 +1201,71 @@ export function EvaluationDashboardView({
                           onChange={(event) =>
                             updateMemoryEdit(field.key, event.target.value)
                           }
-                          className={`${fieldClass} mt-1`}
+                          className={`${paramFieldClass} mt-1.5`}
                         />
                       </label>
                     ))}
                   </div>
-                  <div className="mt-4 grid gap-2 text-sm text-[oklch(0.43_0.025_68)] md:grid-cols-2">
-                    <span>
-                      layers: {selectedTrainingConfig.memory.layerIndices}
-                    </span>
-                    <span>
-                      init: {selectedTrainingConfig.memory.initialization}
-                    </span>
-                    <span>
-                      lora: {selectedTrainingConfig.loraEnabled ? "on" : "off"}
-                    </span>
-                  </div>
-                  {trainingSaveMessage ? (
-                    <p
-                      className={`mt-4 rounded-xl border px-3 py-2 text-sm ${
-                        trainingSaveState === "error"
-                          ? "border-[oklch(0.62_0.14_32)] bg-[oklch(0.96_0.035_32)] text-[oklch(0.43_0.12_32)]"
-                          : "border-[oklch(0.84_0.025_72)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.43_0.025_68)]"
-                      }`}
-                    >
-                      {trainingSaveMessage}
-                    </p>
-                  ) : null}
-                </section>
+                </div>
               </div>
+
+              {trainingSaveMessage ? (
+                <div
+                  className={`rounded-xl border px-4 py-3 text-sm ${
+                    trainingSaveState === "error"
+                      ? "border-[oklch(0.62_0.14_32)] bg-[oklch(0.96_0.035_32)] text-[oklch(0.43_0.12_32)]"
+                      : "border-[oklch(0.76_0.065_55)] bg-[oklch(0.94_0.045_62)] text-[oklch(0.29_0.045_52)]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        trainingSaveState === "error"
+                          ? "bg-[oklch(0.62_0.14_32)]"
+                          : "bg-[oklch(0.56_0.11_42)]"
+                      }`}
+                    />
+                    {trainingSaveMessage}
+                  </div>
+                </div>
+              ) : null}
             </div>
+
+            <aside className="grid gap-5 content-start">
+              <BaselineConfigModule />
+              <ConfigSummaryModule />
+            </aside>
           </div>
         ) : (
-          <p
-            className={`${insetClass} mt-5 p-4 text-sm text-[oklch(0.43_0.025_68)]`}
-          >
-            未读取到训练配置。检查 OPENPI_TRAINING_CONFIG_PATH 或 openpi-simpler
-            本地路径。
-          </p>
+          <div className={`${insetClass} mt-6 overflow-hidden rounded-xl p-5`}>
+            <p className="text-sm text-[oklch(0.43_0.025_68)]">
+              未读取到训练配置。检查 OPENPI_TRAINING_CONFIG_PATH 或
+              openpi-simpler 本地路径。
+            </p>
+          </div>
         )}
       </section>
     );
   }
 
   function SimplerPanel() {
+    const simplerTrendSteps = selectedSimplerRun?.steps ?? [];
+    const trendColumnCount = Math.max(1, simplerTrendSteps.length);
+
     return (
       <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
         <article className={panelClass}>
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
+              <p className="text-lg font-black tracking-[0.01em] text-[oklch(0.34_0.085_42)]">
                 SimplerEnv
               </p>
               <h2 className="mt-2 text-xl font-semibold">仿真评测趋势</h2>
             </div>
             <select
               value={simplerRunIndex}
-              onChange={(event) => {
-                setSimplerRunIndex(Number(event.target.value));
-              }}
+              onChange={(event) => selectSimplerRun(Number(event.target.value))}
+              data-simpler-run-selector="preserve-scroll"
               className={selectClass}
             >
               {dashboard.simpler.runs.map((run, index) => (
@@ -1016,6 +1299,91 @@ export function EvaluationDashboardView({
               <p className="mt-1 text-sm text-[oklch(0.43_0.025_68)]">
                 checkpoint {latestSimplerStep?.step ?? "-"}
               </p>
+            </div>
+          </div>
+
+          <div
+            data-simpler-trend-chart="avg-entire"
+            className="mt-5 overflow-x-auto border-y border-[oklch(0.86_0.023_72)] py-5"
+          >
+            <div className="min-w-[420px]">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">
+                    Avg Entire by checkpoint
+                  </p>
+                  <p className="mt-1 text-xs text-[oklch(0.43_0.025_68)]">
+                    最高 checkpoint 使用深色柱标出。
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-[oklch(0.43_0.025_68)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-[oklch(0.56_0.11_42)]" />
+                    avg
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-sm bg-[oklch(0.25_0.025_62)]" />
+                    best
+                  </span>
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-[34px_minmax(0,1fr)] gap-3">
+                <div className="flex h-52 flex-col justify-between text-right text-[10px] font-medium text-[oklch(0.49_0.02_68)]">
+                  <span>100%</span>
+                  <span>75%</span>
+                  <span>50%</span>
+                  <span>25%</span>
+                  <span>0%</span>
+                </div>
+                <div className="relative h-52 border-l border-b border-[oklch(0.8_0.03_70)]">
+                  <div className="absolute inset-0 grid grid-rows-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <span
+                        key={index}
+                        className="border-t border-[oklch(0.9_0.026_72)]"
+                      />
+                    ))}
+                  </div>
+                  <div
+                    className="relative grid h-full items-end gap-2 px-3"
+                    style={{
+                      gridTemplateColumns: `repeat(${trendColumnCount}, minmax(28px, 1fr))`,
+                    }}
+                  >
+                    {simplerTrendSteps.map((step) => {
+                      const score = Math.max(
+                        0,
+                        Math.min(1, step.averageEntire ?? 0),
+                      );
+                      const isBest = bestSimplerStep?.step === step.step;
+                      return (
+                        <div
+                          key={step.step}
+                          className="flex h-full min-w-0 flex-col justify-end gap-2"
+                        >
+                          <div className="flex flex-1 items-end justify-center">
+                            <div
+                              data-simpler-trend-bar={step.step}
+                              title={`checkpoint ${step.step}: ${formatPercent(step.averageEntire)}`}
+                              className={`w-full max-w-10 rounded-t-md transition ${
+                                isBest
+                                  ? "bg-[oklch(0.25_0.025_62)]"
+                                  : "bg-[oklch(0.56_0.11_42)]"
+                              }`}
+                              style={{
+                                height: `${Math.max(4, score * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="truncate text-center text-[10px] font-medium text-[oklch(0.43_0.025_68)]">
+                            {step.step}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1054,10 +1422,10 @@ export function EvaluationDashboardView({
             </div>
             <select
               value={simplerStepIndex}
-              onChange={(event) => {
-                setSimplerStepIndex(Number(event.target.value));
-                setSimplerVideoIndex(0);
-              }}
+              onChange={(event) =>
+                selectSimplerStep(Number(event.target.value))
+              }
+              data-simpler-step-selector="preserve-scroll"
               className={selectClass}
             >
               {selectedSimplerRun?.steps.map((step, index) => (
@@ -1094,8 +1462,9 @@ export function EvaluationDashboardView({
               <select
                 value={simplerVideoIndex}
                 onChange={(event) =>
-                  setSimplerVideoIndex(Number(event.target.value))
+                  selectSimplerVideo(Number(event.target.value))
                 }
+                data-simpler-video-selector="preserve-scroll"
                 className={`${selectClass} min-w-0 md:min-w-72`}
               >
                 {selectedSimplerStep?.videos.map((video, index) => (
@@ -1109,7 +1478,7 @@ export function EvaluationDashboardView({
               <>
                 <div className="mx-auto mt-5 aspect-video w-full max-w-xl overflow-hidden rounded-2xl bg-[oklch(0.18_0.015_60)]">
                   <video
-                    key={selectedSimplerVideo.relativePath}
+                    data-simpler-video-player="stable"
                     controls
                     preload="metadata"
                     className="h-full w-full object-contain"
@@ -1121,7 +1490,8 @@ export function EvaluationDashboardView({
                     <button
                       key={video.relativePath}
                       type="button"
-                      onClick={() => setSimplerVideoIndex(index)}
+                      onClick={() => selectSimplerVideo(index)}
+                      data-simpler-video-option={index}
                       className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
                         index === simplerVideoIndex
                           ? "border-[oklch(0.59_0.105_43)] bg-[oklch(0.94_0.045_62)] text-[oklch(0.25_0.025_62)]"
@@ -1147,44 +1517,115 @@ export function EvaluationDashboardView({
   }
 
   function ResultTablePanel() {
+    const benchmarkSections: Array<{
+      benchmark: EvaluationBenchmark;
+      title: string;
+      caption: string;
+      rows: EvaluationResultRow[];
+    }> = [
+      {
+        benchmark: "SimplerEnv",
+        title: "SimplerEnv 结果",
+        caption: "CSV 汇总的 checkpoint avg-entire 和任务指标。",
+        rows: resultRows.filter((row) => row.benchmark === "SimplerEnv"),
+      },
+      {
+        benchmark: "RMBench",
+        title: "RMBench 结果",
+        caption: "TXT 结果文本解析出的 timestamp score。",
+        rows: resultRows.filter((row) => row.benchmark === "RMBench"),
+      },
+    ];
+
+    function bestRowFor(rows: EvaluationResultRow[]) {
+      return rows.reduce<EvaluationResultRow | null>((best, row) => {
+        if (row.score === null) return best;
+        if (best?.score === null || best === null) return row;
+        return row.score > best.score ? row : best;
+      }, null);
+    }
+
+    const selectedSection =
+      benchmarkSections.find(
+        (section) => section.benchmark === selectedResultBenchmark,
+      ) ?? benchmarkSections[0];
+    const selectedRows = selectedSection.rows;
+    const bestRow = bestRowFor(selectedRows);
+
     return (
       <section className={panelClass}>
-        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
               Evaluation Results
             </p>
             <h2 className="mt-2 text-xl font-semibold">评测结果表格</h2>
           </div>
-          <div className="rounded-xl border border-[oklch(0.76_0.065_55)] bg-[oklch(0.94_0.045_62)] px-4 py-3 text-sm text-[oklch(0.29_0.045_52)]">
-            <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              当前最高
-            </span>
-            <span className="mt-1 block font-semibold">
-              {bestResultRow
-                ? `${bestResultRow.benchmark} / ${bestResultRow.configName} / ${formatPercent(bestResultRow.score)}`
-                : "暂无可比较分数"}
-            </span>
+          <div className="inline-flex rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.96_0.018_75)] p-1">
+            {benchmarkSections.map((section) => (
+              <button
+                key={section.benchmark}
+                type="button"
+                onClick={() => selectResultBenchmark(section.benchmark)}
+                data-result-benchmark-tab={section.benchmark}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  section.benchmark === selectedResultBenchmark
+                    ? "bg-[oklch(0.25_0.025_62)] text-[oklch(0.98_0.012_76)]"
+                    : "text-[oklch(0.43_0.025_68)] hover:text-[oklch(0.25_0.025_62)]"
+                }`}
+              >
+                {section.benchmark}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-xl border border-[oklch(0.84_0.025_72)]">
+        <section
+          data-result-table="switchable"
+          data-selected-benchmark={selectedSection.benchmark}
+          className="mt-5 overflow-hidden rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.98_0.014_76)]"
+        >
+          <div className="flex flex-col justify-between gap-3 border-b border-[oklch(0.84_0.025_72)] bg-[oklch(0.965_0.018_75)] px-4 py-3 md:flex-row md:items-center">
+            <div>
+              <h3 className="text-base font-semibold">
+                {selectedSection.title}
+              </h3>
+              <p className="mt-1 text-sm text-[oklch(0.43_0.025_68)]">
+                {selectedSection.caption}
+              </p>
+            </div>
+            <div
+              data-benchmark-best="selected"
+              className="rounded-xl border border-[oklch(0.76_0.065_55)] bg-[oklch(0.94_0.045_62)] px-4 py-2 text-sm text-[oklch(0.29_0.045_52)]"
+            >
+              <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
+                当前最高
+              </span>
+              <span className="mt-1 block font-semibold">
+                {bestRow
+                  ? `${bestRow.configName} / ${formatPercent(bestRow.score)}`
+                  : "暂无可比较分数"}
+              </span>
+            </div>
+          </div>
+
           <div className="max-h-80 overflow-auto">
-            <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+            <table className="w-full min-w-[820px] border-collapse text-left text-sm">
               <thead className="sticky top-0 bg-[oklch(0.92_0.028_72)] text-xs font-semibold uppercase tracking-[0.08em] text-[oklch(0.47_0.055_54)]">
                 <tr>
-                  <th className="px-4 py-3">Benchmark</th>
                   <th className="px-4 py-3">Config</th>
                   <th className="px-4 py-3">Exp</th>
                   <th className="px-4 py-3">Step / Time</th>
+                  <th className="px-4 py-3">Task</th>
                   <th className="px-4 py-3">Metric</th>
+                  <th className="px-4 py-3 text-right">Partial</th>
                   <th className="px-4 py-3 text-right">Score</th>
                   <th className="px-4 py-3">Source</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[oklch(0.86_0.023_72)] bg-[oklch(0.985_0.012_76)]">
-                {resultRows.map((row) => {
-                  const isBest = bestResultRow?.id === row.id;
+                {selectedRows.map((row) => {
+                  const isBest = bestRow?.id === row.id;
                   return (
                     <tr
                       key={row.id}
@@ -1194,18 +1635,6 @@ export function EvaluationDashboardView({
                           : "bg-[oklch(0.985_0.012_76)]"
                       }
                     >
-                      <td className="px-4 py-3">
-                        <span
-                          data-benchmark={row.benchmark}
-                          className={`benchmark-label inline-flex rounded-lg border px-2.5 py-1 text-base font-black tracking-[0.01em] ${
-                            row.benchmark === "SimplerEnv"
-                              ? "border-[oklch(0.66_0.09_44)] bg-[oklch(0.93_0.05_62)] text-[oklch(0.32_0.085_42)]"
-                              : "border-[oklch(0.58_0.075_255)] bg-[oklch(0.93_0.035_252)] text-[oklch(0.34_0.08_252)]"
-                          }`}
-                        >
-                          {row.benchmark}
-                        </span>
-                      </td>
                       <td className="px-4 py-3 font-medium text-[oklch(0.25_0.025_62)]">
                         {row.configName}
                       </td>
@@ -1218,7 +1647,13 @@ export function EvaluationDashboardView({
                           : row.timestamp}
                       </td>
                       <td className="px-4 py-3 text-[oklch(0.43_0.025_68)]">
-                        {row.taskName} / {row.metricName}
+                        {row.taskName}
+                      </td>
+                      <td className="px-4 py-3 text-[oklch(0.43_0.025_68)]">
+                        {row.metricName}
+                      </td>
+                      <td className="px-4 py-3 text-right text-[oklch(0.43_0.025_68)]">
+                        {formatPercent(row.partial)}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-[oklch(0.25_0.025_62)]">
                         {formatPercent(row.score)}
@@ -1229,10 +1664,20 @@ export function EvaluationDashboardView({
                     </tr>
                   );
                 })}
+                {selectedRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-5 text-sm text-[oklch(0.43_0.025_68)]"
+                    >
+                      暂无 {selectedSection.benchmark} 结果。
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </section>
     );
   }
@@ -1241,17 +1686,15 @@ export function EvaluationDashboardView({
     return (
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <article className={panelClass}>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
+          <p className="text-lg font-black tracking-[0.01em] text-[oklch(0.34_0.08_252)]">
             RMBench
           </p>
           <h2 className="mt-2 text-xl font-semibold">Swap Blocks 回放</h2>
           <div className="mt-5 grid gap-3">
             <select
               value={rmbenchRunIndex}
-              onChange={(event) => {
-                setRmbenchRunIndex(Number(event.target.value));
-                setTimestampIndex(0);
-              }}
+              onChange={(event) => selectRmbenchRun(Number(event.target.value))}
+              data-rmbench-run-selector="preserve-scroll"
               className={selectClass}
             >
               {dashboard.rmbench.runs.map((run, index) => (
@@ -1265,9 +1708,10 @@ export function EvaluationDashboardView({
             </select>
             <select
               value={timestampIndex}
-              onChange={(event) =>
-                setTimestampIndex(Number(event.target.value))
-              }
+              onChange={(event) => {
+                selectRmbenchTimestamp(Number(event.target.value));
+              }}
+              data-rmbench-timestamp-selector="preserve-scroll"
               className={selectClass}
             >
               {selectedRmbenchRun?.timestamps.map((item, index) => (
@@ -1290,19 +1734,20 @@ export function EvaluationDashboardView({
 
         <article className={panelClass}>
           <h2 className="text-xl font-semibold">Episode 视频</h2>
-          {firstVideo ? (
+          {selectedRmbenchVideo ? (
             <div
               data-video-frame="compact"
               data-video-crop="horizontal"
+              data-rmbench-video-frame="inline"
               className="mx-auto mt-5 w-full max-w-md overflow-hidden rounded-2xl bg-[oklch(0.18_0.015_60)]"
               style={{ aspectRatio: rmbenchVideoRatio }}
             >
               <video
-                key={firstVideo.relativePath}
+                data-rmbench-video-player="stable"
                 controls
                 preload="metadata"
                 className="block h-full max-w-none object-contain"
-                src={mediaUrl(firstVideo.relativePath)}
+                src={mediaUrl(selectedRmbenchVideo.relativePath)}
                 style={{
                   width: `${RMBENCH_VIDEO_WIDTH_PERCENT}%`,
                   marginLeft: `-${RMBENCH_VIDEO_OFFSET_PERCENT}%`,
@@ -1322,15 +1767,20 @@ export function EvaluationDashboardView({
             </div>
           ) : null}
           <div className="mt-5 grid max-h-64 gap-2 overflow-y-auto md:grid-cols-3">
-            {selectedTimestamp?.videos.map((video) => (
-              <a
+            {selectedTimestamp?.videos.map((video, index) => (
+              <button
                 key={video.relativePath}
-                href={mediaUrl(video.relativePath)}
-                target="_blank"
-                className="rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.96_0.018_75)] px-3 py-2 text-sm text-[oklch(0.43_0.025_68)] transition hover:border-[oklch(0.59_0.105_43)] hover:text-[oklch(0.25_0.025_62)]"
+                type="button"
+                onClick={() => selectRmbenchVideo(index)}
+                data-rmbench-video-option={index}
+                className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
+                  index === rmbenchVideoIndex
+                    ? "border-[oklch(0.59_0.105_43)] bg-[oklch(0.94_0.045_62)] text-[oklch(0.25_0.025_62)]"
+                    : "border-[oklch(0.84_0.025_72)] bg-[oklch(0.96_0.018_75)] text-[oklch(0.43_0.025_68)] hover:border-[oklch(0.59_0.105_43)] hover:text-[oklch(0.25_0.025_62)]"
+                }`}
               >
                 {video.name}
-              </a>
+              </button>
             ))}
           </div>
         </article>
@@ -1410,10 +1860,10 @@ export function EvaluationDashboardView({
             </div>
           </div>
 
-          <aside className="flex flex-col gap-4">
+          <aside className="grid gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-                Data Preview
+                ACONE 数据概览
               </p>
               <h3 className="mt-2 text-lg font-semibold text-[oklch(0.25_0.025_62)]">
                 ACONE 三路相机预览

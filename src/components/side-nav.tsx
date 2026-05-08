@@ -113,6 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ) : (
                   <Link
                     href={`./episode_${episode}`}
+                    scroll={false}
                     className={`underline ${episode === episodeId ? "-ml-1 font-bold" : ""}`}
                   >
                     回合 {episode}

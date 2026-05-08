@@ -3,6 +3,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   lazy,
   Suspense,
@@ -71,6 +72,7 @@ const ACTIVE_TABS: ActiveTab[] = [
   "doctor",
   "replay",
 ];
+const EPISODE_CONTENT_SCROLL_KEY = "episodeContentScrollTop";
 
 function resolveActiveTab(
   value: string | null | undefined,
@@ -224,6 +226,7 @@ function EpisodeViewerInner({
   const [insightsLoading, setInsightsLoading] = useState(false);
   const insightsLoadedRef = useRef(false);
   const mountedRef = useRef(true);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -399,6 +402,35 @@ function EpisodeViewerInner({
     [searchParamString],
   );
 
+  const saveContentScrollPosition = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const scrollTop = contentScrollRef.current?.scrollTop ?? window.scrollY;
+    sessionStorage.setItem(EPISODE_CONTENT_SCROLL_KEY, String(scrollTop));
+  }, []);
+
+  const restoreContentScrollPosition = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const rawScrollTop = sessionStorage.getItem(EPISODE_CONTENT_SCROLL_KEY);
+    if (rawScrollTop === null) return;
+    const scrollTop = Number(rawScrollTop);
+    if (!Number.isFinite(scrollTop)) {
+      sessionStorage.removeItem(EPISODE_CONTENT_SCROLL_KEY);
+      return;
+    }
+    if (contentScrollRef.current) {
+      contentScrollRef.current.scrollTop = scrollTop;
+    }
+    sessionStorage.removeItem(EPISODE_CONTENT_SCROLL_KEY);
+  }, []);
+
+  const navigateToEpisode = useCallback(
+    (nextEpisodeId: number) => {
+      saveContentScrollPosition();
+      router.push(getEpisodeRoute(nextEpisodeId), { scroll: false });
+    },
+    [getEpisodeRoute, router, saveContentScrollPosition],
+  );
+
   // Pagination state
   const pageSize = 100;
   const [currentPage, setCurrentPage] = useState(1);
@@ -432,6 +464,10 @@ function EpisodeViewerInner({
       links.forEach((l) => l.remove());
     };
   }, [org, dataset, episodeId]);
+
+  useLayoutEffect(() => {
+    restoreContentScrollPosition();
+  }, [episodeId, restoreContentScrollPosition]);
 
   // Initialize based on URL time parameter
   useEffect(() => {
@@ -485,7 +521,7 @@ function EpisodeViewerInner({
           direction: key === "ArrowDown" ? 1 : -1,
         });
         if (nextEpisodeId !== null) {
-          router.push(getEpisodeRoute(nextEpisodeId));
+          navigateToEpisode(nextEpisodeId);
         }
       }
     },
@@ -494,8 +530,7 @@ function EpisodeViewerInner({
       episodes,
       flagged,
       framesFilterMode,
-      getEpisodeRoute,
-      router,
+      navigateToEpisode,
       setIsPlaying,
       sidebarFilterMode,
       toggle,
@@ -671,18 +706,14 @@ function EpisodeViewerInner({
             nextPage={nextPage}
             episodeFilterMode={sidebarFilterMode}
             onEpisodeFilterModeChange={setSidebarFilterMode}
-            onEpisodeSelect={
-              activeTab === "replay"
-                ? (ep) => {
-                    router.push(getEpisodeRoute(ep));
-                  }
-                : undefined
-            }
+            onEpisodeSelect={navigateToEpisode}
           />
         )}
 
         {/* Main content */}
         <div
+          ref={contentScrollRef}
+          data-testid="episode-content-scroll"
           className={`flex flex-col gap-4 p-4 flex-1 relative ${isLoading ? "overflow-hidden" : "overflow-y-auto"}`}
         >
           {isLoading && <Loading />}

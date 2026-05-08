@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, test } from "vitest";
+import { cleanup, fireEvent, render } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import EvaluationPage from "@/app/evaluation/page";
@@ -9,6 +10,12 @@ import EvaluationReplayPage from "@/app/evaluation/replay/page";
 import EvaluationTrainingPage from "@/app/evaluation/training/page";
 import { EvaluationDashboardView } from "@/components/thesis/evaluation-dashboard";
 import type { EvaluationDashboard } from "@/server/eval-results/summary";
+import type { TrainingConfigSummary } from "@/server/eval-results/training-config";
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const replayDashboard: EvaluationDashboard = {
   wandbUrl: "https://wandb.example.com",
@@ -57,6 +64,10 @@ const replayDashboard: EvaluationDashboard = {
               {
                 name: "episode_0.mp4",
                 relativePath: "RMBench/run/timestamp/episode_0.mp4",
+              },
+              {
+                name: "episode_1.mp4",
+                relativePath: "RMBench/run/timestamp/episode_1.mp4",
               },
             ],
           },
@@ -122,40 +133,69 @@ const trainingDashboard: EvaluationDashboard = {
   ...replayDashboard,
   training: {
     configs: [
-      {
-        name: "pi05_simpler_baseline",
+      trainingConfig({
+        name: "pi05_rmbench",
         projectName: "openpi",
-        expName: "baseline",
-        dataFactory: "LeRobotAlohaDataConfig",
-        repoId: "local/baseline",
+        expName: "rmbench",
+        dataFactory: "LeRobotRMBenchDataConfig",
+        repoId: "local/rmbench",
         model: "Pi0Config",
-        actionHorizon: "50",
-        discreteStateInput: "False",
+        actionHorizon: "30",
+        discreteStateInput: "True",
         batchSize: "64",
-        gradientAccumulationSteps: "1",
-        numTrainSteps: "30000",
-        saveInterval: "2000",
-        peakLr: "2.5e-5",
-        warmupSteps: "1000",
-        decaySteps: "30000",
-        decayLr: "2.5e-6",
-        baseLr: "None",
-        memoryLr: "None",
-        emaDecay: "0.99",
-        wandbEnabled: "True",
-        trainVisionEncoder: "True",
+        peakLr: "5e-5",
         loraEnabled: false,
         isBaseline: true,
-        memory: {
-          enabled: false,
-          momentTokenCount: "0",
-          cacheSize: "0",
-          decisionStride: "None",
-          layerIndices: "None",
-          initialization: "none",
-        },
-      },
-      {
+      }),
+      trainingConfig({
+        name: "pi05_rmbench_lora",
+        projectName: "openpi",
+        expName: "rmbench-lora",
+        dataFactory: "LeRobotRMBenchDataConfig",
+        repoId: "local/rmbench",
+        model: "Pi0Config",
+        actionHorizon: "30",
+        discreteStateInput: "True",
+        batchSize: "64",
+        peakLr: "5e-4",
+        loraEnabled: true,
+        isBaseline: true,
+      }),
+      trainingConfig({
+        name: "pi05_simpler",
+        projectName: "openpi",
+        expName: "simpler",
+        dataFactory: "LeRobotSimplerDataConfig",
+        repoId: "bridgev2_lerobot_v21",
+        model: "Pi0Config",
+        actionHorizon: "10",
+        discreteStateInput: "True",
+        batchSize: "512",
+        peakLr: "5e-5",
+        loraEnabled: false,
+        isBaseline: true,
+      }),
+      trainingConfig({
+        name: "pi05_simpler_lora_pytorch_baseline",
+        projectName: "openpi",
+        expName: "simpler-lora",
+        dataFactory: "LeRobotSimplerDataConfig",
+        repoId: "bridgev2_lerobot_v21",
+        model: "Pi0Config",
+        actionHorizon: "4",
+        discreteStateInput: "True",
+        batchSize: "128",
+        peakLr: "1e-4",
+        loraEnabled: true,
+        isBaseline: true,
+      }),
+      trainingConfig({
+        name: "pi05_simpler_baseline",
+        batchSize: "64",
+        peakLr: "2.5e-5",
+        isBaseline: true,
+      }),
+      trainingConfig({
         name: "pi05_simpler_memory",
         projectName: "openpi",
         expName: "memory",
@@ -187,10 +227,49 @@ const trainingDashboard: EvaluationDashboard = {
           layerIndices: "[10, 20]",
           initialization: "MemoryInitializer",
         },
-      },
+      }),
     ],
   },
 };
+
+function trainingConfig(
+  overrides: Partial<TrainingConfigSummary> & { name: string },
+): TrainingConfigSummary {
+  return {
+    name: overrides.name,
+    projectName: "openpi",
+    expName: "-",
+    dataFactory: "LeRobotAlohaDataConfig",
+    repoId: "local/baseline",
+    model: "Pi0Config",
+    actionHorizon: "50",
+    discreteStateInput: "False",
+    batchSize: "64",
+    gradientAccumulationSteps: "1",
+    numTrainSteps: "30000",
+    saveInterval: "2000",
+    peakLr: "2.5e-5",
+    warmupSteps: "1000",
+    decaySteps: "30000",
+    decayLr: "2.5e-6",
+    baseLr: "None",
+    memoryLr: "None",
+    emaDecay: "0.99",
+    wandbEnabled: "True",
+    trainVisionEncoder: "True",
+    loraEnabled: false,
+    isBaseline: true,
+    memory: {
+      enabled: false,
+      momentTokenCount: "0",
+      cacheSize: "0",
+      decisionStride: "None",
+      layerIndices: "None",
+      initialization: "none",
+    },
+    ...overrides,
+  };
+}
 
 describe("evaluation page", () => {
   test("renders overview as an entry-only hub", async () => {
@@ -262,7 +341,10 @@ describe("evaluation page", () => {
     expect(dataHtml).toContain("末条样本");
     expect(dataHtml).toContain('data-workspace-cue="data"');
     expect(dataHtml).toContain('data-workspace-icon="data-video"');
-    expect(dataHtml).toContain("ACONE 预览图");
+    expect(dataHtml).toContain("ACONE 数据概览");
+    expect(dataHtml).toContain("ACONE 三路相机预览");
+    expect(dataHtml).toContain("ACONE 三路相机数据预览图");
+    expect(dataHtml).toContain("%2Fimages%2Facone-data-preview.jpg");
     expect(dataHtml).not.toContain("数据巡检清单");
     expect(dataHtml).not.toContain("按清洗流程逐项确认");
     expect(dataHtml).not.toContain("清洗状态");
@@ -273,7 +355,7 @@ describe("evaluation page", () => {
     expect(trainingHtml).toContain("Weights &amp; Biases");
     expect(trainingHtml).toContain("保存配置");
     expect(trainingHtml).toContain("训练规模");
-    expect(trainingHtml).toContain("学习率 schedule");
+    expect(trainingHtml).toContain("学习率 Schedule");
     expect(trainingHtml).toContain("Memory 参数");
     expect(trainingHtml).toContain('data-workspace-cue="training"');
     expect(trainingHtml).toContain('data-workspace-icon="training-baseline"');
@@ -287,6 +369,7 @@ describe("evaluation page", () => {
     expect(replayHtml).toContain("评测查看和回放");
     expect(replayHtml).toContain("SimplerEnv 回放");
     expect(replayHtml).toContain("RMBench");
+    expect(replayHtml).toContain('data-simpler-trend-chart="avg-entire"');
     expect(replayHtml).toContain('data-workspace-cue="replay"');
     expect(replayHtml).toContain('data-workspace-icon="replay-table"');
     expect(replayHtml).toContain("最高分表格");
@@ -304,32 +387,138 @@ describe("evaluation page", () => {
     expect(html).not.toContain("scaleX(");
     expect(html).not.toContain("transform:");
     expect(html).toContain("object-contain");
+    expect(html).toContain('data-simpler-trend-bar="1000"');
+    expect(html).toContain('data-simpler-video-selector="preserve-scroll"');
+    expect(html).toContain('data-simpler-video-player="stable"');
+    expect(html).toContain('data-simpler-video-option="0"');
+    expect(html).toContain('data-rmbench-video-frame="inline"');
+    expect(html).toContain('data-rmbench-video-player="stable"');
+    expect(html).toContain('data-rmbench-video-option="0"');
+    expect(html).toContain('data-rmbench-video-option="1"');
+    expect(html).not.toContain('href="/api/eval-results/media?path=RMBench');
     expect(html).toContain('data-video-frame="compact"');
     expect(html).toContain('data-video-crop="horizontal"');
     expect(html).toContain("max-w-md");
   });
 
-  test("renders evaluation result table with prominent benchmark labels and best row", () => {
+  test("renders one switchable evaluation result table by benchmark", () => {
     const html = renderToStaticMarkup(
       <EvaluationDashboardView dashboard={replayDashboard} mode="replay" />,
     );
 
     expect(html).toContain("评测结果表格");
-    expect(html).toContain("当前最高");
-    expect(html).toContain('data-benchmark="SimplerEnv"');
-    expect(html).toContain('data-benchmark="RMBench"');
-    expect(html).toContain("benchmark-label");
+    expect(html).toContain('data-result-table="switchable"');
+    expect(html).toContain('data-result-benchmark-tab="SimplerEnv"');
+    expect(html).toContain('data-result-benchmark-tab="RMBench"');
+    expect(html).toContain('data-selected-benchmark="SimplerEnv"');
+    expect(html).toContain('data-benchmark-best="selected"');
+    expect(html).not.toContain('data-result-table="RMBench"');
+    expect(html).not.toContain("benchmark-label");
+    expect(html).not.toContain('data-benchmark="SimplerEnv"');
+    expect(html).not.toContain('data-benchmark="RMBench"');
     expect(html).toContain("best-result-row");
   });
 
-  test("renders a fixed baseline module for memory-free training configs", () => {
+  test("switches the single evaluation result table between benchmarks", () => {
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+
+    const { container, getByRole } = render(
+      <EvaluationDashboardView dashboard={replayDashboard} mode="replay" />,
+    );
+
+    expect(
+      container.querySelectorAll('[data-result-table="switchable"]'),
+    ).toHaveLength(1);
+    expect(
+      container.querySelector('[data-selected-benchmark="SimplerEnv"]'),
+    ).not.toBeNull();
+    let resultTable = container.querySelector(
+      '[data-result-table="switchable"]',
+    );
+    expect(resultTable?.textContent).toContain("simpler-config");
+    expect(resultTable?.textContent).not.toContain("rmbench-config");
+
+    fireEvent.click(getByRole("button", { name: "RMBench" }));
+
+    expect(
+      container.querySelectorAll('[data-result-table="switchable"]'),
+    ).toHaveLength(1);
+    expect(
+      container.querySelector('[data-selected-benchmark="RMBench"]'),
+    ).not.toBeNull();
+    resultTable = container.querySelector('[data-result-table="switchable"]');
+    expect(resultTable?.textContent).toContain("rmbench-config");
+    expect(resultTable?.textContent).not.toContain("simpler-config");
+  });
+
+  test("renders a selectable baseline module with only approved configs", () => {
     const html = renderToStaticMarkup(
       <EvaluationDashboardView dashboard={trainingDashboard} mode="training" />,
     );
 
-    expect(html).toContain("Baseline 配置");
-    expect(html).toContain("不带 memory 的配置");
-    expect(html).toContain('data-baseline-config="pi05_simpler_baseline"');
+    expect(html).toContain("Baseline 对照");
+    expect(html).toContain('data-baseline-selector="training-baseline"');
+    expect(html).toContain('data-baseline-config="pi05_rmbench"');
+    expect(html).toContain('data-baseline-option="pi05_rmbench"');
+    expect(html).toContain('data-baseline-option="pi05_rmbench_lora"');
+    expect(html).toContain('data-baseline-option="pi05_simpler"');
+    expect(html).toContain(
+      'data-baseline-option="pi05_simpler_lora_pytorch_baseline"',
+    );
+    expect(html).toContain(
+      "pi05_rmbench - batch 64 / peak lr 5e-5 / memory off",
+    );
+    expect(html).toContain(
+      "pi05_rmbench_lora - batch 64 / peak lr 5e-4 / memory off",
+    );
+    expect(html).toContain(
+      "pi05_simpler - batch 512 / peak lr 5e-5 / memory off",
+    );
+    expect(html).toContain(
+      "pi05_simpler_lora_pytorch_baseline - batch 128 / peak lr 1e-4 / memory off",
+    );
+    expect(html).toContain("完整配置");
+    expect(html).toContain("LeRobotRMBenchDataConfig");
+    expect(html).toContain("action horizon");
+    expect(html).toContain("lora");
+    expect(html).toContain("memory");
+    expect(html).not.toContain('data-baseline-option="pi05_simpler_baseline"');
     expect(html).not.toContain('data-baseline-config="pi05_simpler_memory"');
+  });
+
+  test("preserves scroll position when changing baseline dropdown", () => {
+    Object.defineProperty(window, "scrollX", {
+      configurable: true,
+      value: 12,
+    });
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 640,
+    });
+    const scrollTo = vi
+      .spyOn(window, "scrollTo")
+      .mockImplementation(() => undefined);
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame");
+    document.documentElement.style.scrollBehavior = "smooth";
+    document.body.style.scrollBehavior = "smooth";
+
+    const { container } = render(
+      <EvaluationDashboardView dashboard={trainingDashboard} mode="training" />,
+    );
+    const baselineSelect = container.querySelector(
+      '[data-baseline-selector="training-baseline"]',
+    );
+    expect(baselineSelect).not.toBeNull();
+
+    fireEvent.change(baselineSelect!, { target: { value: "1" } });
+
+    expect(scrollTo).toHaveBeenCalledWith({
+      left: 12,
+      top: 640,
+      behavior: "instant",
+    });
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
+    expect(document.documentElement.style.scrollBehavior).toBe("smooth");
+    expect(document.body.style.scrollBehavior).toBe("smooth");
   });
 });

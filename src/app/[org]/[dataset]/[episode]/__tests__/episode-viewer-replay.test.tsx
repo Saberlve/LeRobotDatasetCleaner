@@ -158,8 +158,46 @@ describe("EpisodeViewer replay tab", () => {
     fireEvent.keyDown(window, { key: "ArrowDown" });
 
     await waitFor(() => {
-      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1?tab=replay");
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1?tab=replay", {
+        scroll: false,
+      });
     });
+  });
+
+  test("stores the content scroll position before episode keyboard navigation", async () => {
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    await screen.findByRole("button", { name: "回放" });
+    const content = screen.getByTestId("episode-content-scroll");
+    Object.defineProperty(content, "scrollTop", {
+      configurable: true,
+      value: 320,
+    });
+
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+
+    await waitFor(() => {
+      expect(sessionStorage.getItem("episodeContentScrollTop")).toBe("320");
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1", {
+        scroll: false,
+      });
+    });
+  });
+
+  test("restores stored content scroll position without waiting for animation frame", async () => {
+    sessionStorage.setItem("episodeContentScrollTop", "275");
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame");
+
+    render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
+
+    await screen.findByRole("button", { name: "回放" });
+    const content = screen.getByTestId("episode-content-scroll");
+
+    await waitFor(() => {
+      expect(content.scrollTop).toBe(275);
+      expect(sessionStorage.getItem("episodeContentScrollTop")).toBeNull();
+    });
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
   });
 
   test("toggles the current episode flag with f", async () => {
@@ -184,7 +222,9 @@ describe("EpisodeViewer replay tab", () => {
 
     await waitFor(() => {
       fireEvent.keyDown(window, { key: "ArrowDown" });
-      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_2");
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_2", {
+        scroll: false,
+      });
     });
   });
 
