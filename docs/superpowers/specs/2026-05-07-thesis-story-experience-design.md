@@ -1,355 +1,500 @@
-# Thesis Story Experience Design
+# 论文宣传站叙事体验设计
 
-## Goal
+## 目标
 
-Turn LeRobotDatasetCleaner itself into the first part of a thesis-facing visualization experience for the graduate project under `/mnt/d/share/docs/graduate`. The existing data-cleaning application is not a side tool next to the thesis presentation; it is the opening evidence in the thesis story.
+将当前项目重构为一个用于毕业答辩与成果展示的论文宣传站,服务对象是导师、评审、同学与访客。它的任务不是提供通用数据工具入口,也不是展示完整研究工作台,而是在较短时间内让读者理解:
 
-The primary audience is a thesis defense viewer: advisor, reviewer, classmate, or visitor who needs to understand what problem the project solves, how the memory method works, what data was collected, how training/evaluation were performed, and what evidence supports the claims.
+- 这篇工作在解决什么问题
+- 为什么长程机器人任务需要记忆
+- 本文方法与已有方案有什么区别
+- 做了多少实现与实验工作
+- 有哪些结果支撑最终结论
 
-## Product Shape
-
-Reshape the current app entry experience so the first visible product surface is the data-cleaning workflow as the foundation of the thesis project. The viewer should understand that the dataset cleaner produced the real-robot training data used by the memory model.
-
-After the data-cleaning story, the experience continues into the rest of the thesis evidence:
-
-1. How the ACONE real-robot dataset was collected, inspected, cleaned, and exported.
-2. Why the cleaned task requires memory.
-3. How the proposed memory system works.
-4. How training was monitored.
-5. How the method performs on SimplerEnv and RMBench.
-6. What rollout videos show.
-7. What the conclusion and limitations are.
-
-This is a presentation surface. It should be readable from top to bottom without requiring the user to configure runs, import logs, or know the file layout.
-
-## Routes
-
-### `/`
-
-The home page becomes the thesis story entry point. It is not a generic landing page and not a separate dashboard launcher.
-
-Layout:
-
-- the page title is the paper title
-- a sticky left sidebar provides section entry points
-- the main content area scrolls through the thesis story in order
-
-First viewport:
-
-- paper title as the dominant headline
-- one-sentence claim under the title
-- direct access to the local ACONE dataset-cleaning demonstration
-- three compact evidence cards: cleaned dataset scale, SimplerEnv result, RMBench result
-
-The page then continues with anchored sections:
-
-- Dataset Cleaning
-- Memory Motivation
-- Method Architecture
-- Training Curves
-- Benchmark Results
-- Rollout Videos
-- Conclusion
-
-The top-level flow should remain linear. Dataset cleaning appears first because it is the user's own system contribution and the source of the real-robot training data.
-The sidebar should expose these sections directly so the user can jump between them during a defense.
-
-### Existing Dataset Inspection Routes
-
-Existing dataset routes such as `/:org/:dataset/episode_:id` remain the detailed inspection tool. In the thesis experience, these routes are treated as drill-down views for the first story section rather than as a separate product area.
-
-When a configured ACONE dataset path is available, the home page should expose clear calls to:
-
-- open a representative cleaned episode
-- inspect action curves and synchronized videos
-- inspect URDF replay
-- compare raw and cleaned dataset summaries
-
-Remote Hugging Face dataset search and generic local-folder import remain available, but visually secondary to the thesis dataset story.
-
-## Data Contract
-
-Use a local static manifest first. This avoids depending on live W&B, remote benchmark hosts, or fragile filesystem scans during a thesis presentation.
-
-Create a typed project manifest, for example:
-
-```ts
-type ThesisProjectManifest = {
-  title: string;
-  subtitle: string;
-  projectRoot: string;
-  highlights: Array<{
-    label: string;
-    value: string;
-    caption: string;
-  }>;
-  dataset: {
-    name: string;
-    format: string;
-    robot: string;
-    task: string;
-    episodes: number;
-    frames: number;
-    fps: number;
-    averageLength: number;
-    cameras: string[];
-    actionDimensions: number;
-    rawDatasetPath?: string;
-    cleanedDatasetPath?: string;
-    representativeEpisodeRoute?: string;
-  };
-  methods: Array<{
-    id: string;
-    name: string;
-    historySource: string;
-    injectionPoint: string;
-    summary: string;
-    risk?: string;
-  }>;
-  benchmarks: Array<{
-    id: string;
-    name: string;
-    tasks: string[];
-    results: Array<{
-      method: string;
-      checkpoint?: string;
-      taskScores: Record<string, number | null>;
-      average?: number;
-    }>;
-  }>;
-  trainingRuns: Array<{
-    id: string;
-    method: string;
-    label: string;
-    source: string;
-    checkpointStep?: number;
-    metrics: string[];
-  }>;
-  videos: Array<{
-    id: string;
-    benchmark: string;
-    task: string;
-    method: string;
-    outcome?: "success" | "failure" | "mixed";
-    source: string;
-    caption: string;
-  }>;
-  figures: Array<{
-    id: string;
-    title: string;
-    source: string;
-    section: string;
-  }>;
-};
-```
+整站的核心要求是:
 
-The first manifest can be hand-authored from the current thesis files:
+- 首页在 3 秒内抓住注意力
+- 首页在 30 秒内建立"工作量大、内容扎实"的第一印象
+- 子页面沿着明确的论文叙事顺序推进,形成"为什么 -> 怎么做 -> 怎么验证 -> 发现了什么 -> 总结"的完整体验
 
-- `/mnt/d/share/docs/graduate/data/results/Simpler.md`
-- `/mnt/d/share/docs/graduate/data/results/rmbench.md`
-- `/mnt/d/share/docs/graduate/paper/chapters/chapter3.md`
-- `/mnt/d/share/docs/graduate/paper/chapters/chapter4.md`
-- `/mnt/d/share/docs/graduate/paper/figures` and `/mnt/d/share/docs/graduate/figures`
+## 产品定义
 
-Later iterations can add importers for W&B exports and benchmark logs.
+这是一个 `1 个主页 + 7 个独立子页面` 的论文宣传站。
 
-## Page Sections
+- `/` 是唯一首页,承担总览与分发职责
+- 7 个子页面分别承担单一叙事命题
+- 页面之间通过顶部导航、首页卡片入口和每页底部的"下一页引导卡片"串联
 
-### Thesis Entry
+该站点不是以下形态:
 
-The first viewport states the paper title plainly:
+- 不是单页长滚动论文概览
+- 不是数据清洗工具首页
+- 不是 episode 检视器导航壳
+- 不是 Hugging Face 数据集浏览器
+- 不是研究后台或实验仪表盘
 
-> Memory-augmented vision-language-action policy for long-horizon robotic manipulation.
+## 受众与阅读场景
 
-It must also make the data-cleaning application visible immediately. The first screen should not hide the cleaner behind a generic dataset search box or a separate thesis route.
+### 主要受众
 
-Show three metric cards:
+- 毕设答辩中的导师与评审
+- 课题组同学或访客
+- 对论文方向有兴趣,但没有时间阅读全文的人
 
-- Cleaned ACONE dataset: `37 episodes`, `34205 frames`
-- Method: `pi0.5 + Gated Cross-Attention Memory`
-- SimplerEnv: average success rate `64.6%`
-- RMBench Swap Blocks: `20.0%`, five times the `pi0.5` LoRA baseline in the current result file
+### 使用场景
 
-Also show a concise contribution list:
+- 答辩现场的大屏演示
+- 会后通过链接快速浏览
+- 在讲解某一部分时,直接跳转到对应子页辅助说明
 
-- The web app cleaned and inspected the real ACONE training dataset.
-- Learnable memory tokens compress current observations.
-- A temporal memory aggregator fuses sliding-window history.
-- Gated cross-attention injects memory into the action expert.
+因此页面必须满足:
 
-### Dataset Cleaning
+- 大标题、大图表、大数字优先
+- 首屏重点内容在投影环境中依然可读
+- 路由命名直观,便于讲解时直接跳转
+- 每页主题明确,避免页面内部承担多个中心论点
 
-This is the first full section and should feel like the original app has become part of the thesis, not like a detached link.
+## 体验总览
 
-Reuse the existing dataset-cleaning strengths:
+整站按以下顺序组织:
 
-- cleaned dataset statistics: LeRobot v2.1, ACONE, 37 episodes, 34205 frames, 30 FPS, average 924.5 frames, three camera views, 14 action dimensions
-- synchronized camera playback and action curves
-- ACONE URDF replay
-- before/after trajectory-length distribution
-- representative raw or problematic episode, when available
-- representative cleaned episode
-- export explanation: raw demonstrations were filtered and exported into the final LeRobot training dataset
+1. 首页:总览与成果压缩
+2. Page 1:为什么需要记忆
+3. Page 2:方法核心
+4. Page 3:四种记忆方案对比实现
+5. Page 4:真机平台与数据清洗工具
+6. Page 5:实验结果
+7. Page 6:深入分析
+8. Page 7:总结与展望
 
-This section should present the data-cleaning app as the first research artifact in the pipeline.
+其中:
 
-### Memory Motivation
+- 首页负责"抓人"与"压缩成果密度"
+- Page 1 和 Page 2 负责建立问题与方法理解
+- Page 3 和 Page 4 负责突出工作量与工程完成度
+- Page 5 和 Page 6 负责展示结果与分析深度
+- Page 7 负责完成收束并给出未来方向
 
-Use the real ACONE task as the motivating example: pick up the black pouch three times, then touch the green ring.
+## 信息架构与路由
 
-The section should build directly on the cleaned dataset section. It should show key frames or video clips for the repeated stages. The message is that a single image can look similar across repetitions, so the policy needs memory to infer the current stage.
+### 路由总表
 
-### Method Architecture
+主页与 7 个子页采用独立路由:
 
-Show the method as a small interactive architecture panel:
+- `/` -> 首页 Home / Landing Page
+- `/why-memory` -> Page 1 为什么需要记忆
+- `/method` -> Page 2 方法核心:三步走
+- `/memory-systems` -> Page 3 四种记忆方案对比实现
+- `/dataset-and-tooling` -> Page 4 真机平台与数据清洗工具
+- `/results` -> Page 5 实验结果
+- `/analysis` -> Page 6 深入分析
+- `/conclusion` -> Page 7 总结与展望
 
-Current observation and instruction -> memory tokens -> history cache -> memory aggregator -> gated cross-attention -> action expert.
+### 导航原则
 
-Below it, show a method comparison table:
+- 全站存在统一主导航,至少覆盖首页与全部 7 个子页
+- 首页上的 7 张导航卡片是主要分发入口
+- 每个子页底部提供"下一页指引卡片",默认按叙事顺序跳转
+- 子页之间允许从主导航任意跳转,但默认阅读顺序应保持线性叙事
 
-| Method | History source                   | Injection point               | Role in thesis                         |
-| ------ | -------------------------------- | ----------------------------- | -------------------------------------- |
-| Cache  | full VLM prefix KV cache         | current VLM prefix            | simple context baseline                |
-| Comp   | compressed memory-token KV cache | current VLM prefix            | strong but has attention shortcut risk |
-| Norm   | aggregated memory vector         | VLM hidden-state modulation   | adaptive normalization baseline        |
-| GCA    | aggregated memory tokens         | action expert cross-attention | proposed method                        |
+### 路由职责
 
-The design should keep this section visual and scannable. It should avoid becoming a code walkthrough.
+- `/` 只做总览,不承担细节论证
+- 每个子页只承担一个主命题
+- 不允许把多个子页内容重新堆回首页
 
-### Training Curves
+## 首页设计
 
-Display W&B-style curves from exported local files. First version supports static JSON/CSV exports instead of live W&B API calls.
+首页是整个站点最重要的页面。它的职责不是完整介绍论文,而是用最短时间建立以下判断:
 
-Required curves:
+- 研究主题明确
+- 方法有自己的核心结构
+- 工作量大且覆盖方法、实验、数据和工具
+- 结果足够强,值得继续往下看
 
-- training loss
-- learning rate
-- selected checkpoint step
+首页必须固定为以下五段式结构。
 
-Optional curves when present:
+### 1. Hero 区
 
-- gradient norm
-- memory gate value
-- validation or evaluation metrics
+组成:
 
-Users should be able to compare GCA, Norm, Comp, and Cache runs if the exported files exist. Missing runs should render as unavailable, not as a page error.
+- 大标题:面向长程任务的 VLM-VLA 通用记忆系统
+- 副标题:给 VLA 装上一个轻量、解耦、可插拔的记忆模块
+- 作者 / 导师 / 学院信息
+- 全屏背景视频,使用现有 `level2.mp4`
 
-### Benchmark Results
+要求:
 
-Provide two benchmark tabs.
+- 首屏视觉冲击力强,优先传达"机器人 + 长程任务 + 研究作品"的氛围
+- 文案简洁,避免长段落解释
+- 文字层与视频背景对比度足够,保证投影环境下可读
 
-SimplerEnv tab:
+### 2. 核心成果数字墙
 
-- Show task-level table and grouped bar chart for Spoon on Towel, Carrot on Plate, Stack Green Block on Yellow Block, Eggplant in Yellow Basket, and Average.
-- Include public comparison rows from the thesis result file: RT-1-X, Octo-Base, Octo-Small, OpenVLA, CogACT, SpatialVLA, pi0, pi0-FAST, GR00T N1.5.
-- Include memory variants: Cache, Comp, Norm, GCA.
-- Highlight GCA average success rate `64.6%`.
+这是首页体现工作量和成果密度的核心模块。使用大字号数字 + 一句说明,至少包含以下指标:
 
-RMBench tab:
+- `64.6%` -> SimplerEnv 平均成功率,超越 11 个对比方法
+- `5-10x` -> RMBench Swap Blocks 上相对 DP / pi0.5 LoRA 的提升
+- `4 种` -> 记忆方案实现并对比
+- `3 个` -> 评测平台
+- `37 条 / 34205 帧` -> 真机数据自采与清洗规模
+- `1 套` -> 自研 URDF 三维数据清洗工具
+- `0 改动` -> 预训练 VLM 骨干参数
 
-- Show Swap Blocks success-rate comparison.
-- Include DP `2%`, pi0.5 LoRA `4%`, and GCA `20.0%`.
-- Make the improvement claim explicit but restrained: current result shows GCA is 5x pi0.5 LoRA and 10x DP on Swap Blocks, while absolute success remains limited.
+要求:
 
-### Rollout Videos
+- 数字比说明文字更显眼
+- 版式要支持快速扫读
+- 读者不看正文,也能感知工作量和结果亮点
 
-Show a video evidence wall, optimized for thesis defense.
+### 3. One-page 方法图
 
-Controls:
+首页必须放置图 3-1 整体架构图作为主视觉之一,并配三段简短说明,讲清:
 
-- benchmark selector
-- task selector
-- method selector
-- success/failure selector
+- 提取
+- 聚合
+- 注入
 
-Video card metadata:
+要求:
 
-- benchmark
-- task
-- method
-- checkpoint
-- outcome
-- short caption
+- 这是全站统一视觉锚点
+- 图不能退化成缩略图或装饰图标
+- 说明文字只负责帮助读者快速理解,不展开技术细节
 
-Support side-by-side playback for baseline versus GCA when matching videos exist. The first version can use ordinary HTML video elements and local/static video URLs from the manifest.
+### 4. 结果速览 Carousel
 
-### Conclusion
+使用轮播或可切换区域展示 3 组代表性内容:
 
-Summarize the evidence:
+- SimplerEnv 完整对比表
+- RMBench Swap Blocks 对比
+- 真机任务关键帧或视频截图
 
-- GCA achieves the best current SimplerEnv average among implemented memory variants.
-- RMBench Swap Blocks shows the strongest memory-specific gain.
-- Comp is competitive but carries an attention-shortcut concern because history enters the VLM prefix directly.
-- The current RMBench absolute success rate remains low, leaving room for better precision and stage-switching.
+要求:
 
-## Error Handling
+- 每张内容都要有一句结论性说明
+- 目标不是展示全部实验,而是给出"结果是真的"的第一层证据
 
-The thesis page must degrade gracefully:
+### 5. 子页导航卡片
 
-- Missing manifest: show setup instructions and the expected manifest path.
-- Missing training curve file: show a disabled run card with the source path.
-- Missing video: show metadata and a "video unavailable" placeholder.
-- Missing dataset path: keep dataset summary visible and hide deep-link actions.
-- Invalid numeric result: omit it from charts and flag it in a small data-quality note.
+首页底部提供 7 张子页入口卡片。每张卡片至少包含:
 
-The defense page should never crash because one artifact is missing.
+- 页面标题
+- 一句钩子文案
+- 明确跳转入口
 
-## Implementation Boundaries
+这组卡片既是功能导航,也是论文故事目录。
 
-First implementation should include:
+## 子页面设计
 
-- home-page restructuring around the thesis story
-- typed local manifest
-- overview cards
-- narrative section layout
-- data-cleaning-first section using existing viewer capabilities and links
-- method comparison table
-- static benchmark charts/tables
-- static training curve reader for local JSON/CSV exports
-- video wall driven by manifest entries
-- links back to existing dataset viewer where possible
+每个子页都应满足:
 
-First implementation should not include:
+- 只有一个清晰主命题
+- 页面开头有一句故事钩子
+- 中段用图表、截图、视频或结构图支撑论点
+- 页面结尾通过下一页指引把读者继续带向后续章节
 
-- a separate thesis-dashboard route as the primary experience
-- live W&B API authentication
-- automatic benchmark execution
-- automatic checkpoint scanning
-- editing thesis markdown files from the web page
-- replacing the existing dataset-cleaning workflow
+### Page 1: 为什么需要记忆
 
-## UI Principles
+路由:`/why-memory`
 
-The visual style should feel like a research presentation interface:
+页面目标:
+解释长程机器人任务中"当前画面不够用"这一核心问题,为方法设计提供动机。
 
-- dense enough to support evidence, but not like a production monitoring dashboard
-- a persistent sidebar should anchor the story and make section jumping obvious
-- Chinese UI text by default, matching the existing translated app
-- restrained cards for metrics and repeated video/result items
-- clear section anchors for defense navigation
-- no marketing landing-page copy
-- no decorative visual effects that distract from experiment evidence
+故事钩子:
+让机器人取杯倒水,它会忘记自己刚开过柜门。
 
-## Testing
+核心内容:
 
-Unit tests should cover:
+- VLA 模型发展时间线,从 RT-1 到 pi0.5
+- 现有记忆方案三类对比:上下文扩展 / 外部存储 / 端到端嵌入
+- 本文真正要解决的问题:通用、轻量、解耦
 
-- manifest validation and fallback behavior
-- benchmark result transformation into chart/table rows
-- W&B export parsing for representative JSON and CSV files
-- video manifest filtering
+推荐媒体形式:
 
-Component tests should cover:
+- 时间线图
+- 三类方案对比图
+- 一段简洁的问题定义文案
 
-- rendering with a complete manifest
-- rendering with missing training files
-- rendering with missing videos
-- rendering benchmark tabs and highlighted GCA results
+读者看完后应记住:
+本文不是单纯"给模型加历史",而是在解决长程任务里的记忆组织问题。
 
-Manual verification should include:
+### Page 2: 方法核心
 
-- desktop and mobile layout checks
-- opening `/`
-- navigating section anchors
-- playing at least one local/static video
-- confirming existing dataset routes still work
+路由:`/method`
+
+页面目标:
+把方法讲清楚,但保持可扫读,避免沦为论文原文照搬。
+
+故事钩子:
+把"记忆"拆成一个三阶段流水线,每一阶段只做一件事。
+
+核心内容:
+
+- 图 3-1 整体架构图放在最显眼位置
+- 三步走展开:
+  - 提取:可学习记忆词元如何拼到 VLM 末端读取信息
+  - 聚合:块级因果注意力如何融合滑动窗口历史
+  - 注入:门控交叉注意力如何把记忆注入动作专家
+- 连续回合采样与固定窗口采样的差异
+- "VLM 骨干一行代码不动"作为关键设计结论
+
+推荐媒体形式:
+
+- 一张大总图
+- 三张局部解释图或分段高亮图
+- 一张训练采样策略图
+
+读者看完后应记住:
+本文方法的优势来自"解耦注入",而不是粗暴把历史塞进骨干。
+
+### Page 3: 四种记忆方案对比实现
+
+路由:`/memory-systems`
+
+页面目标:
+突出方法探索广度与实现工作量,说明不是只试了一个想法。
+
+故事钩子:
+为了找到最好的方案,我们把四条路全走了一遍。
+
+核心内容:
+
+- 表 3-1 四种方案对比放顶部
+- 四张方案卡片:
+  - Cache:暴力但有注意力捷径
+  - Comp:压缩 KV 但仍走骨干
+  - Norm:仿射调制但缺空间选择性
+  - GCA:解耦注入
+- 强调"实现并训练了四个完整模型再对比"
+
+推荐媒体形式:
+
+- 顶部总对比表
+- 四张方法卡片
+- 简化结构示意图或注入点示意图
+
+读者看完后应记住:
+GCA 是经过系统比较后得到的方案,不是拍脑袋选出来的最终版本。
+
+### Page 4: 真机平台与数据清洗工具
+
+路由:`/dataset-and-tooling`
+
+页面目标:
+突出真实数据采集、清洗、平台构建和工具开发的工程量。
+
+故事钩子:
+写代码之前,我们先建了一个数据清洗网页应用。
+
+核心内容:
+
+- ARX Acone 平台介绍与任务设计
+- 真机任务为何天然依赖记忆
+- 关键帧序列展示
+- 自研清洗工具展示:
+  - URDF 三维轨迹回放
+  - 轨迹长度统计
+  - 质量筛选界面
+  - 清洗前后对比
+- 数据集统计表
+
+推荐媒体形式:
+
+- 真实平台照片或示意图
+- 关键帧序列
+- 工具截图轮播
+- 清洗前后对比图
+
+呈现原则:
+
+- 本页以论文展示优先,主内容是故事、截图、统计与流程说明
+- 工具本体不是本页的主要交互对象
+- 如需保留工具访问入口,只能作为补充链接,不进入主叙事结构
+
+读者看完后应记住:
+本文不只是提出算法,还完成了真实平台、数据与工具链的搭建。
+
+### Page 5: 实验结果
+
+路由:`/results`
+
+页面目标:
+在一个页面内完成仿真结果、关键案例与真机结果的核心展示。
+
+故事钩子:
+在三个平台上,我们分别问了三个不同的问题。
+
+页面结构建议分成两段。
+
+#### 第一段:训练过程展示
+
+核心内容:
+
+- 4 种方法的 loss 收敛曲线对比
+- 三个平台各自的训练曲线
+- 分组学习率曲线对照
+- 训练资源说明,例如 8xH800 与 30k 步级别训练成本
+
+推荐媒体形式:
+
+- 可交互曲线图
+- 分组图例开关
+- 必要时附简洁注释,解释曲线应怎么看
+
+#### 第二段:测试结果
+
+核心内容:
+
+- SimplerEnv 完整对比
+- 遮挡场景案例
+- RMBench Swap Blocks 对比
+- 真机 ARX Acone 任务录像或关键帧
+
+推荐媒体形式:
+
+- 结果表
+- 成功率柱状图
+- rollout 视频
+- 基线与本文方法并排对比视频
+
+读者看完后应记住:
+本文方法在短程、强记忆依赖和真实平台三类场景里都给出了可信证据。
+
+### Page 6: 深入分析
+
+路由:`/analysis`
+
+页面目标:
+体现方法理解深度,说明为什么 GCA 赢,而不是只报分数。
+
+故事钩子:
+Comp 在平均分上接近 GCA,但它有一个根本性缺陷。
+
+核心内容:
+
+- 融合方式之差:Norm 为什么不稳定
+- 注意力捷径问题:Comp 为什么存在长程隐患
+- 一张"骨干受影响 vs 不受影响"的对照示意图
+- 如材料不足,聚合模块消融与推理效率可以用待补素材标记,但要明确位置与意图
+
+推荐媒体形式:
+
+- 机制对比图
+- 失败案例解释图
+- 重点结论卡片
+
+读者看完后应记住:
+GCA 的优势不是偶然结果,而是结构选择带来的必然收益。
+
+### Page 7: 总结与展望
+
+路由:`/conclusion`
+
+页面目标:
+完成全站收束,留下贡献、局限和未来方向。
+
+故事钩子:
+做了什么,没做完什么,下一步去哪。
+
+核心内容:
+
+- 4 项主要贡献卡片:
+  - GCA 机制
+  - 连续回合采样
+  - 可插拔架构
+  - 数据清洗工具
+- 当前局限:
+  - 固定窗口
+  - 闭环未做
+  - 可解释性有限
+  - 复杂度有限
+- 未来方向:
+  - 自适应窗口
+  - 闭环验证
+  - 可解释性分析
+  - 多任务迁移
+- 致谢、联系方式、论文 PDF / 代码仓库链接
+
+推荐媒体形式:
+
+- 贡献图标卡片
+- 局限与未来方向对照布局
+- 收尾 CTA 区域
+
+读者看完后应记住:
+这项工作已经形成完整闭环,同时仍有清晰且可信的延伸方向。
+
+## 视觉与交互原则
+
+整站应呈现"论文展览感",而不是"后台系统感"或"工具平台感"。
+
+### 视觉原则
+
+- 大标题、大图、大数字优先
+- 统一复用图 3-1 作为全站视觉锚点
+- 首页视频承担气氛建立作用
+- 重点内容用图、表、关键帧、视频解释,而不是长段文字
+- Page 3 和 Page 4 应显著体现"工作量页"的特殊地位
+
+### 交互原则
+
+- 交互为理解服务,不是为了展示控件能力
+- 少表单、少搜索框、少工具面板
+- 图表与视频可以交互,但不应把页面变成分析工作台
+- 路由切换必须直接、清晰、适合答辩讲解
+
+## 内容素材约束
+
+所有核心素材应来自现有论文与实验材料,包括但不限于:
+
+- 论文图 1-1、1-2、3-1、3-2、3-3、3-4、4-1、4-2、4-7、4-11
+- 表 3-1、4-1、4-3、4-4
+- 训练曲线导出
+- SimplerEnv 与 RMBench 结果
+- 真机任务关键帧与录像
+- 数据清洗工具截图
+
+允许存在占位内容,但必须满足:
+
+- 占位位置明确
+- 标注待补什么素材
+- 不得用与论文无关的泛化示意图替代关键研究证据
+
+## 范围边界
+
+新版 spec 的范围只覆盖宣传站的 `1 + 7` 页面体验。
+
+明确不包含:
+
+- 旧的 `/:org/:dataset/episode_:id` 详细检视路由
+- 任何将旧工具路由并入主导航的设计
+- 以数据浏览或导入为中心的信息架构
+- 远程 Hugging Face 数据集搜索入口作为站点主要能力
+- 将首页恢复成工具入口或仪表盘入口
+
+关于现有数据清洗工具:
+
+- 它是 Page 4 的展示素材与论证支撑之一
+- 它可以保留为独立工具资产,但不属于本 spec 的主体验范围
+- 如果未来需要继续维护工具路由,应在独立 spec 中定义,不能反向污染宣传站架构
+
+## 验收标准
+
+完成后的宣传站应满足以下标准:
+
+1. 读者进入首页 30 秒内可以理解研究主题、核心结果与主要工作量。
+2. 首页能够明确建立继续阅读动机,而不是把流量导向旧工具。
+3. 7 个子页面都有单一主命题,不存在一页同时承担多个中心论点的情况。
+4. 页面顺序能够自然形成"为什么 -> 怎么做 -> 怎么验证 -> 发现什么 -> 总结"的叙事链。
+5. Page 3 与 Page 4 能明显体现该项目在算法之外的实现广度与工程深度。
+6. 图 3-1 整体架构图在首页与方法相关页面中保持一致,形成统一视觉识别。
+7. 全站在答辩投影环境中依然可读,重点信息不依赖鼠标悬停才能理解。
+8. 旧工具型路由不会重新成为主导航或首页核心内容。
+
+## 实现提示
+
+本 spec 聚焦页面叙事与产品结构,不约束具体前端实现细节。但后续实现必须遵守以下方向:
+
+- 先实现路由与页面骨架,再逐步填充素材
+- 优先完成首页、Page 2、Page 3、Page 4、Page 5
+- 所有页面在桌面端与移动端都应可用,但桌面端答辩演示体验优先
+- 页面组件命名、素材组织与内容配置应围绕 `1 + 7` 结构展开,不要延续旧工具的信息模型作为外层壳

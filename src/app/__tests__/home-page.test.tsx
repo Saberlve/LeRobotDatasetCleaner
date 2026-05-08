@@ -1,144 +1,62 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, test, vi } from "vitest";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { describe, expect, test } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
-
-const navigation = vi.hoisted(() => ({
-  push: vi.fn(),
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: navigation.push,
-  }),
-  useSearchParams: () => new URLSearchParams(),
-}));
 
 import Home from "@/app/page";
 
 describe("home page", () => {
-  afterEach(() => {
-    cleanup();
-    vi.unstubAllGlobals();
-    navigation.push.mockReset();
-  });
-
-  test("renders local import controls inline with the search hero", () => {
+  test("renders the thesis promo landing page instead of the dataset opener", () => {
     const html = renderToStaticMarkup(<Home />);
 
-    expect(html).toContain("LeRobot");
-    expect(html).toContain("Cleaner");
-    expect(html).toContain("打开数据集");
-    expect(html).toContain("选择本地文件夹");
-    expect(html).toContain("最近导入");
-    expect(html).not.toContain("Local Import");
-    expect(html).not.toContain("本地数据集导入");
+    expect(html).toContain("面向长程任务的 VLM-VLA 通用记忆系统");
+    expect(html).toContain("给 VLA 装上一个轻量、解耦、可插拔的记忆模块");
+    expect(html).toContain("64.6%");
+    expect(html).toContain("37 条 / 34205 帧");
+    expect(html).toContain("为什么需要记忆");
+    expect(html).toContain("真机平台与数据清洗工具");
+    expect(html).not.toContain("打开数据集");
+    expect(html).not.toContain("选择本地文件夹");
+    expect(html).not.toContain("最近导入");
   });
 
-  test("writes picked local folder into search and opens it through registration", async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url === "/api/local-datasets/registry") {
-        return new Response(JSON.stringify({ entries: [] }), { status: 200 });
-      }
-      if (url === "/api/local-datasets/pick-directory") {
-        return new Response(JSON.stringify({ path: "/mnt/d/demo" }), {
-          status: 200,
-        });
-      }
-      if (url === "/api/local-datasets/register") {
-        return new Response(
-          JSON.stringify({ entryRoute: "/local/demo/episode_0" }),
-          { status: 200 },
-        );
-      }
-      return new Response(JSON.stringify({ datasets: [] }), { status: 200 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+  test("surfaces all seven story routes from the landing page", () => {
+    const html = renderToStaticMarkup(<Home />);
 
-    render(<Home />);
-
-    fireEvent.click(screen.getByRole("button", { name: "选择本地文件夹" }));
-
-    const input = await screen.findByPlaceholderText(
-      "输入数据集 ID，例如 lerobot/pusht",
-    );
-    await waitFor(() =>
-      expect((input as HTMLInputElement).value).toBe("/mnt/d/demo"),
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "打开数据集" }));
-
-    await waitFor(() =>
-      expect(navigation.push).toHaveBeenCalledWith("/local/demo/episode_0"),
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/local-datasets/register",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ path: "/mnt/d/demo", alias: "" }),
-      }),
-    );
+    expect(html).toContain('href="/why-memory"');
+    expect(html).toContain('href="/method"');
+    expect(html).toContain('href="/memory-systems"');
+    expect(html).toContain('href="/dataset-and-tooling"');
+    expect(html).toContain('href="/results"');
+    expect(html).toContain('href="/analysis"');
+    expect(html).toContain('href="/conclusion"');
   });
 
-  test("removes a recent local dataset entry without deleting files", async () => {
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => true),
-    );
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        if (
-          url === "/api/local-datasets/registry" &&
-          init?.method === "DELETE"
-        ) {
-          return new Response(JSON.stringify({ removed: true }), {
-            status: 200,
-          });
-        }
-        if (url === "/api/local-datasets/registry") {
-          return new Response(
-            JSON.stringify({
-              entries: [
-                {
-                  repoId: "local/demo",
-                  displayName: "demo",
-                  path: "/mnt/d/demo",
-                  version: "v2.1",
-                  totalEpisodes: 3,
-                  fps: 30,
-                  robotType: "SO101",
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-        return new Response(JSON.stringify({ datasets: [] }), { status: 200 });
-      },
-    );
-    vi.stubGlobal("fetch", fetchMock);
+  test("keeps the required video hero and audience-facing evidence copy", () => {
+    const html = renderToStaticMarkup(<Home />);
 
-    render(<Home />);
+    expect(html).toContain("/videos/level2.mp4");
+    expect(html).not.toContain("huggingface.co/datasets");
+    expect(html).toContain('preload="auto"');
+    expect(html).toContain("radial-gradient(ellipse_at_center");
+    expect(html).toContain("成果证据链");
+    expect(html).toContain("超越 11 个对比方法");
+    expect(html).not.toContain("结果先开口");
+    expect(html).not.toContain("主页不再");
+    expect(html).not.toContain("数字塞成一墙卡片");
+    expect(html).not.toContain("30 秒内看懂工作量和结果");
+    expect(html).not.toContain("Key Metrics");
+  });
 
-    expect(await screen.findByText("demo")).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "删除 demo" }));
+  test("uses a Claude-style research demo visual system", () => {
+    const html = renderToStaticMarkup(<Home />);
 
-    await waitFor(() => expect(screen.queryByText("demo")).toBeNull());
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/local-datasets/registry",
-      expect.objectContaining({
-        method: "DELETE",
-        body: JSON.stringify({ repoId: "local/demo", path: "/mnt/d/demo" }),
-      }),
-    );
+    expect(html).toContain("bg-[#f8f3ea]");
+    expect(html).toContain("bg-[#2a211c]");
+    expect(html).toContain("text-[#c15f3c]");
+    expect(html).toContain("实际应用演示");
+    expect(html).toContain("MemoryVLA Demo");
+    expect(html).toContain("当前帧歧义");
+    expect(html).toContain("记忆时间轴");
   });
 });
