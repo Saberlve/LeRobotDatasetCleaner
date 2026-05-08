@@ -106,14 +106,14 @@ const workbenchNav: Array<{
     mode: "data",
     href: "/evaluation/data",
     label: "数据查看",
-    caption: "ACONE 与清洗工具",
+    caption: "数据集与样本浏览",
     icon: FiDatabase,
   },
   {
     mode: "training",
     href: "/evaluation/training",
     label: "训练配置和曲线",
-    caption: "config.py 与 W&B",
+    caption: "训练参数与曲线",
     icon: FiBarChart2,
   },
   {
@@ -458,10 +458,6 @@ export function EvaluationDashboardView({
             <h1 className="mt-2 text-2xl font-semibold text-[oklch(0.25_0.025_62)] md:text-3xl">
               训练-评测-回放一体化平台
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-              将数据入口、训练配置、W&B 曲线、SimplerEnv checkpoint 和 RMBench
-              rollout 放在同一套工作台里。
-            </p>
           </div>
           <Link
             href="/results"
@@ -518,7 +514,7 @@ export function EvaluationDashboardView({
         href: "/evaluation/data",
         label: "Data",
         title: "数据查看",
-        caption: "进入 ACONE 真实数据、episode 定位、视频同步和清洗检查。",
+        caption: "查看 ACONE 数据集，定位 episode 并核对采集质量。",
         meta: `${formatInteger(dashboard.acone.episodes)} episodes / ${formatInteger(dashboard.acone.frames)} frames`,
         action: "进入数据查看",
         icon: FiDatabase,
@@ -527,7 +523,7 @@ export function EvaluationDashboardView({
         href: "/evaluation/training",
         label: "Training",
         title: "训练配置和曲线",
-        caption: "编辑 OpenPI config.py，打开 W&B，并对齐训练参数。",
+        caption: "编辑训练参数，对照 baseline 并打开训练曲线。",
         meta: `${formatInteger(platformStats.trainingConfigs)} configs`,
         action: "进入训练工作区",
         icon: FiBarChart2,
@@ -536,7 +532,7 @@ export function EvaluationDashboardView({
         href: "/evaluation/replay",
         label: "Replay",
         title: "评测查看和回放",
-        caption: "查看 SimplerEnv checkpoint、RMBench 分数和 rollout 视频。",
+        caption: "查看 SimplerEnv 与 RMBench 评测结果及回放视频。",
         meta: `${formatInteger(platformStats.simplerCheckpoints)} checkpoints / ${formatInteger(platformStats.replayVideos)} videos`,
         action: "进入评测回放",
         icon: FiPlayCircle,
@@ -552,9 +548,6 @@ export function EvaluationDashboardView({
             </p>
             <h2 className="mt-2 text-xl font-semibold">选择工作区</h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-            总览只保留入口。具体控件、视频和配置表单放在对应工作区里，减少首屏负担。
-          </p>
         </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -686,7 +679,7 @@ export function EvaluationDashboardView({
         workspace="data"
         eyebrow="Data Workspace"
         title="数据查看工作区"
-        caption="把真实数据入口、同步视频、动作曲线和 URDF 回放放在同一页，减少抽查 episode 时的跳转成本。"
+        caption="查看 ACONE 数据集，浏览同步视频、动作曲线与 URDF 回放。"
         items={[
           {
             id: "data-video",
@@ -717,18 +710,18 @@ export function EvaluationDashboardView({
         workspace="training"
         eyebrow="Training Workspace"
         title="训练配置和曲线工作区"
-        caption="固定 baseline，对齐 memory 配置，并把训练曲线入口留在配置编辑附近。"
+        caption="查看训练配置、对照 baseline，并打开训练曲线。"
         items={[
           {
             id: "training-baseline",
             title: "Baseline 对照",
-            caption: "不带 memory 的配置固定归入 baseline。",
+            caption: "对照不带 memory 的训练配置。",
             icon: FiTarget,
           },
           {
             id: "training-config",
             title: "参数编辑",
-            caption: "集中编辑 batch、学习率和 memory 参数。",
+            caption: "编辑 batch、学习率与 memory 参数。",
             icon: FiSliders,
           },
           {
@@ -748,7 +741,7 @@ export function EvaluationDashboardView({
         workspace="replay"
         eyebrow="Replay Workspace"
         title="评测查看和回放工作区"
-        caption="把 CSV/TXT 结果、最高分识别、SimplerEnv 和 RMBench 视频回放放在同一条证据链上。"
+        caption="查看评测结果表格，并回放 SimplerEnv 与 RMBench 视频。"
         items={[
           {
             id: "replay-table",
@@ -765,7 +758,7 @@ export function EvaluationDashboardView({
           {
             id: "replay-text",
             title: "结果文本",
-            caption: "保留 RMBench 原始 result 文本，方便复核。",
+            caption: "查看 RMBench 原始 result 文本。",
             icon: FiFileText,
           },
         ]}
@@ -783,8 +776,7 @@ export function EvaluationDashboardView({
             </p>
             <h2 className="mt-2 text-xl font-semibold">训练曲线监控</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-              外接 W&B 项目页面，用于查看 loss、learning rate、checkpoint
-              保存和实验运行状态。若浏览器限制嵌入，可直接打开控制台。
+              查看训练 loss、learning rate 与 checkpoint 状态。
             </p>
           </div>
           <Link
@@ -840,7 +832,7 @@ export function EvaluationDashboardView({
       },
       {
         title: "学习率 Schedule",
-        caption: "把 warmup、peak、decay 和分组学习率放在同一处对齐。",
+        caption: "warmup、peak、decay 阶段与分组学习率。",
         icon: <FiTrendingUp aria-hidden="true" className="h-3.5 w-3.5" />,
         fields: [
           {
@@ -900,8 +892,7 @@ export function EvaluationDashboardView({
               </h3>
             </div>
             <p className="mt-1 text-xs leading-5 text-[oklch(0.47_0.03_65)]">
-              不带 memory 的配置固定归入 baseline，用来和 memory
-              版本对照训练曲线。
+              选择基线配置，与启用 memory 的版本对照。
             </p>
           </div>
 
@@ -1095,8 +1086,7 @@ export function EvaluationDashboardView({
               训练超参数配置
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-              从 ~/code/openpi-simpler/src/openpi/training/config.py
-              同步。保存时写回当前配置块。
+              查看并编辑当前训练配置，保存后写回配置文件。
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -1830,9 +1820,8 @@ export function EvaluationDashboardView({
             <h2 className="mt-2 text-xl font-semibold">数据查看</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
               {dashboard.acone.datasetName} 包含{" "}
-              {formatInteger(dashboard.acone.episodes)} 条高质量轨迹、
-              {formatInteger(dashboard.acone.frames)} 帧，用于真实 ARX Acone
-              记忆任务的开环验证。
+              {formatInteger(dashboard.acone.episodes)} 条轨迹、
+              {formatInteger(dashboard.acone.frames)} 帧。
             </p>
           </div>
           <Link
@@ -1869,9 +1858,8 @@ export function EvaluationDashboardView({
                 ACONE 三路相机预览
               </h3>
               <p className="mt-2 text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-                来自 /mnt/d/share/pick_X_times_filterd_twice 的 head、left_wrist
-                和 right_wrist 视角，再进入同步视频、动作曲线和 URDF
-                回放逐条检查。
+                head、left_wrist 与 right_wrist
+                三路视角的同步预览，搭配动作曲线和 URDF 回放检查。
               </p>
             </div>
 

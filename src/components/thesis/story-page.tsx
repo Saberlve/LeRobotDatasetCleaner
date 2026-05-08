@@ -249,8 +249,7 @@ function DatasetPage({ page }: StoryPageProps) {
             数据质量先可视化，再进入训练。
           </p>
           <p className="mt-5 text-sm leading-7 text-[#665c52]">
-            演示时从这里直接进入
-            pick_X_times_filterd_twice，不再绕到单独工具页。
+            直接打开 pick_X_times_filterd_twice 数据集，进入查看与清洗。
           </p>
         </aside>
       </section>
@@ -436,9 +435,6 @@ function EvidenceLedger({
       <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
         <div>
           <p className="text-sm font-medium text-[#c15f3c]">{title}</p>
-          <p className="mt-3 text-sm leading-6 text-[#7a6f64]">
-            讲解时可替换为真实图表、截图或视频帧。
-          </p>
         </div>
         <div
           className={
@@ -507,7 +503,7 @@ function NextPageLink({ nextPage }: { nextPage: ThesisStoryPage | null }) {
           <div>
             <h2 className="text-2xl font-semibold">重新查看整站总览</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-[#665c52]">
-              从首页重新进入论文故事，或在答辩时按需要跳转到任意页面。
+              回到首页重新进入论文故事，或跳转到任意章节。
             </p>
           </div>
         </Link>
