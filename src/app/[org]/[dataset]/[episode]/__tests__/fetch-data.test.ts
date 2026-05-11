@@ -4,6 +4,7 @@ import {
   computeColumnMinMax,
   extractFeatureVector,
   getPositiveVectorDim,
+  loadAllEpisodeLengths,
 } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 import type { ChartRow } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 
@@ -102,6 +103,48 @@ describe("cross-episode vector helpers", () => {
         value: Array.from({ length: 32 }, (_, index) => `states | ${index}`),
       },
     ]);
+  });
+});
+
+describe("loadAllEpisodeLengths — v2.x episodes.jsonl", () => {
+  test("computes episode length stats from v2.1 local episodes metadata", async () => {
+    const originalFetch = global.fetch;
+    global.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/meta/episodes.jsonl")) {
+        return new Response(
+          [
+            JSON.stringify({ episode_index: 0, length: 889 }),
+            JSON.stringify({ episode_index: 1, length: 943 }),
+            JSON.stringify({ episode_index: 2, length: 994 }),
+          ].join("\n"),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const stats = await loadAllEpisodeLengths(
+        "local/pick_X_times_filterd_twice",
+        "v2.1",
+        30,
+      );
+
+      expect(stats).not.toBeNull();
+      expect(stats?.allEpisodeLengths).toEqual([
+        { episodeIndex: 0, frames: 889, lengthSeconds: 29.63 },
+        { episodeIndex: 1, frames: 943, lengthSeconds: 31.43 },
+        { episodeIndex: 2, frames: 994, lengthSeconds: 33.13 },
+      ]);
+      expect(stats?.shortestEpisodes[0]?.episodeIndex).toBe(0);
+      expect(stats?.longestEpisodes[0]?.episodeIndex).toBe(2);
+      expect(stats?.meanEpisodeLength).toBe(31.4);
+      expect(stats?.medianEpisodeLength).toBe(31.43);
+      expect(stats?.episodeLengthHistogram.length).toBeGreaterThan(0);
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });
 

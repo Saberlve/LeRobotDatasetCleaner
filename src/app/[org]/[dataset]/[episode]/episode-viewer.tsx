@@ -30,7 +30,7 @@ import {
   getAdjacentEpisodesVideoInfo,
   computeColumnMinMax,
   getEpisodeDataSafe,
-  loadAllEpisodeLengthsV3,
+  loadAllEpisodeLengths,
   loadAllEpisodeFrameInfo,
   loadCrossEpisodeActionVariance,
   type EpisodeData,
@@ -292,8 +292,7 @@ function EpisodeViewerInner({
       const repoId = `${org}/${dataset}`;
       getDatasetVersionAndInfo(repoId)
         .then(({ version, info }) => {
-          if (version !== "v3.0") return null;
-          return loadAllEpisodeLengthsV3(repoId, version, info.fps);
+          return loadAllEpisodeLengths(repoId, version, info.fps);
         })
         .then((result) => {
           if (!mountedRef.current) return;
@@ -367,6 +366,10 @@ function EpisodeViewerInner({
       loadStats();
       loadInsights();
     }
+    if (activeTab === "doctor") {
+      loadStats();
+      loadInsights();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -377,6 +380,10 @@ function EpisodeViewerInner({
     if (tab === "frames") loadFrames();
     if (tab === "insights") loadInsights();
     if (tab === "filtering") {
+      loadStats();
+      loadInsights();
+    }
+    if (tab === "doctor") {
       loadStats();
       loadInsights();
     }

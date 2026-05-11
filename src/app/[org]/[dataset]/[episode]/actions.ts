@@ -3,7 +3,7 @@
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
 import {
-  loadAllEpisodeLengthsV3,
+  loadAllEpisodeLengths,
   loadAllEpisodeFrameInfo,
   loadCrossEpisodeActionVariance,
   loadEpisodeFlatChartData,
@@ -18,8 +18,7 @@ export async function fetchEpisodeLengthStats(
 ): Promise<EpisodeLengthStats | null> {
   const repoId = `${org}/${dataset}`;
   const { version, info } = await getDatasetVersionAndInfo(repoId);
-  if (version !== "v3.0") return null;
-  return loadAllEpisodeLengthsV3(repoId, version, info.fps);
+  return loadAllEpisodeLengths(repoId, version, info.fps);
 }
 
 export async function fetchEpisodeFrames(

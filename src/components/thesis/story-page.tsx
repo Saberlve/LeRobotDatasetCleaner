@@ -133,7 +133,6 @@ function ProblemPage({ page }: StoryPageProps) {
         </div>
       </section>
 
-      <EvidenceLedger page={page} title="画面证据" />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -176,7 +175,7 @@ function MethodPage({ page }: StoryPageProps) {
       </section>
 
       <SplitNarrative page={page} label="故事推进" />
-      <EvidenceLedger page={page} title="画面证据" compact />
+      <FigureEvidence page={page} />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -220,8 +219,8 @@ function SystemsPage({ page }: StoryPageProps) {
         </div>
       </section>
 
+      <FigureEvidence page={page} />
       <SplitNarrative page={page} label="故事推进" />
-      <EvidenceLedger page={page} title="画面证据" compact />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -276,7 +275,7 @@ function DatasetPage({ page }: StoryPageProps) {
         </div>
       </section>
 
-      <EvidenceLedger page={page} title="画面证据" compact />
+      <FigureEvidence page={page} />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -309,8 +308,8 @@ function ResultsPage({ page }: StoryPageProps) {
         </div>
       </section>
 
+      <BenchmarkTables page={page} />
       <SplitNarrative page={page} label="故事推进" />
-      <EvidenceLedger page={page} title="画面证据" compact />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -350,7 +349,6 @@ function AnalysisPage({ page }: StoryPageProps) {
       </section>
 
       <SplitNarrative page={page} label="故事推进" />
-      <EvidenceLedger page={page} title="画面证据" compact />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -388,7 +386,6 @@ function ConclusionPage({ page }: StoryPageProps) {
       </section>
 
       <SplitNarrative page={page} label="故事推进" />
-      <EvidenceLedger page={page} title="画面证据" compact />
       <QuietConclusion page={page} />
     </StoryShell>
   );
@@ -421,36 +418,101 @@ function SplitNarrative({
   );
 }
 
-function EvidenceLedger({
-  page,
-  title,
-  compact = false,
-}: {
-  page: ThesisStoryPage;
-  title: string;
-  compact?: boolean;
-}) {
+function FigureEvidence({ page }: StoryPageProps) {
+  if (!page.figures?.length) {
+    return null;
+  }
+
+  return (
+    <section className="mx-auto mt-8 max-w-5xl border-y border-[#d8ccbb] py-5">
+      <div className="grid gap-4 lg:grid-cols-2">
+        {page.figures.map((figure) => (
+          <figure
+            key={figure.src}
+            className={`overflow-hidden rounded-[1rem] border border-[#d8ccbb] bg-[#fffaf4] ${
+              figure.layout === "wide" ? "lg:col-span-2" : ""
+            }`}
+          >
+            <div className="bg-[#efe6d9] p-2">
+              <img
+                src={figure.src}
+                alt={figure.title}
+                className={`w-full rounded-[0.75rem] object-contain ${
+                  figure.layout === "wide" ? "max-h-[360px]" : "max-h-[300px]"
+                }`}
+              />
+            </div>
+            <figcaption className="border-t border-[#d8ccbb] px-4 py-3">
+              <p className="text-sm font-semibold leading-6 text-[#2a211c]">
+                {figure.title}
+              </p>
+              <p className="mt-1.5 text-sm leading-6 text-[#665c52]">
+                {figure.caption}
+              </p>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BenchmarkTables({ page }: StoryPageProps) {
+  if (!page.benchmarkTables?.length) {
+    return null;
+  }
+
   return (
     <section className="mx-auto mt-10 max-w-7xl border-t border-[#d8ccbb] pt-6">
       <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
         <div>
-          <p className="text-sm font-medium text-[#c15f3c]">{title}</p>
+          <p className="text-sm font-medium text-[#c15f3c]">Benchmark 表格</p>
         </div>
-        <div
-          className={
-            compact ? "grid gap-3 md:grid-cols-2" : "grid gap-3 md:grid-cols-3"
-          }
-        >
-          {page.media.map((item, index) => (
-            <div
-              key={item}
-              className="rounded-[1.25rem] border border-[#d8ccbb] bg-[#fffaf4] px-4 py-4 text-sm leading-6 text-[#665c52]"
+        <div className="grid gap-5">
+          {page.benchmarkTables.map((table) => (
+            <article
+              key={table.title}
+              className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4]"
             >
-              <span className="mb-3 block font-semibold text-[#c15f3c]">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              {item}
-            </div>
+              <div className="px-5 py-4">
+                <h2 className="text-xl font-semibold text-[#2a211c]">
+                  {table.title}
+                </h2>
+                <p className="mt-2 text-sm leading-7 text-[#665c52]">
+                  {table.caption}
+                </p>
+              </div>
+              <div className="overflow-x-auto border-t border-[#d8ccbb]">
+                <table className="min-w-[720px] w-full border-collapse text-left text-sm">
+                  <thead className="bg-[#2a211c] text-[#f4eee7]">
+                    <tr>
+                      {table.columns.map((column) => (
+                        <th key={column} className="px-5 py-3 font-medium">
+                          {column}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {table.rows.map((row) => (
+                      <tr
+                        key={row.join("-")}
+                        className="border-t border-[#d8ccbb] text-[#3a3029]"
+                      >
+                        {row.map((cell, index) => (
+                          <td
+                            key={`${cell}-${index}`}
+                            className="px-5 py-4 align-top leading-6"
+                          >
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
           ))}
         </div>
       </div>

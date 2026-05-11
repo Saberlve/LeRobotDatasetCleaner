@@ -39,9 +39,7 @@ describe("story pages", () => {
     expect(pages[3].indexOf("故事推进")).toBeLessThan(
       pages[3].indexOf('href="/local/pick_X_times_filterd_twice/episode_0"'),
     );
-    expect(
-      pages[3].indexOf('href="/local/pick_X_times_filterd_twice/episode_0"'),
-    ).toBeLessThan(pages[3].indexOf("画面证据"));
+    expect(pages[3]).toContain('src="/images/thesis/3-3.png"');
     expect(pages[3]).not.toContain('href="/dataset-cleaning"');
     expect(pages[4]).toContain("在三个平台上，我们分别问了三个不同的问题。");
     expect(pages[5]).toContain(
@@ -94,9 +92,92 @@ describe("story pages", () => {
     expect(html).toContain("bg-[#f8f3ea]");
     expect(html).toContain("bg-[#2a211c]");
     expect(html).toContain("故事推进");
-    expect(html).toContain("画面证据");
     expect(html).toContain("留下的结论");
     expect(html).toContain("rounded-[2rem]");
+  });
+
+  test("renders selected thesis figures as page evidence", () => {
+    const methodHtml = renderToStaticMarkup(<MethodPage />);
+    const systemsHtml = renderToStaticMarkup(<MemorySystemsPage />);
+    const datasetHtml = renderToStaticMarkup(<DatasetAndToolingPage />);
+
+    expect(methodHtml).toContain('src="/images/thesis/2-1.png"');
+    expect(methodHtml).toContain('src="/images/thesis/2-2.png"');
+    expect(methodHtml).toContain('src="/images/thesis/2-3.png"');
+
+    expect(systemsHtml).toContain('src="/images/thesis/2-5.png"');
+
+    expect(datasetHtml).toContain('src="/images/thesis/3-3.png"');
+  });
+
+  test("renders figure titles and concise captions without generic figure labels", () => {
+    const html = [
+      renderToStaticMarkup(<MethodPage />),
+      renderToStaticMarkup(<MemorySystemsPage />),
+      renderToStaticMarkup(<DatasetAndToolingPage />),
+    ].join("");
+
+    expect(html).not.toContain("插图证据");
+    expect(html).toContain("VLA模型整体框架");
+    expect(html).toContain("记忆系统整体架构");
+    expect(html).toContain("历史矩阵构建与块级因果注意力掩码");
+    expect(html).toContain("三种记忆融合方式结构对比");
+    expect(html).toContain("Acone双臂机器人平台");
+    expect(html).toContain("图中区分视觉-语言模型");
+    expect(html).toContain("记忆词元提取当前帧信息");
+    expect(html).toContain("Acone 平台包含两条七自由度机械臂");
+  });
+
+  test("keeps inserted thesis figures compact", () => {
+    const html = renderToStaticMarkup(<MethodPage />);
+
+    expect(html).toContain("max-w-5xl");
+    expect(html).toContain("max-h-[360px]");
+    expect(html).toContain("max-h-[300px]");
+    expect(html).not.toContain("max-h-[560px]");
+    expect(html).not.toContain("max-h-[420px]");
+  });
+
+  test("places supporting method figures side by side instead of stacking all figures", () => {
+    const html = renderToStaticMarkup(<MethodPage />);
+    const wideFigureCount = html.match(/lg:col-span-2/g)?.length ?? 0;
+
+    expect(html).toContain("lg:grid-cols-2");
+    expect(wideFigureCount).toBe(1);
+    expect(html.indexOf('src="/images/thesis/2-1.png"')).toBeLessThan(
+      html.indexOf('src="/images/thesis/2-3.png"'),
+    );
+  });
+
+  test("does not render text-only evidence placeholders without images", () => {
+    const html = [
+      renderToStaticMarkup(<WhyMemoryPage />),
+      renderToStaticMarkup(<MethodPage />),
+      renderToStaticMarkup(<MemorySystemsPage />),
+      renderToStaticMarkup(<DatasetAndToolingPage />),
+      renderToStaticMarkup(<ResultsPage />),
+      renderToStaticMarkup(<AnalysisPage />),
+      renderToStaticMarkup(<ConclusionPage />),
+    ].join("");
+
+    expect(html).not.toContain("画面证据");
+    expect(html).not.toContain("整体架构总图");
+    expect(html).not.toContain("工具截图轮播");
+    expect(html).not.toContain("结果表与柱状图");
+    expect(html).not.toContain("机制对比图");
+    expect(html).not.toContain("论文与代码入口");
+  });
+
+  test("renders benchmark results as html tables with reserved data slots", () => {
+    const html = renderToStaticMarkup(<ResultsPage />);
+
+    expect(html).toContain("SimplerEnv Benchmark");
+    expect(html).toContain("RMBench Benchmark");
+    expect(html).toContain("<table");
+    expect(html).toContain("数据待补充");
+    expect(html).not.toContain("3-6_dim_rmse_bar.png");
+    expect(html).not.toContain("3-7.png");
+    expect(html).not.toContain("3-8.png");
   });
 
   test("shows a loading state when opening the data cleaning project", () => {

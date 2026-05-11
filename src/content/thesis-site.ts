@@ -15,7 +15,23 @@ export type ThesisStoryPage = {
   summary: string;
   highlights: string[];
   media: string[];
+  figures?: ThesisFigure[];
+  benchmarkTables?: ThesisBenchmarkTable[];
   takeaway: string;
+};
+
+export type ThesisFigure = {
+  src: string;
+  title: string;
+  caption: string;
+  layout?: "wide" | "standard";
+};
+
+export type ThesisBenchmarkTable = {
+  title: string;
+  caption: string;
+  columns: string[];
+  rows: string[][];
 };
 
 export const thesisTitle = "面向长程任务的 VLM-VLA 通用记忆系统";
@@ -116,6 +132,27 @@ export const thesisPages: ThesisStoryPage[] = [
       "连续回合采样让训练样本保留前后关系，避免把长程任务切成互不相干的片段。",
     ],
     media: ["整体架构总图", "提取/聚合/注入局部示意图", "训练采样策略图"],
+    figures: [
+      {
+        src: "/images/thesis/2-2.png",
+        title: "记忆系统整体架构",
+        caption:
+          "记忆词元提取当前帧信息，历史缓存构成滑动窗口，再由聚合模块和门控交叉注意力送入动作专家。",
+        layout: "wide",
+      },
+      {
+        src: "/images/thesis/2-1.png",
+        title: "VLA模型整体框架",
+        caption:
+          "图中区分视觉-语言模型与动作头两部分，先交代图像观测、语言指令和本体状态如何转成连续动作序列。",
+      },
+      {
+        src: "/images/thesis/2-3.png",
+        title: "历史矩阵构建与块级因果注意力掩码",
+        caption:
+          "每帧多个记忆词元按时间拼接成历史矩阵，块内允许双向注意力，跨帧只允许看到过去。",
+      },
+    ],
     takeaway: "本文方法的核心不是加历史，而是把历史以正确位置和方式注入策略。",
   },
   {
@@ -135,6 +172,15 @@ export const thesisPages: ThesisStoryPage[] = [
       "GCA 把记忆留在骨干之外，只在动作专家处完成解耦注入。",
     ],
     media: ["方法对比总表", "四张方案卡片", "注入点对照图"],
+    figures: [
+      {
+        src: "/images/thesis/2-5.png",
+        title: "三种记忆融合方式结构对比",
+        caption:
+          "上下文拼接、自适应层归一化和门控交叉注意力并排展示，帮助定位 GCA 与其他注入路径的差异。",
+        layout: "wide",
+      },
+    ],
     takeaway: "GCA 的胜出来自系统比较，不是单点尝试。",
   },
   {
@@ -153,6 +199,15 @@ export const thesisPages: ThesisStoryPage[] = [
       "37 条 episode 和 34205 帧最终进入训练数据集。",
     ],
     media: ["平台照片/示意图", "关键帧序列", "工具截图轮播", "数据集统计表"],
+    figures: [
+      {
+        src: "/images/thesis/3-3.png",
+        title: "Acone双臂机器人平台",
+        caption:
+          "Acone 平台包含两条七自由度机械臂，并通过头部与双腕 RGB 摄像头提供三路视觉输入。",
+        layout: "wide",
+      },
+    ],
     takeaway: "算法之外，本文也把真实平台、数据集和清洗工具链搭起来了。",
   },
   {
@@ -171,6 +226,28 @@ export const thesisPages: ThesisStoryPage[] = [
       "结果从短程任务推进到遮挡案例、Swap Blocks，再落到真机关键帧。",
     ],
     media: ["可交互训练曲线", "结果表与柱状图", "基线对比 rollout 视频"],
+    benchmarkTables: [
+      {
+        title: "SimplerEnv Benchmark",
+        caption: "短程与遮挡任务的对比结果预留为 HTML 表格，后续补最终数值。",
+        columns: ["任务组", "方法", "成功率", "备注"],
+        rows: [
+          ["Google Robot", "GCA", "数据待补充", "最终论文数据待填入"],
+          ["WidowX", "GCA", "数据待补充", "最终论文数据待填入"],
+          ["平均", "GCA", "数据待补充", "保留 64.6% 结果位置"],
+        ],
+      },
+      {
+        title: "RMBench Benchmark",
+        caption: "Swap Blocks 等强记忆依赖任务预留为 HTML 表格。",
+        columns: ["任务", "方法", "成功率/次数", "相对提升", "备注"],
+        rows: [
+          ["Swap Blocks", "DP", "数据待补充", "1x", "基线位置"],
+          ["Swap Blocks", "pi0.5 LoRA", "数据待补充", "数据待补充", "基线位置"],
+          ["Swap Blocks", "GCA", "数据待补充", "5-10x", "本文方法位置"],
+        ],
+      },
+    ],
     takeaway: "结果页要同时回答两个问题：这套方法真训出来了，而且它确实更强。",
   },
   {
