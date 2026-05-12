@@ -85,14 +85,20 @@ describe("story pages", () => {
     expect(html).not.toContain("Takeaway");
   });
 
-  test("renders story pages with polished evidence and conclusion panels", () => {
+  test("renders story pages without quiet conclusion panels", () => {
     const html = renderToStaticMarkup(<MethodPage />);
 
     expect(html).toContain("bg-[#f8f3ea]");
-    expect(html).toContain("bg-[#2a211c]");
-    expect(html).toContain("关键线索");
-    expect(html).toContain("收束判断");
-    expect(html).toContain("rounded-[2rem]");
+    expect(html).not.toContain("收束判断");
+  });
+
+  test("renders block-causal inequality symbols as math text", () => {
+    const html = renderToStaticMarkup(<MethodPage />);
+
+    expect(html).toContain("τ");
+    expect(html).toContain("≤");
+    expect(html).not.toContain("\\tau");
+    expect(html).not.toContain("\\le");
   });
 
   test("renders selected thesis figures as page evidence", () => {
@@ -376,7 +382,7 @@ describe("story pages", () => {
     const conclusionHtml = renderToStaticMarkup(<ConclusionPage />);
     const whyHtml = renderToStaticMarkup(<WhyMemoryPage />);
 
-    expect(whyHtml).not.toContain("平台入口");
+    expect(whyHtml).not.toContain("一体化平台入口");
     expect(whyHtml).not.toContain("收束判断");
 
     expect(methodHtml).toContain(

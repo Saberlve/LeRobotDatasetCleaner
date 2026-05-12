@@ -26,7 +26,7 @@ function MathText({ text }: { text: string }) {
 
   // Split by common math symbols and VLA/VLM keywords
   const parts = text.split(
-    /(\$N\$|\$t\$|\$\tau \le t\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-GCA|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
+    /(\$N\$|\$t\$|\$\\tau\s+\\le\s+t\$|\$\\tau\$|\$\\le\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-GCA|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
   );
 
   return (
@@ -44,11 +44,23 @@ function MathText({ text }: { text: string }) {
               t
             </span>
           );
-        if (part === "$\tau \le t$")
+        if (/^\$\\tau\s+\\le\s+t\$$/.test(part))
           return (
             <span key={i} className="font-serif">
               <span className="italic">τ</span> ≤{" "}
               <span className="italic">t</span>
+            </span>
+          );
+        if (part === "$\\tau$")
+          return (
+            <span key={i} className="font-serif italic">
+              τ
+            </span>
+          );
+        if (part === "$\\le$")
+          return (
+            <span key={i} className="font-serif">
+              ≤
             </span>
           );
         if (part === "H_t")
@@ -565,7 +577,6 @@ function MethodPage({ page }: StoryPageProps) {
       <FigureEvidence page={{ ...page, figures: remainingFigures }} />
       <BenchmarkTables tables={page.benchmarkTables} />
       <PlatformCallout platform={page.platform} />
-      <QuietConclusion page={page} />
     </StoryShell>
   );
 }
@@ -627,7 +638,6 @@ function SystemsPage({ page }: StoryPageProps) {
       <FigureEvidence page={page} />
       <SplitNarrative page={page} label="关键判断" />
       <PlatformCallout platform={page.platform} />
-      <QuietConclusion page={page} />
     </StoryShell>
   );
 }
@@ -669,7 +679,6 @@ function ResultsPage({ page }: StoryPageProps) {
 
       <SplitNarrative page={page} label="关键线索" />
       <PlatformCallout platform={page.platform} />
-      <QuietConclusion page={page} />
     </StoryShell>
   );
 }
@@ -700,7 +709,6 @@ function AnalysisPage({ page }: StoryPageProps) {
       <FigureEvidence page={page} />
       <SplitNarrative page={page} label="关键线索" />
       <PlatformCallout platform={page.platform} />
-      <QuietConclusion page={page} />
     </StoryShell>
   );
 }
@@ -754,7 +762,6 @@ function ConclusionPage({ page }: StoryPageProps) {
           ))}
         </div>
       </section>
-      <QuietConclusion page={page} />
     </StoryShell>
   );
 }
@@ -1285,7 +1292,7 @@ function PlatformCallout({
           className="aspect-video w-full rounded-[1rem] border border-[#d8ccbb] bg-[#f8f3ea] object-cover"
         />
         <div>
-          <p className="text-sm font-medium text-[#c15f3c]">平台入口</p>
+          <p className="text-sm font-medium text-[#c15f3c]">一体化平台入口</p>
           <h2 className="mt-3 text-2xl font-semibold text-[#2a211c]">
             {platform.title}
           </h2>
@@ -1305,17 +1312,6 @@ function PlatformCallout({
         </div>
         <PlatformProjectLink href={platform.href} label={platform.action} />
       </div>
-    </section>
-  );
-}
-
-function QuietConclusion({ page }: StoryPageProps) {
-  return (
-    <section className="mx-auto mt-10 max-w-7xl rounded-[2rem] bg-[#2a211c] px-6 py-7 text-[#f4eee7] md:px-8">
-      <p className="text-sm font-medium text-[#f0cbb8]">收束判断</p>
-      <p className="mt-4 max-w-4xl text-xl font-semibold leading-9 text-[#fffaf4]">
-        {page.takeaway}
-      </p>
     </section>
   );
 }
@@ -1458,15 +1454,15 @@ function BlockCausalMaskDiagram() {
 
       <div className="mt-8 border-t border-[#d8ccbb] pt-5 text-sm leading-7 text-[#665c52]">
         <div className="flex gap-3">
-          <strong className="shrink-0 text-[#2a211c]">块状结构：</strong>
+          <strong className="shrink-0 text-[#2a211c]">块内双向：</strong>
           <div>
-            <MathText text="每个格子代表一个时间步的 $N$ 个记忆词元。" />
+            <MathText text="每个4x4方块代表一个时间步的 $N$ 个记忆词元，块内双向注意力。" />
           </div>
         </div>
         <div className="mt-2 flex gap-3">
-          <strong className="shrink-0 text-[#2a211c]">因果约束：</strong>
+          <strong className="shrink-0 text-[#2a211c]">块间因果：</strong>
           <div>
-            <MathText text="第 $t$ 步的词元只能注意到 $\tau \le t$ 的历史词元。" />
+            <MathText text="第 $t$ 步的词元只能注意到 $\tau$ $\le$ $t$ 的历史词元。" />
           </div>
         </div>
       </div>

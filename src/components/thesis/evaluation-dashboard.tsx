@@ -99,7 +99,7 @@ const workbenchNav: Array<{
     mode: "overview",
     href: "/evaluation",
     label: "总览",
-    caption: "平台入口",
+    caption: "一体化平台入口",
     icon: FiBarChart2,
   },
   {
