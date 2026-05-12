@@ -20,6 +20,94 @@ type StoryShellProps = StoryPageProps & {
   children: React.ReactNode;
 };
 
+function MathText({ text }: { text: string }) {
+  if (!text) return null;
+
+  // Split by common math symbols and VLA/VLM keywords
+  const parts = text.split(/(H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-GCA|ℝ\^N|VLA|VLM|φ\(H_t\))/g);
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part === "H_t")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">H</span>
+              <sub className="text-[0.7em]">t</sub>
+            </span>
+          );
+        if (part === "m_t")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">m</span>
+              <sub className="text-[0.7em]">t</sub>
+            </span>
+          );
+        if (part === "o_t")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">o</span>
+              <sub className="text-[0.7em]">t</sub>
+            </span>
+          );
+        if (part === "a_t")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">a</span>
+              <sub className="text-[0.7em]">t</sub>
+            </span>
+          );
+        if (part === "φ")
+          return (
+            <span key={i} className="font-serif italic">
+              φ
+            </span>
+          );
+        if (part === "φ(H_t)")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">φ</span>(
+              <span className="italic">H</span>
+              <sub className="text-[0.7em]">t</sub>)
+            </span>
+          );
+        if (part === "ℓ")
+          return (
+            <span key={i} className="font-serif italic">
+              ℓ
+            </span>
+          );
+        if (part === "π_θ")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">π</span>
+              <sub className="text-[0.7em] italic">θ</sub>
+            </span>
+          );
+        if (part === "π-GCA")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">π</span>-GCA
+            </span>
+          );
+        if (part === "ℝ^N")
+          return (
+            <span key={i} className="font-serif">
+              ℝ<sup className="text-[0.7em]">N</sup>
+            </span>
+          );
+        if (part === "VLA" || part === "VLM")
+          return (
+            <span key={i} className="font-sans font-medium">
+              {part}
+            </span>
+          );
+        return part;
+      })}
+    </>
+  );
+}
+
 const pageIndex = (href: string) =>
   Math.max(
     0,
@@ -112,12 +200,12 @@ function ProblemPage({ page }: StoryPageProps) {
             {page.title}
           </h1>
           <p className="mt-4 max-w-xl text-lg leading-8 text-[#3a3029]">
-            {page.hook}
+            <MathText text={page.hook} />
           </p>
         </div>
         <div className="lg:pt-10">
           <p className="max-w-2xl text-base leading-7 text-[#665c52]">
-            {page.summary}
+            <MathText text={page.summary} />
           </p>
         </div>
       </section>
@@ -134,51 +222,305 @@ function ProblemPage({ page }: StoryPageProps) {
 }
 
 function MethodPage({ page }: StoryPageProps) {
+  const [architectureFigure, ...remainingFigures] = page.figures ?? [];
+  const stageEnglish = ["Extract", "Aggregate", "Inject"] as const;
+
   return (
     <StoryShell page={page}>
       <section className="mx-auto max-w-7xl">
         <PageKicker page={page} label="方法结构" />
-        <div className="mt-8 grid gap-8 lg:grid-cols-[360px_1fr]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-start">
           <div>
-            <h1 className="max-w-lg text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-semibold leading-snug text-[#1f1a17] md:text-4xl">
               {page.title}
             </h1>
-            <p className="mt-6 text-xl leading-9 text-[#3a3029]">{page.hook}</p>
-            <p className="mt-5 text-base leading-8 text-[#665c52]">
-              {page.summary}
+            <p className="mt-4 max-w-xl text-lg leading-8 text-[#3a3029]">
+              <MathText text={page.hook} />
             </p>
           </div>
-          <div className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
-            <div className="rounded-[1.25rem] bg-[#2a211c] p-5 text-[#f4eee7]">
-              <p className="text-sm font-medium text-[#f0cbb8]">
-                形式化 · POMDP 压缩问题
+          <p className="max-w-2xl text-base leading-7 text-[#665c52] lg:pt-2">
+            <MathText text={page.summary} />
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto mt-8 max-w-7xl">
+        <div className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5 md:p-7">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end">
+            <div>
+              <p className="text-sm font-medium text-[#c15f3c]">
+                形式化 · 策略建模对比
               </p>
-              <p className="mt-5 text-lg leading-8 text-[#fffaf4]">
-                H_t = (o_1, a_1, ..., o_t)，|H_t| 随 t 线性增长。
+              <h2 className="mt-2 text-2xl font-semibold leading-snug text-[#1f1a17]">
+                记忆=巧妙压缩的历史上下文
+              </h2>
+            </div>
+        
+          </div>
+
+          <div className="mx-auto mt-6 grid max-w-6xl gap-4">
+            <article className="min-w-0 rounded-[1rem] border border-[#e6dccb] bg-[#fbf4eb] p-4 md:p-5">
+              <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1f1a17]">
+                    压缩函数建模
+                  </h3>
+                  <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[#a89a8b]">
+                    From history to memory
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <div className="rounded-[0.85rem] bg-[#f1e5d8] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs uppercase tracking-[0.16em] text-[#8a7565]">
+                      完整交互历史
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ead0bf] px-2.5 py-0.5 text-[0.65rem] font-medium text-[#9b3826]">
+                      <span aria-hidden="true" className="font-bold">
+                        ✕
+                      </span>
+                      容易上下文爆炸
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-x-auto pb-1 font-serif text-xl leading-relaxed text-[#3a2e25] md:text-[1.55rem]">
+                    <span className="whitespace-nowrap">
+                      <span className="italic">H</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span className="mx-2">=</span>
+                      <span>(</span>
+                      <span className="italic">o</span>
+                      <sub className="text-[0.62em]">1</sub>
+                      <span>,&thinsp;</span>
+                      <span className="italic">o</span>
+                      <sub className="text-[0.62em]">2</sub>
+                      <span>,&thinsp;…,&thinsp;</span>
+                      <span className="italic">o</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span>)</span>
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-[#7a6354]">
+                    长度 |<span className="font-serif italic">H</span>
+                    <sub className="text-[0.7em]">t</sub>| 随时间步{" "}
+                    <span className="font-serif italic">t</span>{" "}
+                    线性增长，序列上下文很快超出 VLA 窗口。
+                  </p>
+                </div>
+
+                <div className="rounded-[0.85rem] border border-[#efcdb8] bg-[#fffaf4] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#c15f3c]">
+                      固定长度的压缩历史
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fbe2d2] px-2.5 py-0.5 text-[0.65rem] font-medium text-[#c15f3c]">
+                      <span aria-hidden="true" className="font-bold">
+                        ✓
+                      </span>
+                      本文采用
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-x-auto pb-1 font-serif text-xl leading-relaxed text-[#1f1a17] md:text-[1.55rem]">
+                    <span className="whitespace-nowrap">
+                      <span className="rounded-md bg-[#fbe2d2] px-1.5 py-0.5 italic">
+                        m
+                      </span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span className="mx-2">=</span>
+                      <span className="italic">φ</span>
+                      <span>(</span>
+                      <span className="italic">H</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span>)</span>
+                      <span className="mx-2">∈</span>
+                      <span>ℝ</span>
+                      <sup className="text-[0.62em]">N*D</sup>
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-[#665c52]">
+                    通过学习压缩函数 <span className="font-serif italic">φ</span>
+                    ，只保留历史上下文中的关键信息，输出固定长度的记忆状态{" "}
+                  </p>
+                </div>
+              </div>
+            </article>
+
+            <article className="min-w-0 rounded-[1rem] border border-[#e6dccb] bg-[#fbf4eb] p-4 md:p-5">
+              <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1f1a17]">
+                    带有记忆的VLA建模
+                  </h3>
+                  <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[#a89a8b]">
+                    From memory to action
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                <div className="rounded-[0.85rem] bg-[#f1e5d8] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs uppercase tracking-[0.16em] text-[#8a7565]">
+                      无记忆
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ead0bf] px-2.5 py-0.5 text-[0.65rem] font-medium text-[#9b3826]">
+                      <span aria-hidden="true" className="font-bold">
+                        ✕
+                      </span>
+                      历史缺失
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-x-auto pb-1 font-serif text-[1.55rem] leading-relaxed text-[#3a2e25]">
+                    <span className="whitespace-nowrap">
+                      <span className="italic">a</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span className="mx-2">∼</span>
+                      <span className="italic">π</span>
+                      <sub className="text-[0.62em] italic">θ</sub>
+                      <span>(·</span>
+                      <span className="mx-1.5">|</span>
+                      <span className="italic">o</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span>,&thinsp;</span>
+                      <span className="italic">ℓ</span>
+                      <span>)</span>
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-[#7a6354]">
+                    模型只看当前观测{" "}
+                    <span className="font-serif italic">o</span>
+                    <sub className="text-[0.7em]">t</sub> 与语言指令{" "}
+                    <span className="font-serif italic">ℓ</span>
+                    ；对于相同画面会给出相同动作。
+                  </p>
+                </div>
+
+                <div className="rounded-[0.85rem] border border-[#efcdb8] bg-[#fffaf4] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#c15f3c]">
+                      带记忆
+                    </p>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fbe2d2] px-2.5 py-0.5 text-[0.65rem] font-medium text-[#c15f3c]">
+                      <span aria-hidden="true" className="font-bold">
+                        ✓
+                      </span>
+                      本文采用
+                    </span>
+                  </div>
+                  <div className="mt-3 overflow-x-auto pb-1 font-serif text-[1.55rem] leading-relaxed text-[#1f1a17]">
+                    <span className="whitespace-nowrap">
+                      <span className="italic">a</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span className="mx-2">∼</span>
+                      <span className="italic">π</span>
+                      <sub className="text-[0.62em] italic">θ</sub>
+                      <span>(·</span>
+                      <span className="mx-1.5">|</span>
+                      <span className="rounded-md bg-[#fbe2d2] px-1.5 py-0.5 italic">
+                        m
+                      </span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span>,&thinsp;</span>
+                      <span className="italic">o</span>
+                      <sub className="text-[0.62em]">t</sub>
+                      <span>,&thinsp;</span>
+                      <span className="italic">ℓ</span>
+                      <span>)</span>
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-7 text-[#665c52]">
+                    在观察之外引入压缩记忆{" "}
+                    <span className="font-serif italic">m</span>
+                    <sub className="text-[0.7em]">t</sub>
+                    ；同一画面模型可以根据不同历史产生不同动作。
+                  </p>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          
+        </div>
+      </section>
+
+      <section className="mx-auto mt-8 max-w-7xl">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="text-sm font-medium text-[#c15f3c]">
+            记忆通道的三步流程
+          </p>
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-[#a89a8b]">
+            Extract · Aggregate · Inject
+          </p>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {methodStages.map((stage, index) => (
+            <article
+              key={stage.title}
+              className="rounded-[1.25rem] bg-[#2a211c] p-6 text-[#f4eee7]"
+            >
+              <div className="flex items-baseline justify-between">
+                <p className="font-mono text-xs text-[#f0cbb8]">0{index + 1}</p>
+                <p className="font-mono text-[0.6rem] uppercase tracking-[0.22em] text-[#a89a8b]">
+                  {stageEnglish[index]}
+                </p>
+              </div>
+              <h2 className="mt-6 text-2xl font-semibold text-[#fffaf4]">
+                {stage.title}
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-[#d8ccc0]">
+                {stage.detail}
               </p>
-              <p className="mt-3 text-lg leading-8 text-[#fffaf4]">
-                m_t = φ(H_t) ∈ R^N，固定长度，只保留决策所需信息。
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {architectureFigure ? (
+        <section className="mx-auto mt-8 grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] lg:items-start">
+          <figure className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4]">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 px-6 pt-6">
+              <p className="text-sm font-medium text-[#c15f3c]">
+                {architectureFigure.title}
+              </p>
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-[#a89a8b]">
+                Architecture
               </p>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {methodStages.map((stage, index) => (
+            {architectureFigure.src ? (
+              <div className="mt-5 bg-[#efe6d9]">
+                <img
+                  src={architectureFigure.src}
+                  alt={architectureFigure.title}
+                  className="block h-auto w-full object-contain"
+                />
+              </div>
+            ) : null}
+            <figcaption className="border-t border-[#d8ccbb] px-6 py-4">
+              <p className="text-sm leading-7 text-[#665c52]">
+                {architectureFigure.caption}
+              </p>
+            </figcaption>
+          </figure>
+
+          <aside className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
+            <p className="text-sm font-medium text-[#c15f3c]">关键线索</p>
+            <div className="mt-4 grid gap-0">
+              {page.highlights.map((item, index) => (
                 <article
-                  key={stage.title}
-                  className="min-h-56 rounded-[1.25rem] bg-[#2a211c] p-5 text-[#f4eee7]"
+                  key={item}
+                  className="border-t border-[#d8ccbb] py-4 text-sm leading-7 text-[#3a3029]"
                 >
-                  <p className="text-sm text-[#f0cbb8]">0{index + 1}</p>
-                  <h2 className="mt-8 text-3xl font-semibold text-[#fffaf4]">
-                    {stage.title}
-                  </h2>
-                  <p className="mt-5 text-sm leading-7 text-[#d8ccc0]">
-                    {stage.detail}
-                  </p>
+                  <span className="mb-2 block text-xs font-semibold text-[#c15f3c]">
+                    0{index + 1}
+                  </span>
+                  {item}
                 </article>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
+          </aside>
+        </section>
+      ) : null}
 
       <section className="mx-auto mt-8 grid max-w-7xl gap-5 lg:grid-cols-2">
         <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
@@ -202,8 +544,7 @@ function MethodPage({ page }: StoryPageProps) {
         </article>
       </section>
 
-      <SplitNarrative page={page} label="关键线索" />
-      <FigureEvidence page={page} />
+      <FigureEvidence page={{ ...page, figures: remainingFigures }} />
       <BenchmarkTables tables={page.benchmarkTables} />
       <PlatformCallout platform={page.platform} />
       <QuietConclusion page={page} />
@@ -221,10 +562,12 @@ function SystemsPage({ page }: StoryPageProps) {
             <h1 className="text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl">
               {page.title}
             </h1>
-            <p className="mt-6 text-xl leading-9 text-[#3a3029]">{page.hook}</p>
+            <p className="mt-6 text-xl leading-9 text-[#3a3029]">
+              <MathText text={page.hook} />
+            </p>
           </div>
           <p className="border-t border-[#d8ccbb] pt-5 text-base leading-8 text-[#665c52] lg:mt-10">
-            {page.summary}
+            <MathText text={page.summary} />
           </p>
         </div>
 
@@ -281,10 +624,12 @@ function ResultsPage({ page }: StoryPageProps) {
             <h1 className="text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl">
               {page.title}
             </h1>
-            <p className="mt-6 text-xl leading-9 text-[#3a3029]">{page.hook}</p>
+            <p className="mt-6 text-xl leading-9 text-[#3a3029]">
+              <MathText text={page.hook} />
+            </p>
           </div>
           <p className="border-y border-[#d8ccbb] py-6 text-base leading-8 text-[#665c52]">
-            {page.summary}
+            <MathText text={page.summary} />
           </p>
         </div>
       </section>
@@ -321,10 +666,14 @@ function AnalysisPage({ page }: StoryPageProps) {
             <h1 className="text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl">
               {page.title}
             </h1>
-            <p className="mt-6 text-xl leading-9 text-[#3a3029]">{page.hook}</p>
+            <p className="mt-6 text-xl leading-9 text-[#3a3029]">
+              <MathText text={page.hook} />
+            </p>
           </div>
           <div className="border-y border-[#d8ccbb] py-7">
-            <p className="text-base leading-8 text-[#665c52]">{page.summary}</p>
+            <p className="text-base leading-8 text-[#665c52]">
+              <MathText text={page.summary} />
+            </p>
           </div>
         </div>
       </section>
@@ -348,9 +697,11 @@ function ConclusionPage({ page }: StoryPageProps) {
             <h1 className="text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl">
               {page.title}
             </h1>
-            <p className="mt-6 text-xl leading-9 text-[#3a3029]">{page.hook}</p>
+            <p className="mt-6 text-xl leading-9 text-[#3a3029]">
+              <MathText text={page.hook} />
+            </p>
             <p className="mt-5 text-base leading-8 text-[#665c52]">
-              {page.summary}
+              <MathText text={page.summary} />
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -740,7 +1091,7 @@ function SplitNarrative({
             <span className="mb-3 block text-sm font-semibold text-[#c15f3c]">
               0{index + 1}
             </span>
-            {item}
+            <MathText text={item} />
           </article>
         ))}
       </div>

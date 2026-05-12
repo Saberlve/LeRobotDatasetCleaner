@@ -38,7 +38,7 @@ describe("story pages", () => {
     ]);
 
     expect(pages[0]).toContain("VLA 模型的“金鱼记忆”");
-    expect(pages[1]).toContain("三步走：从一帧像素到一行动作");
+    expect(pages[1]).toContain("让VLA不再「只看当下」");
     expect(pages[2]).toContain("同一个动机，四种实现：哪种最合理？");
     expect(pages[3]).toContain("SimplerEnv 常规四任务 + RMBench 长程记忆任务");
     expect(pages[4]).toContain("消融 + 注意力捷径分析：为什么 GCA 赢？");
@@ -91,7 +91,6 @@ describe("story pages", () => {
     const systemsHtml = renderToStaticMarkup(<MemorySystemsPage />);
     const analysisHtml = renderToStaticMarkup(<AnalysisPage />);
 
-    expect(methodHtml).toContain('src="/images/thesis/2-1.png"');
     expect(methodHtml).toContain('src="/images/thesis/2-2.png"');
     expect(methodHtml).toContain('src="/images/thesis/2-3.png"');
 
@@ -216,33 +215,49 @@ describe("story pages", () => {
     ].join("");
 
     expect(html).not.toContain("插图证据");
-    expect(html).toContain("VLA模型整体框架");
+    expect(html).not.toContain("VLA模型整体框架");
     expect(html).toContain("记忆系统整体架构");
     expect(html).toContain("历史矩阵构建与块级因果注意力掩码");
     expect(html).toContain("三种记忆融合方式结构对比");
-    expect(html).toContain("图中区分视觉-语言模型");
+    expect(html).not.toContain("图中区分视觉-语言模型");
     expect(html).toContain("记忆词元提取当前帧信息");
   });
 
-  test("keeps inserted thesis figures compact", () => {
+  test("keeps supporting figures compact while pairing the architecture figure with key clues", () => {
     const html = renderToStaticMarkup(<MethodPage />);
 
-    expect(html).toContain("max-w-5xl");
-    expect(html).toContain("max-h-[360px]");
+    expect(html).toContain(
+      "lg:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)]",
+    );
+    expect(html).toContain("block h-auto w-full object-contain");
     expect(html).toContain("max-h-[300px]");
+    expect(html).not.toContain("max-w-5xl");
+    expect(html).not.toContain("max-h-[520px]");
     expect(html).not.toContain("max-h-[560px]");
     expect(html).not.toContain("max-h-[420px]");
   });
 
   test("places supporting method figures side by side instead of stacking all figures", () => {
     const html = renderToStaticMarkup(<MethodPage />);
-    const wideFigureCount = html.match(/lg:col-span-2/g)?.length ?? 0;
 
     expect(html).toContain("lg:grid-cols-2");
-    expect(wideFigureCount).toBe(1);
-    expect(html.indexOf('src="/images/thesis/2-3.png"')).toBeLessThan(
-      html.indexOf('src="/images/thesis/2-1.png"'),
+    expect(html).toContain("mx-auto mt-6 grid max-w-6xl gap-4");
+    expect(html).toContain(
+      "mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center",
     );
+    expect(html.indexOf("记忆通道的三步流程")).toBeLessThan(
+      html.indexOf("记忆系统整体架构"),
+    );
+    expect(html.indexOf("记忆系统整体架构")).toBeLessThan(
+      html.indexOf("关键线索"),
+    );
+    expect(html.indexOf("关键线索")).toBeLessThan(
+      html.indexOf('src="/images/thesis/2-3.png"'),
+    );
+    expect(html.indexOf('src="/images/thesis/2-2.png"')).toBeLessThan(
+      html.indexOf('src="/images/thesis/2-3.png"'),
+    );
+    expect(html).not.toContain('src="/images/thesis/2-1.png"');
   });
 
   test("renders storyboard posters and platform thumbnails from the design spec", () => {
