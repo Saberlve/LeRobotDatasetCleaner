@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   thesisMetrics,
   thesisHeroVideoSrc,
-  thesisNavItems,
+  thesisLandingNavItems,
   thesisResultPanels,
   thesisSubtitle,
   thesisTitle,
@@ -244,7 +244,7 @@ export function LandingPage() {
           </div>
 
           <div className="mt-9 grid gap-3">
-            {thesisNavItems.map((item, index) => (
+            {thesisLandingNavItems.map((item, index) => (
               <Link
                 key={item.href}
                 href={item.href}

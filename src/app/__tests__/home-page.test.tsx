@@ -13,23 +13,24 @@ describe("home page", () => {
     expect(html).toContain("给 VLA 装上一个轻量、解耦、可插拔的记忆模块");
     expect(html).toContain("64.6%");
     expect(html).toContain("37 条 / 34205 帧");
-    expect(html).toContain("为什么需要记忆");
+    expect(html).toContain("背景与研究动机");
     expect(html).toContain("真机平台与数据清洗工具");
     expect(html).not.toContain("打开数据集");
     expect(html).not.toContain("选择本地文件夹");
     expect(html).not.toContain("最近导入");
   });
 
-  test("surfaces all seven story routes from the landing page", () => {
+  test("keeps seven landing entry cards while avoiding the removed story route", () => {
     const html = renderToStaticMarkup(<Home />);
 
     expect(html).toContain('href="/why-memory"');
     expect(html).toContain('href="/method"');
     expect(html).toContain('href="/memory-systems"');
-    expect(html).toContain('href="/dataset-and-tooling"');
     expect(html).toContain('href="/results"');
     expect(html).toContain('href="/analysis"');
     expect(html).toContain('href="/conclusion"');
+    expect(html).toContain("真机平台与数据清洗工具");
+    expect(html).not.toContain('href="/dataset-and-tooling"');
   });
 
   test("keeps the required video hero and audience-facing evidence copy", () => {

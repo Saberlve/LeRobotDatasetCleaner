@@ -1,0 +1,4 @@
+.next
+node_modules
+public/**/*.mp4
+nice.mp4
