@@ -246,7 +246,7 @@ export function LandingPage() {
           <div className="mt-9 grid gap-3">
             {thesisLandingNavItems.map((item, index) => (
               <Link
-                key={item.href}
+                key={`${item.href}-${index}`}
                 href={item.href}
                 className="grid gap-3 rounded-2xl border border-[#dfd4c5] bg-[#fffaf4] px-5 py-5 transition hover:-translate-y-0.5 hover:border-[#c15f3c] hover:shadow-[0_14px_34px_rgba(42,33,28,0.08)] md:grid-cols-[90px_260px_1fr_36px] md:items-center"
               >

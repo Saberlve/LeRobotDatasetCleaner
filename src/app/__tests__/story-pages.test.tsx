@@ -37,7 +37,7 @@ describe("story pages", () => {
       "/conclusion",
     ]);
 
-    expect(pages[0]).toContain("VLA 机器人为什么 &quot;记不住&quot; 上一帧？");
+    expect(pages[0]).toContain("VLA 模型的“金鱼记忆”");
     expect(pages[1]).toContain("三步走：从一帧像素到一行动作");
     expect(pages[2]).toContain("同一个动机，四种实现：哪种最合理？");
     expect(pages[3]).toContain("SimplerEnv 常规四任务 + RMBench 长程记忆任务");
@@ -105,7 +105,7 @@ describe("story pages", () => {
     const html = renderToStaticMarkup(<WhyMemoryPage />);
 
     expect(html).toContain("视觉编码器");
-    expect(html).toContain("LLM / VLA 骨干");
+    expect(html).toContain("视觉编码器 + LLM");
     expect(html).toContain("动作头");
     expect(html).toContain("第 t-2 帧");
     expect(html).toContain("第 t-1 帧");
@@ -120,13 +120,16 @@ describe("story pages", () => {
     expect(html).toContain(
       "clip-path:polygon(14% 0, 86% 0, 100% 100%, 0 100%)",
     );
+    expect(html).toContain("h-8 w-[58%]");
+    expect(html).toContain("items-center justify-center");
+    expect(html).toContain(">视觉编码器</div>");
     expect(
       html.match(/clip-path:polygon\(14% 0, 86% 0, 100% 100%, 0 100%\)/g)
         ?.length,
     ).toBe(1);
     expect(
       html.indexOf('src="/images/thesis/vla-input-frame-000.jpg"'),
-    ).toBeLessThan(html.indexOf("当前帧指令"));
+    ).toBeLessThan(html.indexOf("语言指令"));
     expect(html).toContain("@keyframes piFrameCarousel");
     expect(html).toContain("translateX(28%)");
     expect(html).toContain("animation: piFrameCarousel 9s");
@@ -137,22 +140,35 @@ describe("story pages", () => {
     expect(html).toContain("连续动作");
     expect(html).toContain("动作专家");
     expect(html).toContain("噪声");
-    expect(html).toContain("min-w-[586px]");
-    expect(html).toContain("grid-cols-[minmax(420px,1fr)_150px]");
+    expect(html).toContain("overflow-x-auto md:overflow-x-hidden");
+    expect(html).toContain("min-w-[630px] md:min-w-0");
+    expect(html).toContain("grid-cols-[minmax(0,1fr)_180px]");
+    expect(html).toContain("items-start gap-y-1");
+    expect(html).toContain("self-end");
+    expect(html).toContain("mb-1 text-center font-mono text-xs");
     expect(html).toContain("grid-cols-[220px_150px]");
     expect(html).toContain("h-16 w-[150px]");
-    expect(html).toContain("mt-[2.25rem]");
     expect(html).toContain("grid-cols-4 gap-1.5");
-    expect(html).toContain("h-5 rounded-[0.3rem]");
+    expect(html).toContain("h-6 rounded-[0.3rem]");
     expect(html).toContain("whitespace-nowrap");
-    expect(html).toContain("h-[10rem]");
+    expect(html).toContain("h-[12rem]");
+    expect(html).toContain("rounded-r-none");
+    expect(html).toContain("rounded-l-none border border-l-0");
     expect(html).not.toContain("min-w-[760px]");
-    expect(html).not.toContain("grid-cols-[minmax(0,1fr)_180px]");
+    expect(html).not.toContain("min-w-[672px]");
+    expect(html).not.toContain("min-w-[586px]");
+    expect(html).not.toContain("min-w-[548px]");
+    expect(html).not.toContain("grid-cols-[minmax(0,1fr)_42px_180px]");
+    expect(html).not.toContain("items-start gap-y-3");
+    expect(html).not.toContain("grid-cols-[minmax(0,1fr)_140px]");
     expect(html).not.toContain("grid-cols-[minmax(520px,1fr)_180px]");
+    expect(html).not.toContain("grid-cols-[minmax(420px,1fr)_150px]");
     expect(html).not.toContain("grid-cols-[260px_132px]");
     expect(html).not.toContain("grid-cols-[260px_200px]");
     expect(html).not.toContain("h-16 w-[132px]");
     expect(html).not.toContain("h-16 w-[200px]");
+    expect(html).not.toContain("mt-[2.25rem]");
+    expect(html).not.toContain("rotate-45 border-r border-t");
     expect(html).not.toContain("grid-cols-[220px_minmax(0,1fr)_160px]");
     expect(html).not.toContain("grid-cols-[1.4fr_0.6fr]");
     expect(html).not.toContain("多模态帧流");
@@ -179,6 +195,17 @@ describe("story pages", () => {
     expect(html).not.toContain("linear-gradient(135deg,#403830");
     expect(html).not.toContain("linear-gradient(135deg,#524036");
     expect(html).not.toContain("linear-gradient(135deg,#8bb9c3");
+  });
+
+  test("shows the VLA architecture limit with a draggable failure video", () => {
+    const html = renderToStaticMarkup(<WhyMemoryPage />);
+
+    expect(html).toContain("当前 VLA 架构限制");
+    expect(html).toContain("每一步对于VLA都是新的开始");
+    expect(html).toContain('src="/videos/failure.mp4"');
+    expect(html).toContain("controls=");
+    expect(html).toContain("交换方块失败回放");
+    expect(html).not.toContain("关键线索");
   });
 
   test("renders figure titles and concise captions without generic figure labels", () => {
