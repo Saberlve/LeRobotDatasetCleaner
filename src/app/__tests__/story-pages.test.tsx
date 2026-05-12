@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import React from "react";
 
@@ -11,10 +18,12 @@ import ResultsPage from "@/app/results/page";
 import AnalysisPage from "@/app/analysis/page";
 import ConclusionPage from "@/app/conclusion/page";
 import { thesisNavItems } from "@/content/thesis-site";
+import { SamplingComparisonAnimation } from "@/components/thesis/sampling-comparison-animation";
 
 describe("story pages", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   test("renders the six defense story routes with shared navigation", () => {
@@ -258,6 +267,105 @@ describe("story pages", () => {
       html.indexOf('src="/images/thesis/2-3.png"'),
     );
     expect(html).not.toContain('src="/images/thesis/2-1.png"');
+  });
+
+  test("embeds the sampling animation in the method implementation details", () => {
+    const html = renderToStaticMarkup(<MethodPage />);
+
+    expect(html).toContain("采样动画重播");
+    expect(html).toContain("固定窗口采样动画面板");
+    expect(html).toContain("连续回合采样动画面板");
+    expect(html).toContain('src="/images/sampling-demo/1.png"');
+    expect(html).toContain('src="/images/sampling-demo/5.png"');
+  });
+
+  test("constructs the fixed-window training sample on the first tick", async () => {
+    vi.useFakeTimers();
+    render(<SamplingComparisonAnimation />);
+
+    const fixedPanel = screen.getByLabelText("固定窗口采样动画面板");
+
+    expect(
+      within(fixedPanel).queryByText("[f1, f2, f3, f4]"),
+    ).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1150);
+    });
+
+    expect(within(fixedPanel).queryByText("[f1, f2, f3, f4]")).not.toBeNull();
+  });
+
+  test("selects all four fixed-window frames together on the first tick", async () => {
+    vi.useFakeTimers();
+    render(<SamplingComparisonAnimation />);
+
+    const fixedPanel = screen.getByLabelText("固定窗口采样动画面板");
+
+    expect(
+      within(fixedPanel)
+        .getByAltText("f1 采样视频帧")
+        .parentElement?.className.includes("opacity-25"),
+    ).toBe(true);
+    expect(
+      within(fixedPanel)
+        .getByAltText("f4 采样视频帧")
+        .parentElement?.className.includes("opacity-25"),
+    ).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1150);
+    });
+
+    for (const frame of ["f1", "f2", "f3", "f4"]) {
+      expect(
+        within(fixedPanel)
+          .getByAltText(`${frame} 采样视频帧`)
+          .parentElement?.className.includes("opacity-100"),
+      ).toBe(true);
+    }
+  });
+
+  test("finishes the fixed-window outside-frame state on the second tick", async () => {
+    vi.useFakeTimers();
+    render(<SamplingComparisonAnimation />);
+
+    const fixedPanel = screen.getByLabelText("固定窗口采样动画面板");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1150);
+    });
+
+    expect(within(fixedPanel).queryByText("窗口外帧不参与")).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1150);
+    });
+
+    expect(within(fixedPanel).queryByText("窗口外帧不参与")).not.toBeNull();
+    expect(
+      within(fixedPanel)
+        .getByAltText("f5 采样视频帧")
+        .parentElement?.className.includes("opacity-35"),
+    ).toBe(true);
+  });
+
+  test("stops the sampling animation on the final state until replay", async () => {
+    vi.useFakeTimers();
+    render(<SamplingComparisonAnimation />);
+
+    for (let tick = 0; tick < 8; tick += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1150);
+      });
+    }
+
+    expect(
+      within(screen.getByLabelText("连续回合采样动画面板")).queryByText(
+        "[f2, f3, f4, f5]",
+      ),
+    ).not.toBeNull();
+    expect(screen.queryByText("等待首帧")).toBeNull();
   });
 
   test("renders storyboard posters and platform thumbnails from the design spec", () => {

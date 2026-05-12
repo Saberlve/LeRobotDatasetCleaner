@@ -11,6 +11,7 @@ import {
   thesisNavItems,
 } from "@/content/thesis-site";
 import { PlatformProjectLink } from "@/components/thesis/platform-project-link";
+import { SamplingComparisonAnimation } from "@/components/thesis/sampling-comparison-animation";
 
 type StoryPageProps = {
   page: ThesisStoryPage;
@@ -24,11 +25,32 @@ function MathText({ text }: { text: string }) {
   if (!text) return null;
 
   // Split by common math symbols and VLA/VLM keywords
-  const parts = text.split(/(H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-GCA|ℝ\^N|VLA|VLM|φ\(H_t\))/g);
+  const parts = text.split(
+    /(\$N\$|\$t\$|\$\tau \le t\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-GCA|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
+  );
 
   return (
     <>
       {parts.map((part, i) => {
+        if (part === "$N$")
+          return (
+            <span key={i} className="font-serif italic">
+              N
+            </span>
+          );
+        if (part === "$t$")
+          return (
+            <span key={i} className="font-serif italic">
+              t
+            </span>
+          );
+        if (part === "$\tau \le t$")
+          return (
+            <span key={i} className="font-serif">
+              <span className="italic">τ</span> ≤{" "}
+              <span className="italic">t</span>
+            </span>
+          );
         if (part === "H_t")
           return (
             <span key={i} className="font-serif">
@@ -119,18 +141,19 @@ const pageNumber = (href: string) =>
 
 const methodStages = [
   {
-    title: "提取",
+    title: "从当前观测提取信息",
     detail:
-      "每帧末尾追加 N 个可学习记忆词元，VLM 注意力把当前观察写入少量 token。",
+      "输入序列末尾添加 N 个可学习的词元，通过 VLM 的因果注意力机制，将当前观测信息写入固定长度的记忆词元。",
   },
   {
-    title: "聚合",
+    title: "历史信息的时序聚合",
     detail:
-      "滑动窗口内的记忆词元经过 2 层 Transformer，块内双向，跨时刻只看历史。",
+      "双层 Transformer 对历史的记忆词元进行时序聚合，采用块级因果注意力，进一步抽象历史信息。",
   },
   {
-    title: "注入",
-    detail: "门控交叉注意力只在动作专家处读取记忆，训练早期门控接近关闭。",
+    title: "历史信息的注入",
+    detail:
+      "通过门控交叉注意力，将压缩后的历史信息注入动作专家，生成记忆增强后的动作。",
   },
 ];
 
@@ -255,7 +278,6 @@ function MethodPage({ page }: StoryPageProps) {
                 记忆=巧妙压缩的历史上下文
               </h2>
             </div>
-        
           </div>
 
           <div className="mx-auto mt-6 grid max-w-6xl gap-4">
@@ -339,7 +361,8 @@ function MethodPage({ page }: StoryPageProps) {
                     </span>
                   </div>
                   <p className="mt-3 text-sm leading-7 text-[#665c52]">
-                    通过学习压缩函数 <span className="font-serif italic">φ</span>
+                    通过学习压缩函数{" "}
+                    <span className="font-serif italic">φ</span>
                     ，只保留历史上下文中的关键信息，输出固定长度的记忆状态{" "}
                   </p>
                 </div>
@@ -439,15 +462,13 @@ function MethodPage({ page }: StoryPageProps) {
               </div>
             </article>
           </div>
-
-          
         </div>
       </section>
 
       <section className="mx-auto mt-8 max-w-7xl">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <p className="text-sm font-medium text-[#c15f3c]">
-            记忆通道的三步流程
+            记忆系统的三个关键步骤
           </p>
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.22em] text-[#a89a8b]">
             Extract · Aggregate · Inject
@@ -504,7 +525,7 @@ function MethodPage({ page }: StoryPageProps) {
           </figure>
 
           <aside className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
-            <p className="text-sm font-medium text-[#c15f3c]">关键线索</p>
+            <p className="text-sm font-medium text-[#c15f3c]">系统流程</p>
             <div className="mt-4 grid gap-0">
               {page.highlights.map((item, index) => (
                 <article
@@ -527,19 +548,16 @@ function MethodPage({ page }: StoryPageProps) {
           <p className="text-sm font-medium text-[#c15f3c]">
             实现细节 · 块级因果掩码
           </p>
-          <img
-            src="/images/thesis/2-3.png"
-            alt="历史矩阵构建与块级因果注意力掩码"
-            className="mt-5 max-h-[300px] w-full rounded-[0.75rem] bg-[#efe6d9] object-contain p-2"
-          />
+          <div className="mt-5">
+            <BlockCausalMaskDiagram />
+          </div>
         </article>
         <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
           <p className="text-sm font-medium text-[#c15f3c]">
             实现细节 · 连续回合采样
           </p>
-          <div className="mt-5 space-y-4 text-base leading-8 text-[#3a3029]">
-            <p>按时间步顺序遍历 episode，每帧独立维护缓存。</p>
-            <p>训练样本保留前后关系，让训练分布贴近流式推理分布。</p>
+          <div className="mt-5">
+            <SamplingComparisonAnimation />
           </div>
         </article>
       </section>
@@ -837,9 +855,7 @@ function VlaNoMemoryDiagram() {
       `}</style>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-sm text-[#3a3029]">
-            主流 VLA 数据流图
-          </p>
+          <p className="font-mono text-sm text-[#3a3029]">主流 VLA 数据流图</p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#665c52]">
             多帧依次到达，但每次只输入最新一帧。
           </p>
@@ -951,9 +967,7 @@ function VlaNoMemoryDiagram() {
                 </div>
                 <div className="rounded-[0.45rem] border border-[#2a211c] bg-[#fffaf4] px-2.5 py-3 text-center">
                   <p className="font-mono text-sm font-semibold">动作头</p>
-                  <p className="font-mono text-xs text-[#665c52]">
-                    动作专家
-                  </p>
+                  <p className="font-mono text-xs text-[#665c52]">动作专家</p>
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
                   {Array.from({ length: 8 }).map((_, index) => (
@@ -1013,15 +1027,14 @@ function VlaArchitectureLimitSection() {
   return (
     <section className="mx-auto mt-12 grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
       <div className="border-y border-[#d8ccbb] py-6">
-        <p className="text-sm font-medium text-[#c15f3c]">
-          当前 VLA 架构限制
-        </p>
+        <p className="text-sm font-medium text-[#c15f3c]">当前 VLA 架构限制</p>
         <h2 className="mt-4 max-w-xl text-3xl font-semibold leading-tight text-[#2a211c]">
           每一步对于VLA都是新的开始
         </h2>
         <p className="mt-5 max-w-xl text-base leading-8 text-[#665c52]">
           交换方块任务其实已经完成了，但模型不知道初始状态是什么，还在操纵机器臂移动方块。
-          现在的 VLA 只能获取当前观测，之前发生过什么一概不管，遇到需要记忆信息的长程任务就会出错。
+          现在的 VLA
+          只能获取当前观测，之前发生过什么一概不管，遇到需要记忆信息的长程任务就会出错。
         </p>
         <div className="mt-7 grid gap-3">
           {limits.map((item, index) => (
@@ -1039,7 +1052,7 @@ function VlaArchitectureLimitSection() {
       </div>
 
       <figure className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] shadow-[0_18px_45px_rgba(42,33,28,0.08)]">
-         <figcaption className="border-t border-[#d8ccbb] px-5 py-4">
+        <figcaption className="border-t border-[#d8ccbb] px-5 py-4">
           <p className="text-sm font-semibold text-[#2a211c]">
             交换方块失败案例 —— 完成任务后继续执行多余动作
           </p>
@@ -1056,7 +1069,6 @@ function VlaArchitectureLimitSection() {
             交换方块失败回放
           </video>
         </div>
-
       </figure>
     </section>
   );
@@ -1205,15 +1217,10 @@ function BenchmarkTables({ tables }: { tables?: ThesisBenchmarkTable[] }) {
 
   return (
     <section className="mx-auto mt-10 max-w-7xl border-t border-[#d8ccbb] pt-6">
-      <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
-        <div>
-          <p className="text-sm font-medium text-[#c15f3c]">结果表格</p>
-        </div>
-        <div className="grid gap-5">
-          {tables.map((table) => (
-            <BenchmarkTable key={table.title} table={table} />
-          ))}
-        </div>
+      <div className="grid gap-5">
+        {tables.map((table) => (
+          <BenchmarkTable key={table.title} table={table} />
+        ))}
       </div>
     </section>
   );
@@ -1372,5 +1379,97 @@ function NextPageLink({ nextPage }: { nextPage: ThesisStoryPage | null }) {
         </div>
       </Link>
     </section>
+  );
+}
+
+function BlockCausalMaskDiagram() {
+  const steps = [0, 1, 2, 3]; // 4 time steps
+  const labels = ["T-4", "T-3", "T-2", "T-1"];
+
+  return (
+    <div className="rounded-[1.25rem] bg-[#efe6d9] p-5 md:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-bold text-[#2a211c]">注意权重矩阵</h3>
+          <p className="font-mono text-xs text-[#665c52]">
+            Block-Causal Mask (T-4 → T-1)
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded-sm bg-[#c15f3c]" />
+            <span className="text-xs font-medium text-[#665c52]">1 (计算)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded-sm border border-[#d8ccbb] bg-[#efe6d9]" />
+            <span className="text-xs font-medium text-[#665c52]">0 (掩码)</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 flex gap-5">
+        {/* Y-axis label */}
+        <div className="flex flex-col justify-around py-4 font-mono text-sm font-bold text-[#a89a8b]">
+          {labels.map((label) => (
+            <div key={label} className="flex h-0 items-center justify-end">
+              <span className="-rotate-90 whitespace-nowrap px-1">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          <div className="grid grid-cols-4 gap-2.5">
+            {steps.map((row) =>
+              steps.map((col) => {
+                const isAllowed = row >= col;
+                return (
+                  <div
+                    key={`${row}-${col}`}
+                    className={`aspect-square rounded-lg border transition-all duration-500 ${
+                      isAllowed
+                        ? "border-[#c15f3c]/30 bg-[#f4ece1]"
+                        : "border-transparent bg-black/5"
+                    }`}
+                  >
+                    <div className="grid h-full w-full grid-cols-4 grid-rows-4 gap-0.5 p-1.5">
+                      {Array.from({ length: 16 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`rounded-[1.5px] ${
+                            isAllowed ? "bg-[#c15f3c]" : "bg-[#d8ccbb]/40"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              }),
+            )}
+          </div>
+
+          {/* X-axis label */}
+          <div className="mt-4 grid grid-cols-4 gap-2.5 text-center font-mono text-sm font-bold text-[#a89a8b]">
+            {labels.map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 border-t border-[#d8ccbb] pt-5 text-sm leading-7 text-[#665c52]">
+        <div className="flex gap-3">
+          <strong className="shrink-0 text-[#2a211c]">块状结构：</strong>
+          <div>
+            <MathText text="每个格子代表一个时间步的 $N$ 个记忆词元。" />
+          </div>
+        </div>
+        <div className="mt-2 flex gap-3">
+          <strong className="shrink-0 text-[#2a211c]">因果约束：</strong>
+          <div>
+            <MathText text="第 $t$ 步的词元只能注意到 $\tau \le t$ 的历史词元。" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
