@@ -63,6 +63,24 @@ describe("story pages", () => {
     }
   });
 
+  test("renders memory systems table without duplicate-key warnings", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    render(<MemorySystemsPage />);
+
+    const hasDuplicateKeyWarning = consoleError.mock.calls.some((call) =>
+      call.some((message) =>
+        String(message).includes("Encountered two children with the same key"),
+      ),
+    );
+
+    consoleError.mockRestore();
+
+    expect(hasDuplicateKeyWarning).toBe(false);
+  });
+
   test("uses audience-facing defense copy instead of task-intent notes", () => {
     const html = [
       renderToStaticMarkup(<WhyMemoryPage />),
