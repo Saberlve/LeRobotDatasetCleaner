@@ -12,6 +12,11 @@ import {
 } from "@/content/thesis-site";
 import { PlatformProjectLink } from "@/components/thesis/platform-project-link";
 import { SamplingComparisonAnimation } from "@/components/thesis/sampling-comparison-animation";
+import { SimplerEnvSuccessRateCharts } from "@/components/thesis/success-rate-charts";
+import {
+  AttentionDistributionChart,
+  AttentionOverTimeChart,
+} from "@/components/thesis/attention-charts";
 
 type StoryPageProps = {
   page: ThesisStoryPage;
@@ -19,6 +24,21 @@ type StoryPageProps = {
 
 type StoryShellProps = StoryPageProps & {
   children: React.ReactNode;
+};
+
+type MemoryDiagramStep = {
+  label: string;
+  detail: string;
+  tone: string;
+  tokens?: string[];
+};
+
+type MemorySystemDiagram = {
+  title: string;
+  badge: string;
+  caption: string;
+  steps: MemoryDiagramStep[];
+  notes: string[];
 };
 
 function MathText({ text }: { text: string }) {
@@ -177,6 +197,144 @@ const systemRows = [
   ["改 VLM 骨干", "否", "否", "是", "否"],
   ["与图像通道", "同池竞争", "同池竞争", "改归一化", "独立并行"],
   ["捷径风险", "中", "高", "低", "低"],
+];
+
+const memorySystemDiagrams: MemorySystemDiagram[] = [
+  {
+    title: "缓存上下文记忆",
+    badge: "Cache",
+    caption:
+      "历史 moment token 的 KV 状态直接接到下一步 VLM 前缀里，路径最短，但上下文随窗口变长。",
+    steps: [
+      {
+        label: "当前观测",
+        detail: "图像 + 语言输入",
+        tone: "bg-[#dfeff1]",
+        tokens: ["Frame t", "Prompt"],
+      },
+      {
+        label: "VLM Prefix",
+        detail: "生成 moment block",
+        tone: "bg-[#9fcad2]",
+        tokens: ["m1", "m2", "m3", "m4"],
+      },
+      {
+        label: "KV Cache",
+        detail: "HistoryCache 滚动保存",
+        tone: "bg-[#fff7be]",
+        tokens: ["K/V", "K/V", "K/V"],
+      },
+      {
+        label: "动作专家",
+        detail: "读取扩展前缀",
+        tone: "bg-[#dbe9d5]",
+        tokens: ["a_t"],
+      },
+    ],
+    notes: ["历史以 prefix cache 形式保留", "序列长度随缓存窗口增长"],
+  },
+  {
+    title: "压缩式上下文记忆",
+    badge: "Comp",
+    caption:
+      "先抽取每步 moment tokens，再用轻量 MemoryModule 聚合成固定数量 Memory Tokens。",
+    steps: [
+      {
+        label: "Moment Tokens",
+        detail: "每帧末尾学习词元",
+        tone: "bg-[#dfeff1]",
+        tokens: ["m_t-3", "m_t-2", "m_t-1", "m_t"],
+      },
+      {
+        label: "History Matrix",
+        detail: "T x N 拼接",
+        tone: "bg-[#f1e5d8]",
+        tokens: ["T", "N"],
+      },
+      {
+        label: "MemoryModule",
+        detail: "块级因果聚合",
+        tone: "bg-[#fff7be]",
+        tokens: ["RMS", "Attn", "MLP"],
+      },
+      {
+        label: "Memory Tokens",
+        detail: "固定 N 个压缩词元",
+        tone: "bg-[#dbe9d5]",
+        tokens: ["M1", "M2", "M3", "M4"],
+      },
+    ],
+    notes: [
+      "长度固定，训练成本低于直接缓存",
+      "仍容易与图像语言 token 同池竞争",
+    ],
+  },
+  {
+    title: "自适应归一化",
+    badge: "Norm",
+    caption:
+      "记忆不作为额外上下文参与竞争，而是转成调制向量，改变模型内部层的归一化输出。",
+    steps: [
+      {
+        label: "Memory Tokens",
+        detail: "历史压缩表示",
+        tone: "bg-[#dfeff1]",
+        tokens: ["M1", "M2", "M3", "M4"],
+      },
+      {
+        label: "Memory Attn",
+        detail: "得到 modulation",
+        tone: "bg-[#fff7be]",
+        tokens: ["q", "k", "v"],
+      },
+      {
+        label: "Adaptive Norm",
+        detail: "生成 scale / shift",
+        tone: "bg-[#f3d8c7]",
+        tokens: ["γ", "β"],
+      },
+      {
+        label: "模型内部层",
+        detail: "调制 hidden states",
+        tone: "bg-[#dbe9d5]",
+        tokens: ["LayerNorm"],
+      },
+    ],
+    notes: ["推理序列长度不增加", "注入点绑定到底层 Gemma 层结构"],
+  },
+  {
+    title: "门控交叉注意力",
+    badge: "GCA",
+    caption:
+      "动作专家隐藏状态查询压缩记忆，再用小门控残差注入，让记忆通道与 VLM 主路径解耦。",
+    steps: [
+      {
+        label: "HistoryCache",
+        detail: "按 episode / stride 取历史",
+        tone: "bg-[#dfeff1]",
+        tokens: ["t-3k", "t-2k", "t-k"],
+      },
+      {
+        label: "MemoryModule",
+        detail: "块级因果 Transformer",
+        tone: "bg-[#fff7be]",
+        tokens: ["RoPE", "KV", "Mask"],
+      },
+      {
+        label: "Gated Cross Attention",
+        detail: "动作专家查询记忆",
+        tone: "bg-[#f3d8c7]",
+        tokens: ["Q_action", "K_mem", "V_mem"],
+      },
+      {
+        label: "动作专家",
+        detail: "gate * memory residual",
+        tone: "bg-[#dbe9d5]",
+        tokens: ["a_t"],
+      },
+    ],
+    notes: ["不改 VLM 主干输入通道", "后注入降低注意力捷径风险"],
+  },
 ];
 
 const contributionRows = [
@@ -635,10 +793,1081 @@ function SystemsPage({ page }: StoryPageProps) {
         </div>
       </section>
 
-      <FigureEvidence page={page} />
+      <MemorySystemDiagramGrid />
       <SplitNarrative page={page} label="关键判断" />
       <PlatformCallout platform={page.platform} />
     </StoryShell>
+  );
+}
+
+function MemorySystemDiagramGrid() {
+  return (
+    <section className="mx-auto mt-8 max-w-7xl border-y border-[#d8ccbb] py-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-[#c15f3c]">
+            四种 memory 接入路径
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-[#2a211c]">
+            从历史保存到动作注入
+          </h2>
+        </div>
+        <p className="max-w-xl text-sm leading-7 text-[#665c52]">
+          每张图只画一条真实代码路径：缓存什么、在哪里压缩、最后如何进入动作预测。
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        {memorySystemDiagrams.map((diagram) => (
+          <MemorySystemDiagramCard key={diagram.badge} diagram={diagram} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MemorySystemDiagramCard({
+  diagram,
+}: {
+  diagram: MemorySystemDiagram;
+}) {
+  return (
+    <article className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#f7f1e8] p-5 text-[#2a211c] shadow-[0_18px_45px_rgba(42,33,28,0.06)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-[0.45rem] border border-[#2a211c] bg-[#fffaf4] px-2.5 py-1 font-mono text-[0.65rem] font-semibold">
+              {diagram.badge}
+            </span>
+            <h3 className="text-lg font-semibold text-[#1f1a17]">
+              {diagram.title}
+            </h3>
+          </div>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#665c52]">
+            {diagram.caption}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 overflow-x-auto pb-1">
+        <div className="min-w-[430px]">
+          {diagram.badge === "Cache" ? <CacheContextDiagram /> : null}
+          {diagram.badge === "Comp" ? <CompressedContextDiagram /> : null}
+          {diagram.badge === "Norm" ? <AdaptiveNormDiagramClean /> : null}
+          {diagram.badge === "GCA" ? <GatedCrossAttentionDiagramClean /> : null}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        {diagram.notes.map((note, index) => (
+          <p
+            key={note}
+            className="rounded-[0.75rem] border border-[#e6dccb] bg-[#fffaf4] px-3 py-2 text-xs leading-5 text-[#665c52]"
+          >
+            <span className="mr-2 font-mono text-[#c15f3c]">0{index + 1}</span>
+            {note}
+          </p>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function TokenGroup({
+  label,
+  tokens,
+  tone,
+}: {
+  label: string;
+  tokens: string[];
+  tone: "vision" | "memory" | "action";
+}) {
+  const toneClass =
+    tone === "vision"
+      ? "border-[#4f8a47] bg-[#e7f1df] text-[#20361c]"
+      : tone === "memory"
+        ? "border-[#c76524] bg-[#f8ded0] text-[#4a2615]"
+        : "border-[#9a9a9a] bg-[#e4e4e1] text-[#33302c]";
+
+  return (
+    <div>
+      <p className="mb-1 text-center text-xs font-semibold text-[#3a3029]">
+        {label}
+      </p>
+      <div className="flex justify-center">
+        {tokens.map((token) => (
+          <span
+            key={token}
+            className={`-ml-px flex h-9 min-w-10 items-center justify-center border px-2 font-serif text-lg italic first:ml-0 first:rounded-l-[0.6rem] last:rounded-r-[0.6rem] ${toneClass}`}
+          >
+            {token}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ModuleBox({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex min-h-24 items-center justify-center rounded-[0.75rem] border-2 border-[#2a211c] px-3 py-4 text-center text-xl font-semibold leading-7 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DownArrow({ label }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center py-2 text-center">
+      {label ? (
+        <span className="mb-1 text-sm font-medium text-[#3a3029]">{label}</span>
+      ) : null}
+      <span className="h-8 border-l-2 border-[#2a211c]" />
+      <span className="-mt-1 font-mono text-xl leading-none text-[#2a211c]">
+        v
+      </span>
+    </div>
+  );
+}
+
+function OutputActionTokens() {
+  return (
+    <div className="flex flex-col items-center">
+      <TokenGroup
+        label="增强后的动作词元"
+        tone="action"
+        tokens={["a′1", "a′2", "...", "a′m"]}
+      />
+    </div>
+  );
+}
+
+function CacheContextDiagram() {
+  return (
+    <div className="rounded-[1rem] bg-[#fffaf4] p-4">
+      <div className="rounded-[1rem] border-2 border-[#2a211c] bg-[#dce9f5] p-4">
+        <p className="text-center text-xl font-semibold">记忆缓存库</p>
+        <p className="text-center font-mono text-xs text-[#665c52]">
+          HistoryCache / KV Cache
+        </p>
+        <div className="mt-3 grid grid-cols-[0.9fr_1.5fr] gap-3">
+          <div className="flex flex-col justify-center text-base leading-7">
+            <span>记忆t-(T-1)k</span>
+            <span>......</span>
+            <span>记忆t-k</span>
+          </div>
+          <div className="rounded-[0.9rem] border-2 border-dashed border-[#397aa3] bg-[#bdd7ec] p-3">
+            {[0, 1].map((row) => (
+              <div key={row} className="mb-2 flex gap-3 last:mb-0">
+                <span className="rounded-[0.35rem] border-2 border-[#2a211c] bg-[#fffaf4] px-5 py-1 text-lg shadow-[0_3px_0_rgba(42,33,28,0.22)]">
+                  键
+                </span>
+                <span className="rounded-[0.35rem] border-2 border-[#2a211c] bg-[#fffaf4] px-5 py-1 text-lg shadow-[0_3px_0_rgba(42,33,28,0.22)]">
+                  值
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-5 px-12 text-center">
+        <DownArrow label="加载" />
+        <div className="flex flex-col items-center py-2">
+          <span className="mb-1 text-sm font-medium text-[#3a3029]">添加</span>
+          <span className="font-mono text-xl leading-none text-[#2a211c]">
+            ^
+          </span>
+          <span className="-mt-1 h-8 border-l-2 border-[#2a211c]" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <TokenGroup
+          label="视觉语言词元"
+          tone="vision"
+          tokens={["v1", "v2", "...", "vm"]}
+        />
+        <TokenGroup
+          label="记忆词元"
+          tone="memory"
+          tokens={["m1", "m2", "...", "mn"]}
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-[1fr_1fr_0.85fr]">
+        <ModuleBox className="rounded-r-none bg-[#e8f0f8]">
+          视觉语言模型
+        </ModuleBox>
+        <ModuleBox className="rounded-none bg-[#dce9f5]">
+          拼接记忆缓存
+        </ModuleBox>
+        <ModuleBox className="rounded-l-none bg-[#fbefdd]">动作专家</ModuleBox>
+      </div>
+      <DownArrow />
+      <OutputActionTokens />
+    </div>
+  );
+}
+
+function CompressedContextDiagram() {
+  return (
+    <div className="rounded-[1rem] bg-[#fffaf4] p-4">
+      <div className="grid grid-cols-2 gap-4">
+        <TokenGroup
+          label="视觉语言词元"
+          tone="vision"
+          tokens={["v1", "v2", "...", "vm"]}
+        />
+        <TokenGroup
+          label="记忆词元"
+          tone="memory"
+          tokens={["m1", "m2", "...", "mn"]}
+        />
+      </div>
+      <DownArrow />
+      <div className="grid grid-cols-[1fr_1fr_0.9fr] gap-0">
+        <TokenGroup label="" tone="vision" tokens={["v1", "v2", "...", "vm"]} />
+        <TokenGroup label="" tone="memory" tokens={["m1", "m2", "...", "mn"]} />
+        <TokenGroup
+          label="动作词元"
+          tone="action"
+          tokens={["a1", "a2", "..."]}
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-[1.4fr_0.72fr]">
+        <ModuleBox className="rounded-r-none bg-[#e8f0f8]">
+          视觉语言模型
+        </ModuleBox>
+        <ModuleBox className="rounded-l-none bg-[#fbefdd]">动作专家</ModuleBox>
+      </div>
+      <div className="mt-5 grid grid-cols-[70px_1fr] items-center gap-3">
+        <p
+          aria-label="块级注意力"
+          className="text-center text-xl font-semibold leading-8"
+        >
+          块级
+          <br />
+          注意力
+        </p>
+        <div>
+          <p className="mb-1 text-center font-mono text-xs text-[#665c52]">
+            MemoryModule / block causal mask
+          </p>
+          <div className="mx-auto grid w-52 grid-cols-8 border border-[#2a211c]/60">
+            {Array.from({ length: 64 }).map((_, index) => {
+              const row = Math.floor(index / 8);
+              const col = index % 8;
+              const color =
+                row < 3 && col < 3
+                  ? "bg-[#dfeee0]"
+                  : row >= 3 && row < 6 && col >= 3 && col < 6
+                    ? "bg-[#f5d8c9]"
+                    : row >= 6
+                      ? "bg-[#cfe1ef]"
+                      : "bg-[#eeeeeb]";
+              return (
+                <span
+                  key={index}
+                  className={`aspect-square border border-[#2a211c]/35 ${color}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <DownArrow />
+      <OutputActionTokens />
+    </div>
+  );
+}
+
+function SvgTokenRow({
+  x,
+  y,
+  label,
+  tokens,
+  tone,
+  cellWidth,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  tokens: string[];
+  tone: "memory" | "action";
+  cellWidth: number;
+}) {
+  const colors =
+    tone === "memory"
+      ? { fill: "#f8ded0", stroke: "#c76524", text: "#4a2615" }
+      : { fill: "#e4e4e1", stroke: "#9a9a9a", text: "#33302c" };
+
+  return (
+    <g>
+      <text
+        x={x + (tokens.length * cellWidth) / 2}
+        y={y - 12}
+        textAnchor="middle"
+        fontSize="15"
+        fontWeight="700"
+        fill="#3a3029"
+      >
+        {label}
+      </text>
+      {tokens.map((token, index) => (
+        <g
+          key={`${label}-${token}`}
+          transform={`translate(${x + index * cellWidth} ${y})`}
+        >
+          <rect
+            width={cellWidth}
+            height="38"
+            rx={index === 0 || index === tokens.length - 1 ? 10 : 0}
+            fill={colors.fill}
+            stroke={colors.stroke}
+          />
+          <text
+            x={cellWidth / 2}
+            y="25"
+            textAnchor="middle"
+            fontFamily="serif"
+            fontSize="21"
+            fontStyle="italic"
+            fill={colors.text}
+          >
+            {token}
+          </text>
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function AdaptiveNormDiagramClean() {
+  return (
+    <div className="rounded-[1rem] bg-[#fffaf4] p-4">
+      <div className="mx-auto w-full max-w-[620px]">
+        <div className="overflow-hidden rounded-[0.25rem] bg-[#eef5fb]">
+          <svg
+            className="h-auto w-full text-[#2a211c]"
+            viewBox="0 0 620 470"
+            role="img"
+            aria-label="自适应归一化模块图"
+          >
+            <defs>
+              <marker
+                id="clean-norm-arrow"
+                markerHeight="8"
+                markerWidth="8"
+                orient="auto"
+                refX="7"
+                refY="4"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
+              </marker>
+            </defs>
+            <rect width="620" height="470" fill="#eef5fb" />
+            <SvgTokenRow
+              x={55}
+              y={52}
+              label="动作词元"
+              tokens={["a1", "a2", "...", "ah"]}
+              tone="action"
+              cellWidth={54}
+            />
+            <path
+              d="M163 94 V164"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-norm-arrow)"
+            />
+            <rect
+              x="45"
+              y="178"
+              width="235"
+              height="72"
+              rx="12"
+              fill="#d6ecd0"
+              stroke="#1f5f91"
+              strokeWidth="2"
+            />
+            <text
+              x="162"
+              y="222"
+              textAnchor="middle"
+              fontSize="28"
+              fontWeight="700"
+            >
+              层归一化
+            </text>
+            <path
+              d="M163 252 V324"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-norm-arrow)"
+            />
+            <rect
+              x="55"
+              y="338"
+              width="215"
+              height="68"
+              rx="12"
+              fill="#ffeaa1"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <text
+              x="162"
+              y="381"
+              textAnchor="middle"
+              fontSize="27"
+              fontWeight="700"
+            >
+              前馈网络
+            </text>
+            <SvgTokenRow
+              x={380}
+              y={52}
+              label="记忆词元"
+              tokens={["m1", "m2", "...", "mn"]}
+              tone="memory"
+              cellWidth={48}
+            />
+            <path
+              d="M470 94 V119"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-norm-arrow)"
+            />
+            <rect
+              x="350"
+              y="132"
+              width="240"
+              height="66"
+              rx="10"
+              fill="#fff1df"
+              stroke="#efcdb8"
+              strokeWidth="2"
+            />
+            <text
+              x="470"
+              y="173"
+              textAnchor="middle"
+              fontSize="27"
+              fontWeight="700"
+            >
+              多层感知机
+            </text>
+            <path
+              d="M470 200 V226"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-norm-arrow)"
+            />
+            <rect
+              x="330"
+              y="240"
+              width="125"
+              height="60"
+              rx="10"
+              fill="#fff1df"
+              stroke="#efcdb8"
+              strokeWidth="2"
+            />
+            <rect
+              x="468"
+              y="240"
+              width="125"
+              height="60"
+              rx="10"
+              fill="#fff1df"
+              stroke="#efcdb8"
+              strokeWidth="2"
+            />
+            <text
+              x="392"
+              y="278"
+              textAnchor="middle"
+              fontSize="23"
+              fontWeight="700"
+            >
+              缩放参数
+            </text>
+            <text
+              x="530"
+              y="278"
+              textAnchor="middle"
+              fontSize="23"
+              fontWeight="700"
+            >
+              平移参数
+            </text>
+            <path
+              d="M330 270 H302 V214 H283"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-norm-arrow)"
+            />
+            <text
+              x="448"
+              y="342"
+              textAnchor="middle"
+              fontSize="17"
+              fontWeight="700"
+            >
+              自适应层归一化公式
+            </text>
+            <rect
+              x="315"
+              y="360"
+              width="275"
+              height="68"
+              rx="10"
+              fill="#fffaf4"
+              stroke="#b8b1aa"
+              strokeDasharray="5 5"
+            />
+            <text
+              x="452"
+              y="402"
+              textAnchor="middle"
+              fontFamily="serif"
+              fontSize="21"
+            >
+              â = γ(m) · LN(a) + β(m)
+            </text>
+          </svg>
+        </div>
+        <div className="mt-5 grid grid-cols-[1.4fr_0.72fr]">
+          <ModuleBox className="rounded-r-none bg-[#e8f0f8]">
+            视觉语言模型
+          </ModuleBox>
+          <ModuleBox className="rounded-l-none bg-[#fbefdd]">
+            动作专家
+          </ModuleBox>
+        </div>
+        <DownArrow />
+        <OutputActionTokens />
+      </div>
+    </div>
+  );
+}
+
+function GatedCrossAttentionDiagramClean() {
+  return (
+    <div className="rounded-[1rem] bg-[#fffaf4] p-4">
+      <div className="mx-auto w-full max-w-[620px]">
+        <div className="overflow-hidden rounded-[0.25rem] bg-[#eef5fb]">
+          <svg
+            className="h-auto w-full text-[#2a211c]"
+            viewBox="0 0 620 360"
+            role="img"
+            aria-label="门控交叉注意力模块图"
+          >
+            <defs>
+              <marker
+                id="clean-gca-arrow"
+                markerHeight="8"
+                markerWidth="8"
+                orient="auto"
+                refX="7"
+                refY="4"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
+              </marker>
+            </defs>
+            <rect width="620" height="360" fill="#eef5fb" />
+            <path
+              d="M92 246 V40 H202"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M215 54 V72"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-gca-arrow)"
+            />
+            <path
+              d="M215 134 V145"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-gca-arrow)"
+            />
+            <path
+              d="M215 173 V236"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-gca-arrow)"
+            />
+            <path
+              d="M208 246 V188 H426 V165"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-gca-arrow)"
+            />
+            <path
+              d="M456 246 V165"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-gca-arrow)"
+            />
+            <path
+              d="M360 157 H232"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#clean-gca-arrow)"
+            />
+            <text x="298" y="182" fontSize="15" fontWeight="700">
+              查询
+            </text>
+            <text x="482" y="205" fontSize="15" fontWeight="700">
+              键值
+            </text>
+            <text x="295" y="150" fontSize="18">
+              × γ
+            </text>
+            <circle
+              cx="215"
+              cy="40"
+              r="13"
+              fill="#eef5fb"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <text x="215" y="47" textAnchor="middle" fontSize="22">
+              +
+            </text>
+            <rect
+              x="132"
+              y="76"
+              width="206"
+              height="58"
+              rx="12"
+              fill="#ffeaa1"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <text
+              x="235"
+              y="112"
+              textAnchor="middle"
+              fontSize="28"
+              fontWeight="700"
+            >
+              前馈网络
+            </text>
+            <circle
+              cx="215"
+              cy="158"
+              r="13"
+              fill="#eef5fb"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <text x="215" y="165" textAnchor="middle" fontSize="22">
+              +
+            </text>
+            <rect
+              x="360"
+              y="112"
+              width="180"
+              height="52"
+              rx="12"
+              fill="#bed0e7"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <text
+              x="450"
+              y="147"
+              textAnchor="middle"
+              fontSize="27"
+              fontWeight="700"
+            >
+              交叉注意力
+            </text>
+            {["a1", "a2", "...", "ah"].map((token, index) => (
+              <g
+                key={`gca-action-${token}`}
+                transform={`translate(${105 + index * 54} 246)`}
+              >
+                <rect
+                  width="54"
+                  height="38"
+                  rx={index === 0 || index === 3 ? 10 : 0}
+                  fill="#e4e4e1"
+                  stroke="#9a9a9a"
+                />
+                <text
+                  x="27"
+                  y="25"
+                  textAnchor="middle"
+                  fontFamily="serif"
+                  fontSize="21"
+                  fontStyle="italic"
+                  fill="#33302c"
+                >
+                  {token}
+                </text>
+              </g>
+            ))}
+            <text
+              x="213"
+              y="306"
+              textAnchor="middle"
+              fontSize="15"
+              fontWeight="700"
+            >
+              动作词元
+            </text>
+            {["m1", "m2", "...", "mn"].map((token, index) => (
+              <g
+                key={`gca-memory-${token}`}
+                transform={`translate(${365 + index * 48} 246)`}
+              >
+                <rect
+                  width="48"
+                  height="38"
+                  rx={index === 0 || index === 3 ? 10 : 0}
+                  fill="#f8ded0"
+                  stroke="#c76524"
+                />
+                <text
+                  x="24"
+                  y="25"
+                  textAnchor="middle"
+                  fontFamily="serif"
+                  fontSize="21"
+                  fontStyle="italic"
+                  fill="#4a2615"
+                >
+                  {token}
+                </text>
+              </g>
+            ))}
+            <text
+              x="461"
+              y="306"
+              textAnchor="middle"
+              fontSize="15"
+              fontWeight="700"
+            >
+              记忆词元
+            </text>
+            <text
+              x="310"
+              y="336"
+              textAnchor="middle"
+              fontFamily="monospace"
+              fontSize="13"
+              fill="#665c52"
+            >
+              Gated Cross Attention
+            </text>
+            <text x="-999" y="-999">
+              查询：动作词元。键值：记忆词元。memory residual gate
+            </text>
+          </svg>
+        </div>
+        <div className="mt-5 grid grid-cols-[1.4fr_0.72fr]">
+          <ModuleBox className="rounded-r-none bg-[#e8f0f8]">
+            视觉语言模型
+          </ModuleBox>
+          <ModuleBox className="rounded-l-none bg-[#fbefdd]">
+            动作专家
+          </ModuleBox>
+        </div>
+        <DownArrow />
+        <OutputActionTokens />
+      </div>
+    </div>
+  );
+}
+
+function AdaptiveNormDiagram() {
+  return (
+    <div className="overflow-x-auto rounded-[1rem] bg-[#fffaf4] p-4">
+      <div className="mx-auto w-[600px] shrink-0">
+        <div className="relative h-[430px] overflow-hidden rounded-[0.25rem] bg-[#eef5fb] p-4">
+          <svg
+            className="pointer-events-none absolute inset-0 z-0 h-full w-full text-[#2a211c]"
+            viewBox="0 0 600 430"
+            role="img"
+            aria-label="自适应归一化模块连线"
+          >
+            <defs>
+              <marker
+                id="norm-arrow"
+                markerHeight="8"
+                markerWidth="8"
+                orient="auto"
+                refX="7"
+                refY="4"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
+              </marker>
+            </defs>
+            <path
+              d="M165 86 V162"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#norm-arrow)"
+            />
+            <path
+              d="M165 242 V312"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#norm-arrow)"
+            />
+            <path
+              d="M460 86 V113"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#norm-arrow)"
+            />
+            <path
+              d="M460 191 V214"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#norm-arrow)"
+            />
+            <path
+              d="M320 249 H283 V209 H282"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#norm-arrow)"
+            />
+          </svg>
+
+          <div className="absolute left-[3.75rem] top-5 z-10 w-[13rem]">
+            <TokenGroup
+              label="动作词元"
+              tone="action"
+              tokens={["a1", "a2", "...", "ah"]}
+            />
+          </div>
+
+          <ModuleBox className="absolute left-[3.1rem] top-[10.9rem] z-10 !min-h-16 w-[14.4rem] border-[#1f5f91] bg-[#d6ecd0] text-lg">
+            层归一化
+          </ModuleBox>
+
+          <ModuleBox className="absolute left-[4.35rem] top-[20.2rem] z-10 !min-h-16 w-[12.5rem] bg-[#ffeaa1] text-lg">
+            前馈网络
+          </ModuleBox>
+
+          <div className="absolute right-[2.2rem] top-5 z-10 w-[13rem]">
+            <TokenGroup
+              label="记忆词元"
+              tone="memory"
+              tokens={["m1", "m2", "...", "mn"]}
+            />
+          </div>
+
+          <ModuleBox className="absolute right-[1.9rem] top-[7.45rem] z-10 !min-h-16 w-[15rem] border-[#efcdb8] bg-[#fff1df] text-lg">
+            多层感知机
+          </ModuleBox>
+
+          <div className="absolute right-[1.2rem] top-[13.9rem] z-10 grid w-[16.3rem] grid-cols-2 gap-2">
+            <ModuleBox className="!min-h-12 border-[#efcdb8] bg-[#fff1df] py-2 text-base">
+              缩放参数
+            </ModuleBox>
+            <ModuleBox className="!min-h-12 border-[#efcdb8] bg-[#fff1df] py-2 text-base">
+              平移参数
+            </ModuleBox>
+          </div>
+
+          <div className="absolute bottom-7 right-[1.5rem] z-10 w-[17rem]">
+            <p className="mb-3 text-center text-sm font-semibold text-[#3a3029]">
+              自适应层归一化公式
+            </p>
+            <div className="rounded-[0.75rem] border border-dashed border-[#b8b1aa] bg-[#fffaf4] px-4 py-3 text-center font-serif text-lg">
+              a&#770; = γ(m) · LN(a) + β(m)
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-[1.4fr_0.72fr]">
+          <ModuleBox className="rounded-r-none bg-[#e8f0f8]">
+            视觉语言模型
+          </ModuleBox>
+          <ModuleBox className="rounded-l-none bg-[#fbefdd]">
+            动作专家
+          </ModuleBox>
+        </div>
+        <DownArrow />
+        <OutputActionTokens />
+      </div>
+    </div>
+  );
+}
+
+function GatedCrossAttentionDiagram() {
+  return (
+    <div className="overflow-x-auto rounded-[1rem] bg-[#fffaf4] p-4">
+      <div className="mx-auto w-[600px] shrink-0">
+        <div className="relative h-[360px] overflow-hidden rounded-[0.25rem] bg-[#eef5fb] p-4">
+          <svg
+            className="pointer-events-none absolute inset-0 z-0 h-full w-full text-[#2a211c]"
+            viewBox="0 0 600 360"
+            role="img"
+            aria-label="门控交叉注意力模块连线"
+          >
+            <defs>
+              <marker
+                id="gca-arrow"
+                markerHeight="8"
+                markerWidth="8"
+                orient="auto"
+                refX="7"
+                refY="4"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="currentColor" />
+              </marker>
+            </defs>
+            <path
+              d="M78 270 V46 H174"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M185 48 V68"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#gca-arrow)"
+            />
+            <path
+              d="M185 143 V157"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#gca-arrow)"
+            />
+            <path
+              d="M185 177 V244"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#gca-arrow)"
+            />
+            <path
+              d="M205 244 V216 H365"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#gca-arrow)"
+            />
+            <path
+              d="M456 244 V202"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#gca-arrow)"
+            />
+            <path
+              d="M368 166 H205"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#gca-arrow)"
+            />
+            <text
+              x="280"
+              y="207"
+              fill="currentColor"
+              fontSize="14"
+              fontWeight="600"
+            >
+              查询
+            </text>
+            <text
+              x="468"
+              y="221"
+              fill="currentColor"
+              fontSize="14"
+              fontWeight="600"
+            >
+              键值
+            </text>
+            <text x="266" y="156" fill="currentColor" fontSize="18">
+              × γ
+            </text>
+          </svg>
+
+          <span className="absolute left-[10.72rem] top-[2.05rem] z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#2a211c] bg-[#eef5fb] text-lg leading-none">
+            +
+          </span>
+
+          <ModuleBox className="absolute left-[6.9rem] top-[4.25rem] z-10 !min-h-16 w-[12rem] bg-[#ffeaa1] text-lg">
+            前馈网络
+          </ModuleBox>
+
+          <span className="absolute left-[10.72rem] top-[9.65rem] z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#2a211c] bg-[#eef5fb] text-lg leading-none">
+            +
+          </span>
+
+          <div className="absolute left-[5.8rem] top-[15.5rem] z-10 w-[13.5rem]">
+            <TokenGroup
+              label="动作词元"
+              tone="action"
+              tokens={["a1", "a2", "...", "ah"]}
+            />
+          </div>
+
+          <ModuleBox className="absolute right-[3.8rem] top-[7.9rem] z-10 !min-h-16 w-[11.5rem] bg-[#bed0e7] text-lg">
+            交叉注意力
+          </ModuleBox>
+
+          <div className="absolute right-[2.9rem] top-[15.5rem] z-10 w-[13.5rem]">
+            <TokenGroup
+              label="记忆词元"
+              tone="memory"
+              tokens={["m1", "m2", "...", "mn"]}
+            />
+          </div>
+
+          <p className="absolute bottom-2 left-1/2 -translate-x-1/2 font-mono text-xs text-[#665c52]">
+            Gated Cross Attention
+          </p>
+          <div className="sr-only">
+            查询：动作词元。键值：记忆词元。memory residual gate
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-[1.4fr_0.72fr]">
+          <ModuleBox className="rounded-r-none bg-[#e8f0f8]">
+            视觉语言模型
+          </ModuleBox>
+          <ModuleBox className="rounded-l-none bg-[#fbefdd]">
+            动作专家
+          </ModuleBox>
+        </div>
+        <DownArrow />
+        <OutputActionTokens />
+      </div>
+    </div>
   );
 }
 
@@ -706,6 +1935,51 @@ function AnalysisPage({ page }: StoryPageProps) {
       </section>
 
       <BenchmarkTables tables={page.benchmarkTables} />
+
+      <section className="mx-auto mt-12 grid max-w-7xl gap-8 lg:grid-cols-2">
+        <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-6 shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-sm font-medium text-[#c15f3c]">
+              机制剖析 · 注意力分布
+            </p>
+            <p className="font-mono text-[0.6rem] uppercase tracking-widest text-[#a89a8b]">
+              Figure 3-7
+            </p>
+          </div>
+          <h3 className="mt-4 text-xl font-bold text-[#2a211c]">
+            注意力捷径：Comp 方案的偏移
+          </h3>
+          <p className="mt-2 text-sm leading-7 text-[#665c52]">
+            将记忆词元放在 VLM
+            前缀时，动作专家倾向于直接从中读取压缩后的历史信息，而大幅减少对当前视觉观测的关注。
+          </p>
+          <div className="mt-8">
+            <AttentionDistributionChart />
+          </div>
+        </article>
+
+        <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-6 shadow-sm">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-sm font-medium text-[#c15f3c]">
+              机制剖析 · 时序稳定性
+            </p>
+            <p className="font-mono text-[0.6rem] uppercase tracking-widest text-[#a89a8b]">
+              Figure 3-8
+            </p>
+          </div>
+          <h3 className="mt-4 text-xl font-bold text-[#2a211c]">
+            捷径现象在整个 Episode 中持续存在
+          </h3>
+          <p className="mt-2 text-sm leading-7 text-[#665c52]">
+            记忆注意力始终稳定在 87% 至
+            92%，说明捷径不是单帧偶然现象，而是结构性偏移，会导致模型忽略环境变化。
+          </p>
+          <div className="mt-8">
+            <AttentionOverTimeChart />
+          </div>
+        </article>
+      </section>
+
       <FigureEvidence page={page} />
       <SplitNarrative page={page} label="关键线索" />
       <PlatformCallout platform={page.platform} />
@@ -1123,9 +2397,23 @@ function FigureEvidence({ page }: StoryPageProps) {
     return null;
   }
 
+  const hasPortraitFigures = page.figures.some(
+    (figure) => figure.layout === "portrait",
+  );
+
   return (
-    <section className="mx-auto mt-8 max-w-5xl border-y border-[#d8ccbb] py-5">
-      <div className="grid gap-4 lg:grid-cols-2">
+    <section
+      className={`mx-auto mt-8 border-y border-[#d8ccbb] py-5 ${
+        hasPortraitFigures ? "max-w-7xl" : "max-w-5xl"
+      }`}
+    >
+      <div
+        className={`grid gap-4 ${
+          hasPortraitFigures
+            ? "md:grid-cols-2 xl:grid-cols-4"
+            : "lg:grid-cols-2"
+        }`}
+      >
         {page.figures.map((figure) => (
           <FigureCard key={figure.title} figure={figure} />
         ))}
@@ -1147,7 +2435,11 @@ function FigureCard({ figure }: { figure: ThesisFigure }) {
             src={figure.src}
             alt={figure.title}
             className={`w-full rounded-[0.75rem] object-contain ${
-              figure.layout === "wide" ? "max-h-[360px]" : "max-h-[300px]"
+              figure.layout === "wide"
+                ? "max-h-[360px]"
+                : figure.layout === "portrait"
+                  ? "max-h-[560px]"
+                  : "max-h-[300px]"
             }`}
           />
         ) : null}
@@ -1181,9 +2473,12 @@ function BenchmarkSection({ section }: { section: ThesisBenchmarkSection }) {
         </div>
       </div>
       <VideoGrid section={section} />
-      <div className="mt-5">
-        <BenchmarkTable table={section.table} />
-      </div>
+      {section.name === "SimplerEnv WidowX" && <SimplerEnvSuccessRateCharts />}
+      {section.table ? (
+        <div className="mt-5">
+          <BenchmarkTable table={section.table} />
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1203,7 +2498,11 @@ function VideoGrid({ section }: { section: ThesisBenchmarkSection }) {
           <video
             src={video.src}
             poster={video.poster}
+            autoPlay
             controls
+            loop
+            muted
+            playsInline
             preload="metadata"
             className="aspect-video w-full bg-[#2a211c] object-cover"
           />

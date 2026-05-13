@@ -109,7 +109,8 @@ describe("story pages", () => {
     expect(methodHtml).toContain('src="/images/thesis/2-2.png"');
     expect(methodHtml).toContain('src="/images/thesis/2-3.png"');
 
-    expect(systemsHtml).toContain('src="/images/thesis/2-5.png"');
+    expect(systemsHtml).toContain("四种 memory 接入路径");
+    expect(systemsHtml).not.toContain('src="/images/thesis/2-5.png"');
 
     expect(analysisHtml).toContain("注意力对比图");
     expect(analysisHtml).toContain("注意力随时间步变化");
@@ -233,9 +234,47 @@ describe("story pages", () => {
     expect(html).not.toContain("VLA模型整体框架");
     expect(html).toContain("记忆系统整体架构");
     expect(html).toContain("历史矩阵构建与块级因果注意力掩码");
-    expect(html).toContain("三种记忆融合方式结构对比");
+    expect(html).toContain("门控交叉注意力");
     expect(html).not.toContain("图中区分视觉-语言模型");
     expect(html).toContain("记忆词元提取当前帧信息");
+  });
+
+  test("renders memory fusion comparison as HTML structure diagrams", () => {
+    const html = renderToStaticMarkup(<MemorySystemsPage />);
+
+    expect(html).toContain("缓存上下文记忆");
+    expect(html).toContain("压缩式上下文记忆");
+    expect(html).toContain("自适应归一化");
+    expect(html).toContain("门控交叉注意力");
+    expect(html).toContain("记忆缓存库");
+    expect(html).toContain("拼接记忆缓存");
+    expect(html).toContain("视觉语言模型");
+    expect(html).toContain("动作专家");
+    expect(html).toContain("HistoryCache");
+    expect(html).toContain("MemoryModule");
+    expect(html).toContain("块级注意力");
+    expect(html).toContain("自适应层归一化公式");
+    expect(html).toContain("LN(a)");
+    expect(html).toContain("多层感知机");
+    expect(html).toContain("缩放参数");
+    expect(html).toContain("平移参数");
+    expect(html).toContain("Gated Cross Attention");
+    expect(html).toContain("前馈网络");
+    expect(html).toContain("交叉注意力");
+    expect(html).toContain("查询");
+    expect(html).toContain("键值");
+    expect(html).toContain("Memory Tokens");
+    expect(html).not.toContain('src="/images/thesis/cache-context-memory.jpg"');
+    expect(html).not.toContain(
+      'src="/images/thesis/compressed-context-memory.jpg"',
+    );
+    expect(html).not.toContain(
+      'src="/images/thesis/adaptive-normalization.jpg"',
+    );
+    expect(html).not.toContain(
+      'src="/images/thesis/gated-cross-attention.jpg"',
+    );
+    expect(html).not.toContain('src="/images/thesis/2-5.png"');
   });
 
   test("keeps supporting figures compact while pairing the architecture figure with key clues", () => {
@@ -291,9 +330,7 @@ describe("story pages", () => {
 
     const fixedPanel = screen.getByLabelText("固定窗口采样动画面板");
 
-    expect(
-      within(fixedPanel).queryByText("[f1, f2, f3, f4]"),
-    ).toBeNull();
+    expect(within(fixedPanel).queryByText("[f1, f2, f3, f4]")).toBeNull();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1150);
@@ -436,10 +473,46 @@ describe("story pages", () => {
     expect(html).toContain("<table");
     expect(html).toContain("64.6%");
     expect(html).toContain("20.0%");
-    expect(html.indexOf('src="/video/simpler/spoon.mp4"')).toBeLessThan(
-      html.indexOf("RT-1-X"),
+    expect(html.indexOf('src="/video/rmbench/nice.mp4"')).toBeLessThan(
+      html.indexOf("Diffusion Policy"),
     );
     expect(html).not.toContain("数据待补充");
+  });
+
+  test("renders SimplerEnv success charts without the old average table", () => {
+    const html = renderToStaticMarkup(<ResultsPage />);
+
+    expect(html).toContain("勺子放毛巾 成功率 (%)");
+    expect(html).toContain("胡萝卜放盘子 成功率 (%)");
+    expect(html).toContain("绿块叠黄块 成功率 (%)");
+    expect(html).toContain("茄子入黄篮 成功率 (%)");
+    expect(html).toContain("四任务平均 成功率 (%)");
+    expect(html).not.toContain(
+      '<h2 class="text-xl font-semibold text-[#2a211c]">四任务平均成功率对比</h2>',
+    );
+  });
+
+  test("autoplays benchmark demonstration videos", () => {
+    const html = renderToStaticMarkup(<ResultsPage />);
+
+    for (const src of [
+      "/video/simpler/spoon.mp4",
+      "/video/simpler/carrot.mp4",
+      "/video/simpler/cube.mp4",
+      "/video/simpler/eggplant.mp4",
+      "/video/rmbench/nice.mp4",
+    ]) {
+      const videoStart = html.indexOf(`<video src="${src}"`);
+      const videoMarkup = html.slice(
+        videoStart,
+        html.indexOf("</video>", videoStart),
+      );
+
+      expect(videoMarkup).toContain('autoPlay=""');
+      expect(videoMarkup).toContain('muted=""');
+      expect(videoMarkup).toContain('loop=""');
+      expect(videoMarkup).toContain('playsInline=""');
+    }
   });
 
   test("renders platform links across story pages with loading states", () => {

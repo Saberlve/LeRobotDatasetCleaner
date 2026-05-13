@@ -22,6 +22,7 @@ import {
   FiTrendingUp,
 } from "react-icons/fi";
 
+import { TrainingCurves } from "./training-curves";
 import type {
   EvaluationDashboard,
   EvaluationResultRow,
@@ -2028,6 +2029,9 @@ export function EvaluationDashboardView({
         {showTraining ? (
           <>
             <TrainingWorkspaceCue />
+            <article className={panelClass}>
+              <TrainingCurves />
+            </article>
             <WandbPanel />
             <TrainingConfigPanel />
           </>

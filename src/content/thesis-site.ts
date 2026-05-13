@@ -26,7 +26,7 @@ export type ThesisFigure = {
   src?: string;
   title: string;
   caption: string;
-  layout?: "wide" | "standard";
+  layout?: "wide" | "standard" | "portrait";
 };
 
 export type ThesisBenchmarkTable = {
@@ -49,7 +49,7 @@ export type ThesisBenchmarkSection = {
   intro: string[];
   videos: ThesisBenchmarkVideo[];
   videoColumns: 1 | 4;
-  table: ThesisBenchmarkTable;
+  table?: ThesisBenchmarkTable;
 };
 
 export type ThesisPlatformCallout = {
@@ -124,7 +124,7 @@ export const thesisPages: ThesisStoryPage[] = [
     label: "背景与研究动机",
     shortLabel: "P1",
     eyebrow: "01 / 06",
-    title: 'VLA 模型的“金鱼记忆”',
+    title: "VLA 模型的“金鱼记忆”",
     hook: "主流 VLA 架构每次只输入一帧图像，没有获取历史信息的途径，因此无法完成长程任务。",
     summary:
       "机器人在长程操作里缺少记忆。再交换方块、连续拿取这些任务都要求模型知道前面发生过什么；只看当前画面时，相同的观测但是不同的历史会输出相同的动作。",
@@ -174,14 +174,18 @@ export const thesisPages: ThesisStoryPage[] = [
           ["聚合", "Transformer 层数", "2", "表达力与算力的平衡"],
           ["缓存", "记忆缓存库大小", "4", "滑动窗口长度"],
           ["缓存", "记忆存储步长", "30", "30Hz 频率下每秒存储一帧"],
-          ["注入", "门控系数初值", "1e-3", "训练早期保持原通路稳定，但避免初值太小导致记忆作用丢失"],
+          [
+            "注入",
+            "门控系数初值",
+            "1e-3",
+            "训练早期保持原通路稳定，但避免初值太小导致记忆作用丢失",
+          ],
         ],
       },
     ],
     platform: {
       title: "训练配置中对比与修改",
-      caption:
-        "各个实验的训练配置都可以在平台中查看，并与基线进行对比",
+      caption: "各个实验的训练配置都可以在平台中查看，并与基线进行对比",
       href: "/evaluation/training",
       action: "打开训练配置",
       chips: ["moment_token_count", "cache_size", "decision_stride"],
@@ -208,11 +212,32 @@ export const thesisPages: ThesisStoryPage[] = [
     media: ["三种融合方式结构对比", "四方案结构表", "关键判断"],
     figures: [
       {
-        src: "/images/thesis/2-5.png",
-        title: "三种记忆融合方式结构对比",
+        src: "/images/thesis/cache-context-memory.jpg",
+        title: "缓存上下文记忆",
         caption:
-          "上下文拼接、自适应层归一化和门控交叉注意力并排展示，帮助定位 GCA 与其他注入路径的差异。",
-        layout: "wide",
+          "直接缓存历史上下文 token 并作为前缀带入模型，路径简单，但序列长度和计算成本随历史窗口增长。",
+        layout: "portrait",
+      },
+      {
+        src: "/images/thesis/compressed-context-memory.jpg",
+        title: "压缩式上下文记忆",
+        caption:
+          "先将历史压缩为固定数量的记忆词元，再放入上下文前缀，降低长度压力，但仍与图像语言 token 共享注意力池。",
+        layout: "portrait",
+      },
+      {
+        src: "/images/thesis/adaptive-normalization.jpg",
+        title: "自适应归一化",
+        caption:
+          "用压缩历史生成归一化参数调制中间特征，推理开销低，但注入点绑定到 VLM 内部结构。",
+        layout: "portrait",
+      },
+      {
+        src: "/images/thesis/gated-cross-attention.jpg",
+        title: "门控交叉注意力",
+        caption:
+          "以动作专家隐藏状态查询记忆表示，通过门控残差后注入，让记忆通道与图像语言主路径保持解耦。",
+        layout: "portrait",
       },
     ],
     platform: {
@@ -238,7 +263,8 @@ export const thesisPages: ThesisStoryPage[] = [
     highlights: [
       "SimplerEnv WidowX 覆盖抓取、放置、堆叠、入篮四类桌面操作，平均成功率达到 64.6%。",
       "RMBench Swap Blocks 要记住两个方块起点和当前阶段，π-GCA 达到 20.0%，相对 DP / pi0.5 LoRA 提升 5-10 倍。",
-      "ACONE 真机开环迁移中 14 维关节有 12 维 RMSE 低于 0.1，仅夹爪开合维度仍有空间。",
+      "ACONE 真机数据自采 37 条高质量轨迹，共 34205 帧，平均每回合约 924.5 帧。",
+      "真机开环评测中 14 维关节有 12 维 RMSE 低于 0.1，仅夹爪开合维度仍有空间。",
     ],
     media: ["SimplerEnv rollout", "RMBench rollout", "ACONE 迁移快报"],
     benchmarkSections: [
@@ -280,22 +306,6 @@ export const thesisPages: ThesisStoryPage[] = [
               "/images/thesis/video_storyboards/simpler_eggplant_storyboard.png",
           },
         ],
-        table: {
-          title: "四任务平均成功率对比",
-          caption: "π-GCA 在同一评测集上达到 64.6%。",
-          columns: ["模型", "平均成功率", "备注"],
-          rows: [
-            ["RT-1-X", "1.1%", ""],
-            ["Octo-Base", "17.5%", ""],
-            ["OpenVLA", "4.2%", ""],
-            ["π0", "27.1%", "基座无记忆"],
-            ["π0-FAST", "48.3%", ""],
-            ["SpatialVLA", "42.7%", ""],
-            ["CogACT", "51.3%", ""],
-            ["GROOT-N1.5", "61.9%", ""],
-            ["本文 π-GCA", "64.6%", "最高，超 π0 基线 37.5pp"],
-          ],
-        },
       },
       {
         name: "RMBench 双臂交换方块",
@@ -326,6 +336,21 @@ export const thesisPages: ThesisStoryPage[] = [
         },
       },
     ],
+    benchmarkTables: [
+      {
+        title: "ACONE 真实机械臂记忆数据集统计",
+        caption:
+          "基于方舟无限 Acone 双臂机器人平台，手动引导采集的长程操作数据集。",
+        columns: ["指标", "数值"],
+        rows: [
+          ["回合数量", "37"],
+          ["总帧数", "34205"],
+          ["帧率", "30 FPS"],
+          ["平均长度", "924.5 帧/回合"],
+          ["动作维度", "14 (7+7)"],
+        ],
+      },
+    ],
     platform: {
       title: "评测回放工作区",
       caption:
@@ -349,36 +374,36 @@ export const thesisPages: ThesisStoryPage[] = [
       "分数只说明结果，消融和注意力分析解释机制。去掉聚合 Transformer 后，长程任务几乎塌方；Comp 前缀方案会把动作专家的注意力大量引向记忆，形成注意力捷径。",
     highlights: [
       "完整 GCA 在 SimplerEnv 为 64.6%，去掉聚合层后降到 42.7%。",
-      "RMBench 从 20.0% 降到 0.8%，说明跨时间聚合不是可有可无的附属模块。",
-      "Comp 压缩前缀让记忆占据 89.2% 注意力，图像与语言通道被明显挤压。",
-      "GCA 使用新通道并行注入，保留图像语言主路径，因此更适合可插拔记忆。",
+      "RMBench 从 20.0% 降到 0.8%，说明聚合层承担了跨时间步的信息整理与压缩。",
+      "不同融合方式对比中，GCA 在稳定性上优于 Norm，在性能上远超 Cache。",
+      "Comp 压缩前缀让记忆占据 89.2% 注意力，形成「注意力捷径」，削弱了对当前观测的感知。",
     ],
     media: ["聚合消融", "注意力分布", "时间步稳定性"],
     benchmarkTables: [
       {
-        title: "消融 1：去除聚合 Transformer",
-        caption: "去掉跨时间聚合后，长程任务下降最明显。",
-        columns: ["配置", "SimplerEnv 平均", "RMBench"],
+        title: "消融 1：去除记忆聚合模块",
+        caption:
+          "去掉跨时间聚合后，依赖空间关系和阶段判断的任务（绿块、茄子）下降最剧烈。",
+        columns: ["任务", "完整 GCA", "去除聚合模块", "变化"],
         rows: [
-          ["完整 GCA", "64.6%", "20.0%"],
-          ["去掉聚合层", "42.7% (↓ 21.9pp)", "0.8% (↓ 96%)"],
+          ["勺子放毛巾", "62.5%", "66.7%", "+4.2%"],
+          ["胡萝卜放盘子", "50.0%", "58.3%", "+8.3%"],
+          ["绿块叠黄块", "62.5%", "12.5%", "-50.0%"],
+          ["茄子入黄篮", "83.3%", "33.3%", "-50.0%"],
+          ["平均成功率", "64.6%", "42.7%", "-21.9%"],
+          ["RMBench (长程)", "20.0%", "0.8%", "-19.2%"],
         ],
       },
       {
-        title: "消融 2：动作专家注意力分布",
-        caption: "Comp 前缀方案会让记忆占据主要注意力。",
-        columns: ["实验", "图像", "语言", "记忆"],
+        title: "消融 2：不同记忆融合方式对比",
+        caption: "在 SimplerEnv 四个任务上的完整成功率（%）对比。",
+        columns: ["方法", "勺子", "胡萝卜", "绿块", "茄子", "平均"],
         rows: [
-          ["无记忆基线", "64.6%", "35.4%", ""],
-          ["加 Comp 压缩前缀", "6.9%", "3.8%", "89.2%"],
-          ["加 GCA", "≈ 60%", "≈ 35%", "新通道并行"],
+          ["-Cache", "33.3", "33.3", "12.5", "45.8", "31.2"],
+          ["-Comp", "66.7", "58.3", "62.5", "58.3", "61.5"],
+          ["-Norm", "54.2", "41.7", "45.8", "87.5", "57.3"],
+          ["-GCA (本文)", "62.5", "50.0", "62.5", "83.3", "64.6"],
         ],
-      },
-      {
-        title: "消融 3：Comp 注意力头记忆占比",
-        caption: "4 个注意力头都稳定偏向记忆前缀。",
-        columns: ["Head 1", "Head 2", "Head 3", "Head 4", "episode 范围"],
-        rows: [["88.8%", "89.4%", "89.7%", "90.1%", "87%-92%"]],
       },
     ],
     figures: [
