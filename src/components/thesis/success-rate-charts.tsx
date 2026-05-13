@@ -33,11 +33,25 @@ export function SuccessRateBarChart({
   color = "#c15f3c",
 }: SuccessRateChartsProps) {
   return (
-    <div className="h-[480px] w-full rounded-xl border border-[#d8ccbb] bg-[#fffaf4] p-4 shadow-sm">
-      <h3 className="mb-4 text-center text-base font-semibold text-[#2a211c]">
-        {taskName} 成功率 (%)
+    <div className="h-[520px] w-full rounded-xl border border-[#d8ccbb] bg-[#fffaf4] p-4 shadow-sm">
+      <h3 className="mb-2 text-center text-base font-semibold text-[#2a211c]">
+        {taskName}成功率 (%)
       </h3>
-      <ResponsiveContainer width="100%" height="100%">
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-[#665c52]">
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-3.5 w-3.5 rounded-sm bg-[#c15f3c]" />
+          基线方法
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-3.5 w-3.5 rounded-sm bg-[#5b9bd5]" />
+          π₀.5 消融变体
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-3.5 w-3.5 rounded-sm bg-[#2a211c]" />
+          本文方法
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height="80%">
         <BarChart
           data={data}
           margin={{ top: 5, right: 20, left: 0, bottom: 80 }}
@@ -83,20 +97,6 @@ export function SuccessRateBarChart({
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-[10px] text-[#665c52]">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#c15f3c]" />
-          基线方法
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#5b9bd5]" />
-          π₀.5 消融变体
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#2a211c]" />
-          本文方法
-        </span>
-      </div>
     </div>
   );
 }
@@ -218,9 +218,9 @@ export function SimplerEnvSuccessRateCharts() {
     <div className="mt-8 space-y-10">
       <div className="grid gap-6 md:grid-cols-2">
         <SuccessRateBarChart taskName="将勺子放到毛巾上" data={spoonData} />
-        <SuccessRateBarChart taskName="将勺子放到碗里" data={carrotData} />
-        <SuccessRateBarChart taskName="绿块叠黄块" data={stackData} />
-        <SuccessRateBarChart taskName="茄子入黄篮" data={eggplantData} />
+        <SuccessRateBarChart taskName="将胡萝卜放到盘子上" data={carrotData} />
+        <SuccessRateBarChart taskName="将绿色方块放到黄色方块上" data={stackData} />
+        <SuccessRateBarChart taskName="将茄子放进黄色篮子里" data={eggplantData} />
       </div>
       <div className="mx-auto max-w-4xl">
         <SuccessRateBarChart

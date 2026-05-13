@@ -1,6 +1,10 @@
 import React from "react";
 
-import { type MemorySystemDiagram, memorySystemDiagrams, systemRows } from "./story-data";
+import {
+  type MemorySystemDiagram,
+  memorySystemDiagrams,
+  systemRows,
+} from "./story-data";
 
 export function MemorySystemComparisonTrack() {
   return (
@@ -26,12 +30,13 @@ export function MemorySystemComparisonTrack() {
           <h2 className="mt-2 text-3xl font-semibold text-[#2a211c]">
             四种方案架构图解
           </h2>
-
         </div>
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-[#e7f1df] border border-[#4f8a47]" />
-            <span className="text-xs font-medium text-[#665c52]">视觉语言词元</span>
+            <span className="text-xs font-medium text-[#665c52]">
+              视觉语言词元
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-[#f8ded0] border border-[#c76524]" />
@@ -46,10 +51,10 @@ export function MemorySystemComparisonTrack() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         {memorySystemDiagrams.map((diagram, index) => (
-          <MemorySystemBlueprintCard 
-            key={diagram.badge} 
-            diagram={diagram} 
-            columnIndex={index + 1} 
+          <MemorySystemBlueprintCard
+            key={diagram.badge}
+            diagram={diagram}
+            columnIndex={index + 1}
           />
         ))}
       </div>
@@ -76,7 +81,9 @@ function MemorySystemBlueprintCard({
             {diagram.title}
           </h3>
         </div>
-        <span className="font-mono text-[0.65rem] text-[#c15f3c]">PATH_MODE: 0{columnIndex}</span>
+        <span className="font-mono text-[0.65rem] text-[#c15f3c]">
+          PATH_MODE: 0{columnIndex}
+        </span>
       </div>
 
       {/* Diagram Section */}
@@ -86,7 +93,9 @@ function MemorySystemBlueprintCard({
             {diagram.badge === "Cache" ? <CacheContextDiagram /> : null}
             {diagram.badge === "Comp" ? <CompressedContextDiagram /> : null}
             {diagram.badge === "Norm" ? <AdaptiveNormDiagramClean /> : null}
-            {diagram.badge === "GCA" ? <GatedCrossAttentionDiagramClean /> : null}
+            {diagram.badge === "GCA" ? (
+              <GatedCrossAttentionDiagramClean />
+            ) : null}
           </div>
         </div>
         <p className="mt-6 text-xs italic leading-5 text-[#665c52]/80">
@@ -97,42 +106,16 @@ function MemorySystemBlueprintCard({
 
       {/* Specs / Table Integration */}
       <div className="grid grid-cols-2 divide-x divide-[#d8ccbb] bg-[#fffaf4]">
-        <div className="flex flex-col divide-y divide-[#d8ccbb]/50">
-          {systemRows.slice(0, 4).map((row) => (
-            <div key={row[0]} className="flex flex-col px-4 py-2.5">
-              <span className="text-[0.6rem] font-bold uppercase tracking-wider text-[#c15f3c]/70">
-                {row[0]}
-              </span>
-              <span className="mt-0.5 text-[0.8rem] font-medium text-[#2a211c]">
-                {row[columnIndex]}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-col divide-y divide-[#d8ccbb]/50">
-          {systemRows.slice(4).map((row) => (
-            <div key={row[0]} className="flex flex-col px-4 py-2.5">
-              <span className="text-[0.6rem] font-bold uppercase tracking-wider text-[#c15f3c]/70">
-                {row[0]}
-              </span>
-              <span className="mt-0.5 text-[0.8rem] font-medium text-[#2a211c]">
-                {row[columnIndex]}
-              </span>
-            </div>
-          ))}
-          <div className="px-4 py-2.5">
-             <span className="text-[0.6rem] font-bold uppercase tracking-wider text-[#c15f3c]/70">
-                核心备注
-              </span>
-              <div className="mt-1 flex flex-col gap-1">
-                {diagram.notes.map((note) => (
-                  <p key={note} className="text-[0.65rem] leading-relaxed text-[#665c52]">
-                    • {note}
-                  </p>
-                ))}
-              </div>
+        {systemRows.map((row) => (
+          <div key={row[0]} className="flex flex-col px-4 py-3">
+            <span className="text-[0.6rem] font-bold uppercase tracking-wider text-[#c15f3c]/70">
+              {row[0]}
+            </span>
+            <span className="mt-0.5 text-[0.8rem] font-medium text-[#2a211c]">
+              {row[columnIndex]}
+            </span>
           </div>
-        </div>
+        ))}
       </div>
     </article>
   );
@@ -262,7 +245,9 @@ function DownArrow({ label }: { label?: string }) {
   return (
     <div className="flex flex-col items-center py-1 text-center">
       {label ? (
-        <span className="mb-1 text-[0.8rem] font-bold text-[#665c52]">{label}</span>
+        <span className="mb-1 text-[0.8rem] font-bold text-[#665c52]">
+          {label}
+        </span>
       ) : null}
       <span className="h-6 border-l border-[#2a211c]" />
       <span className="-mt-1.5 font-mono text-base leading-none text-[#2a211c]">
@@ -476,7 +461,10 @@ function SvgTokenRow({
         const currentX = x + index * (cellWidth - 1);
 
         return (
-          <g key={`${label}-${token}-${index}`} transform={`translate(${currentX} ${y})`}>
+          <g
+            key={`${label}-${token}-${index}`}
+            transform={`translate(${currentX} ${y})`}
+          >
             <rect
               width={cellWidth}
               height={cellHeight}
@@ -793,7 +781,14 @@ function GatedCrossAttentionDiagramClean() {
               strokeWidth="1.5"
               markerEnd="url(#clean-gca-arrow)"
             />
-            <text x="260" y="202" textAnchor="middle" fontSize="16" fontWeight="900" fill="#665c52">
+            <text
+              x="260"
+              y="202"
+              textAnchor="middle"
+              fontSize="16"
+              fontWeight="900"
+              fill="#665c52"
+            >
               查询
             </text>
             <text x="115" y="225" fontSize="16" fontWeight="900" fill="#665c52">
@@ -871,7 +866,14 @@ function GatedCrossAttentionDiagramClean() {
               tone="action"
               cellWidth={54}
             />
-            <text x="428" y="375" textAnchor="middle" fontSize="16" fontWeight="900" fill="#665c52">
+            <text
+              x="428"
+              y="375"
+              textAnchor="middle"
+              fontSize="16"
+              fontWeight="900"
+              fill="#665c52"
+            >
               动作查询
             </text>
 
@@ -883,7 +885,14 @@ function GatedCrossAttentionDiagramClean() {
               tone="memory"
               cellWidth={48}
             />
-            <text x="188" y="375" textAnchor="middle" fontSize="16" fontWeight="900" fill="#665c52">
+            <text
+              x="188"
+              y="375"
+              textAnchor="middle"
+              fontSize="16"
+              fontWeight="900"
+              fill="#665c52"
+            >
               记忆键值
             </text>
           </svg>

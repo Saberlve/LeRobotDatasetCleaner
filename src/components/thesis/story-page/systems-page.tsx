@@ -1,8 +1,7 @@
 import React from "react";
 
-import { MathText } from "./math-text";
 import { MemorySystemComparisonTrack } from "./memory-system-diagrams";
-import { PlatformCallout, SplitNarrative } from "./shared-sections";
+import { PlatformCallout } from "./shared-sections";
 import { PageKicker, StoryShell } from "./story-navigation";
 import type { StoryPageProps } from "./types";
 
@@ -30,10 +29,6 @@ export function SystemsPage({ page }: StoryPageProps) {
         </div>
       </section>
 
-      <div className="mt-16 border-t border-[#d8ccbb] pt-12">
-        <SplitNarrative page={page} label="Critical Decisions" />
-      </div>
-      
       <PlatformCallout platform={page.platform} />
     </StoryShell>
   );

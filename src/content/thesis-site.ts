@@ -203,12 +203,7 @@ export const thesisPages: ThesisStoryPage[] = [
     hook: "本节从结构角度对比四种方案，重点关注注入位置和耦合方式对系统的影响，实验数据作为最终的验证依据。",
     summary:
       "Cache、Comp、Norm 和 GCA 这四种方案试图回答同一个问题：历史信息应当放在模型的哪个位置。结构层面的对比分析有助于排除显存开销、推理时延、骨干网络侵入度和注意力竞争等潜在风险，从而让主结果页的实验数据具有更清晰的解释。",
-    highlights: [
-      "Cache 将历史帧的键值缓存作为前缀拼入当前 VLM 输入，路径最为直接，代价是序列长度和训练成本随窗口增长。",
-      "Comp 将历史压缩为固定数量的记忆词元后再拼接至前缀，序列长度可控制在常量范围，但记忆词元仍需与图像和语言词元竞争注意力权重。",
-      "Norm 将压缩后的历史表示映射为层归一化的调制参数，推理时几乎不增加额外开销，但注入方式与基座模型的内部结构紧耦合。",
-      "GCA 将注入点移至动作专家一侧，记忆通道与视觉语言主路径并行，预训练骨干的参数和结构均不受影响。",
-    ],
+    highlights: [],
     media: ["三种融合方式结构对比", "四方案结构表", "关键判断"],
     figures: [
       {
@@ -256,15 +251,14 @@ export const thesisPages: ThesisStoryPage[] = [
     label: "主结果",
     shortLabel: "P4",
     eyebrow: "04 / 06",
-    title: "SimplerEnv 常规四任务 + RMBench 长程记忆任务",
-    hook: "常规短程任务不退化，强记忆依赖任务给出 5-10 倍提升。",
-    summary:
-      "主结果页按两个基准展开：先交代任务，再播放成功 rollout，最后给出表格。ACONE 真机结果只保留迁移性快报，把页面重心留给 SimplerEnv 和 RMBench。",
+    title: "仿真与真机实验结果",
+    hook: "SimplerEnv 平均成功率 64.6% 超越全部对比方法；RMBench 长程任务 20.0%，相对基线提升 5–10 倍；ACONE 真机 14 维控制自由度中 12 维误差低于 0.1。",
+    summary: "",
     highlights: [
-      "SimplerEnv WidowX 覆盖抓取、放置、堆叠、入篮四类桌面操作，平均成功率达到 64.6%。",
-      "RMBench Swap Blocks 要记住两个方块起点和当前阶段，π-GCA 达到 20.0%，相对 DP / pi0.5 LoRA 提升 5-10 倍。",
-      "ACONE 真机数据自采 37 条高质量轨迹，共 34205 帧，平均每回合约 924.5 帧。",
-      "真机开环评测中 14 维关节有 12 维 RMSE 低于 0.1，仅夹爪开合维度仍有空间。",
+      "SimplerEnv WidowX 在抓取、放置、堆叠、入篮四类桌面操作上平均成功率达到 64.6%，超越所有对比方法。",
+      "RMBench Swap Blocks 要求模型持续追踪两个方块的位置与任务进度，本文方法达到 20.0%，分别为 DP 和 π₀.5-LoRA 的 10 倍和 5 倍。",
+      "基于 ACONE 双臂机器人平台手工采集 37 条高质量轨迹，总计 34205 帧，平均每回合约 924.5 帧。",
+      "真机开环评测中 14 维控制自由度中 12 维 RMSE 低于 0.1，仅夹爪开合维度预测误差偏高。",
     ],
     media: ["SimplerEnv rollout", "RMBench rollout", "ACONE 迁移快报"],
     benchmarkSections: [
@@ -272,34 +266,34 @@ export const thesisPages: ThesisStoryPage[] = [
         name: "SimplerEnv WidowX",
         kicker: "① 仿真四任务",
         intro: [
-          "在 SAPIEN 物理模拟器下，WidowX 机械臂完成勺子放毛巾、胡萝卜放盘子、绿块叠黄块和茄子入黄篮。",
-          "四个任务覆盖抓取、放置、堆叠和入篮，评测指标是完整任务成功率。",
+          "基于 SAPIEN 物理模拟器构建的 SimplerEnv 平台，在 WidowX 机械臂配置下评测四个桌面操作任务：将勺子放到毛巾上、将胡萝卜放到盘子上、将绿色方块放到黄色方块上、将茄子放进黄色篮子里。",
+          "四个任务分别覆盖抓取、放置、堆叠和入篮四种操作类型，以完整任务成功率为评测指标。",
         ],
         videoColumns: 4,
         videos: [
           {
-            title: "勺子放毛巾",
+            title: "将勺子放到毛巾上",
             caption: "spoon on towel",
             src: "/video/simpler/spoon.mp4",
             poster:
               "/images/thesis/video_storyboards/simpler_spoon_storyboard.png",
           },
           {
-            title: "胡萝卜放盘子",
+            title: "将胡萝卜放到盘子上",
             caption: "carrot on plate",
             src: "/video/simpler/carrot.mp4",
             poster:
               "/images/thesis/video_storyboards/simpler_carrot_storyboard.png",
           },
           {
-            title: "绿块叠黄块",
+            title: "将绿色方块放到黄色方块上",
             caption: "cube stacking",
             src: "/video/simpler/cube.mp4",
             poster:
               "/images/thesis/video_storyboards/simpler_cube_storyboard.png",
           },
           {
-            title: "茄子入黄篮",
+            title: "将茄子放进黄色篮子里",
             caption: "eggplant in basket",
             src: "/video/simpler/eggplant.mp4",
             poster:
@@ -311,8 +305,8 @@ export const thesisPages: ThesisStoryPage[] = [
         name: "RMBench 双臂交换方块",
         kicker: "② 长程记忆任务",
         intro: [
-          "双臂机器人借助中间格交换两个方块的位置，过程必须保留两个方块的起点和当前流程阶段。",
-          "中间格腾出后，模型如果只看当前画面，容易无法选定下一步目标。",
+          "RMBench 交换方块任务要求双臂机器人借助中间格交换两个方块的位置，操作过程中必须持续追踪方块的初始位置与当前流程阶段。",
+          "单靠当前帧观测无法获知已放置方块的位置和任务进度，因此该任务对记忆能力有较强的依赖性。",
         ],
         videoColumns: 1,
         videos: [
@@ -326,7 +320,7 @@ export const thesisPages: ThesisStoryPage[] = [
         ],
         table: {
           title: "交换方块成功率对比",
-          caption: "GCA 在强记忆依赖任务上给出最直接的收益。",
+          caption: "GCA 在强记忆依赖任务上相对于基线方法取得了显著优势。",
           columns: ["方法", "成功率", "对比 GCA"],
           rows: [
             ["Diffusion Policy", "2.0%", "10x"],
@@ -361,7 +355,7 @@ export const thesisPages: ThesisStoryPage[] = [
       image: "/images/thesis/platform-replay-simpler.png",
     },
     takeaway:
-      "主结果的证据链是任务介绍、成功 rollout、成绩对比；GCA 在短程任务不退化，在长程记忆任务明显拉开差距。",
+      "主结果通过任务介绍、成功案例和定量对比形成完整证据链：GCA 在常规短程任务上保持竞争力，在长程记忆任务上显著超越现有方法。",
   },
   {
     href: "/analysis",
@@ -386,10 +380,10 @@ export const thesisPages: ThesisStoryPage[] = [
           "去掉跨时间聚合后，依赖空间关系和阶段判断的任务（绿块、茄子）下降最剧烈。",
         columns: ["任务", "完整 GCA", "去除聚合模块", "变化"],
         rows: [
-          ["勺子放毛巾", "62.5%", "66.7%", "+4.2%"],
-          ["胡萝卜放盘子", "50.0%", "58.3%", "+8.3%"],
-          ["绿块叠黄块", "62.5%", "12.5%", "-50.0%"],
-          ["茄子入黄篮", "83.3%", "33.3%", "-50.0%"],
+          ["将勺子放到毛巾上", "62.5%", "66.7%", "+4.2%"],
+          ["将胡萝卜放到盘子上", "50.0%", "58.3%", "+8.3%"],
+          ["将绿色方块放到黄色方块上", "62.5%", "12.5%", "-50.0%"],
+          ["将茄子放进黄色篮子里", "83.3%", "33.3%", "-50.0%"],
           ["平均成功率", "64.6%", "42.7%", "-21.9%"],
           ["RMBench (长程)", "20.0%", "0.8%", "-19.2%"],
         ],
@@ -443,7 +437,7 @@ export const thesisPages: ThesisStoryPage[] = [
     highlights: [
       "方法贡献：可学习记忆词元、块级因果聚合和门控交叉注入构成轻量可插拔记忆系统。",
       "实验贡献：SimplerEnv 64.6%、RMBench 20.0%、ACONE 12/14 维误差可控，覆盖仿真和真机。",
-      "关键洞察：Comp 的注意力捷径说明记忆不能简单塞进 VLM 前缀，后注入更稳。",
+      "关键洞察：Comp 的注意力捷径说明记忆不能简单塞进 VLM的视觉/语言表示，后注入更稳。",
       "工程贡献：数据查看、训练配置、评测回放和本地清洗工具组成一体化研究平台。",
     ],
     media: ["四大贡献", "平台总览", "下一步工作"],

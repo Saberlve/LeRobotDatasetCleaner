@@ -10,7 +10,6 @@ export type MemorySystemDiagram = {
   badge: string;
   caption: string;
   steps: MemoryDiagramStep[];
-  notes: string[];
 };
 
 export const methodStages = [
@@ -32,21 +31,15 @@ export const methodStages = [
 ];
 
 export const systemRows = [
-  ["注入位置", "VLM 前缀", "VLM 前缀", "VLM 内部 LayerNorm", "动作专家"],
-  ["记忆形式", "历史 token", "压缩 N 词元", "压缩后生成 γβ", "压缩 N 词元"],
-  ["序列长度", "显著增长", "固定 N", "不变", "不变"],
-  ["训练成本", "高", "中", "低", "低"],
-  ["改 VLM 骨干", "否", "否", "是", "否"],
-  ["与图像通道", "同池竞争", "同池竞争", "改归一化", "独立并行"],
-  ["捷径风险", "中", "高", "低", "低"],
+  ["注入位置", "VLM的视觉/语言表示", "VLM的视觉/语言表示", "动作专家每一层的前馈网络之前", "动作专家"],
+  ["记忆形式", "记忆词元的键值", "压缩后的记忆词元", "经MLP后生成的平移缩放系数", "压缩后的记忆词元"],
 ];
 
 export const memorySystemDiagrams: MemorySystemDiagram[] = [
   {
     title: "缓存上下文记忆",
     badge: "Cache",
-    caption:
-      "历史帧的键值缓存直接拼入当前帧的 VLM 前缀，但没有进行时序聚合，",
+    caption: "历史帧的键值缓存直接拼入当前帧的 VLM的视觉/语言表示，但没有进行时序聚合，",
     steps: [
       {
         label: "当前观测",
@@ -73,7 +66,6 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tokens: ["a_t"],
       },
     ],
-    notes: ["历史帧的键值缓存直接保留", "输入序列长度随窗口线性增长"],
   },
   {
     title: "压缩式上下文记忆",
@@ -105,10 +97,6 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tone: "bg-[#dbe9d5]",
         tokens: ["M1", "M2", "M3", "M4"],
       },
-    ],
-    notes: [
-      "序列长度固定，训练成本可控",
-      "记忆词元仍需与图像语言词元共享注意力池",
     ],
   },
   {
@@ -142,13 +130,11 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tokens: ["LayerNorm"],
       },
     ],
-    notes: ["推理时序列长度不变", "注入方式与基座模型内部结构绑定"],
   },
   {
     title: "门控交叉注意力",
     badge: "GCA",
-    caption:
-      "以动作的隐藏状态查询压缩后的历史记忆，通过门控残差注入。",
+    caption: "以动作的隐藏状态查询压缩后的历史记忆，通过门控残差注入。",
     steps: [
       {
         label: "HistoryCache",
@@ -175,7 +161,6 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tokens: ["a_t"],
       },
     ],
-    notes: ["不修改 VLM 主干输入通道", "动作专家端注入避免注意力捷径"],
   },
 ];
 

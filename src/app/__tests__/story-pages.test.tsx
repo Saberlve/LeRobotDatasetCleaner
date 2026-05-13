@@ -19,6 +19,7 @@ import AnalysisPage from "@/app/analysis/page";
 import ConclusionPage from "@/app/conclusion/page";
 import { thesisNavItems } from "@/content/thesis-site";
 import { SamplingComparisonAnimation } from "@/components/thesis/sampling-comparison-animation";
+import { MemorySystemComparisonTrack } from "@/components/thesis/story-page/memory-system-diagrams";
 
 describe("story pages", () => {
   afterEach(() => {
@@ -49,7 +50,7 @@ describe("story pages", () => {
     expect(pages[0]).toContain("VLA 模型的“金鱼记忆”");
     expect(pages[1]).toContain("让VLA不再「只看当下」");
     expect(pages[2]).toContain("同一个动机，四种实现：哪种最合理？");
-    expect(pages[3]).toContain("SimplerEnv 常规四任务 + RMBench 长程记忆任务");
+    expect(pages[3]).toContain("仿真与真机实验结果");
     expect(pages[4]).toContain("消融 + 注意力捷径分析：为什么 GCA 赢？");
     expect(pages[5]).toContain("四大贡献 · 一处洞察 · 一套平台");
 
@@ -79,6 +80,26 @@ describe("story pages", () => {
     consoleError.mockRestore();
 
     expect(hasDuplicateKeyWarning).toBe(false);
+  });
+
+  test("keeps the architecture diagram focused on remaining comparison fields", () => {
+    const html = renderToStaticMarkup(<MemorySystemComparisonTrack />);
+
+    expect(html).not.toContain("改 VLM 骨干");
+    expect(html).not.toContain("与图像通道");
+    expect(html).not.toContain("捷径风险");
+    expect(html).not.toContain("序列长度");
+    expect(html).not.toContain("训练成本");
+    expect(html).not.toContain("核心备注");
+  });
+
+  test("omits the memory systems numbered architecture rationale section", () => {
+    const html = renderToStaticMarkup(<MemorySystemsPage />);
+
+    expect(html).not.toContain("Cache 将历史帧的键值缓存作为前缀拼入");
+    expect(html).not.toContain("Comp 将历史压缩为固定数量的记忆词元");
+    expect(html).not.toContain("Norm 将压缩后的历史表示映射为层归一化");
+    expect(html).not.toContain("GCA 将注入点移至动作专家一侧");
   });
 
   test("places memory access paths above the systems comparison table", () => {
@@ -512,11 +533,11 @@ describe("story pages", () => {
   test("renders SimplerEnv success charts without the old average table", () => {
     const html = renderToStaticMarkup(<ResultsPage />);
 
-    expect(html).toContain("勺子放毛巾 成功率 (%)");
-    expect(html).toContain("胡萝卜放盘子 成功率 (%)");
-    expect(html).toContain("绿块叠黄块 成功率 (%)");
-    expect(html).toContain("茄子入黄篮 成功率 (%)");
-    expect(html).toContain("四任务平均 成功率 (%)");
+    expect(html).toContain("将勺子放到毛巾上成功率 (%)");
+    expect(html).toContain("将胡萝卜放到盘子上成功率 (%)");
+    expect(html).toContain("将绿色方块放到黄色方块上成功率 (%)");
+    expect(html).toContain("将茄子放进黄色篮子里成功率 (%)");
+    expect(html).toContain("四任务平均成功率 (%)");
     expect(html).not.toContain(
       '<h2 class="text-xl font-semibold text-[#2a211c]">四任务平均成功率对比</h2>',
     );
