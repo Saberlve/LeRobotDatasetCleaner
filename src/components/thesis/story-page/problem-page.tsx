@@ -7,18 +7,18 @@ import type { StoryPageProps } from "./types";
 export function ProblemPage({ page }: StoryPageProps) {
   return (
     <StoryShell page={page}>
-      <section className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_1fr] lg:items-start">
-        <div>
-          <PageKicker page={page} label="背景与研究动机" />
-          <h1 className="mt-6 max-w-xl text-3xl font-semibold leading-snug text-[#1f1a17] md:text-4xl">
+      <section className="mx-auto max-w-4xl pb-12 pt-8">
+        <PageKicker page={page} label="背景与研究动机" />
+        <div className="mt-6">
+          <h1 className="text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl">
             {page.title}
           </h1>
-          <p className="mt-4 max-w-xl text-lg leading-8 text-[#3a3029]">
+          <p className="mt-6 text-xl leading-9 text-[#3a3029]">
             <MathText text={page.hook} />
           </p>
         </div>
-        <div className="lg:pt-10">
-          <p className="max-w-2xl text-base leading-7 text-[#665c52]">
+        <div className="mt-10 border-t border-[#d8ccbb] pt-8">
+          <p className="text-base leading-8 text-[#665c52]">
             <MathText text={page.summary} />
           </p>
         </div>
@@ -62,7 +62,7 @@ function VlaNoMemoryDiagram() {
   const actionValues = ["-1.7", "1.25", "3.14", "1.42"];
 
   return (
-    <article className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#f7f1e8] p-5 text-[#2a211c] shadow-[0_22px_55px_rgba(42,33,28,0.08)]">
+    <article className="overflow-hidden rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 text-[#2a211c] shadow-sm ring-1 ring-[#2c2421]/5">
       <style>{`
         @keyframes piFrameAdvance {
           0%, 18% { opacity: 0.44; transform: translateY(0) scale(0.97); }
@@ -269,19 +269,19 @@ function VlaNoMemoryDiagram() {
 
 function MemoryTaskCard() {
   return (
-    <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-6">
+    <article className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
       <p className="text-sm font-medium text-[#c15f3c]">交换方块任务</p>
       <h2 className="mt-5 text-3xl font-semibold leading-tight text-[#2a211c]">
         四个关键步骤都依赖过去状态。
       </h2>
-      <div className="mt-6 grid gap-3 text-sm leading-7 text-[#3a3029]">
+      <div className="mt-8 grid gap-0 text-sm leading-7 text-[#3a3029]">
         {[
           "记住两个方块的起始位置。",
           "移动 A 到第三个格子。",
           "把 B 放回 A 原来的位置。",
           "按按钮，结束任务。",
         ].map((item, index) => (
-          <p key={item} className="border-t border-[#d8ccbb] pt-3">
+          <p key={item} className="border-t border-[#e8e0d5] py-4">
             <span className="mr-3 font-semibold text-[#c15f3c]">
               0{index + 1}
             </span>
@@ -302,7 +302,7 @@ function VlaArchitectureLimitSection() {
 
   return (
     <section className="mx-auto mt-12 grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-      <div className="border-y border-[#d8ccbb] py-6">
+      <div className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
         <p className="text-sm font-medium text-[#c15f3c]">当前 VLA 架构限制</p>
         <h2 className="mt-4 max-w-xl text-3xl font-semibold leading-tight text-[#2a211c]">
           每一步对于VLA都是新的开始
@@ -312,11 +312,11 @@ function VlaArchitectureLimitSection() {
           现在的 VLA
           只能获取当前观测，之前发生过什么一概不管，遇到需要记忆信息的长程任务就会出错。
         </p>
-        <div className="mt-7 grid gap-3">
+        <div className="mt-8 grid gap-0">
           {limits.map((item, index) => (
             <p
               key={item}
-              className="border-t border-[#d8ccbb] pt-3 text-sm leading-7 text-[#3a3029]"
+              className="border-t border-[#e8e0d5] py-4 text-sm leading-7 text-[#3a3029]"
             >
               <span className="mr-3 font-semibold text-[#c15f3c]">
                 0{index + 1}
@@ -327,24 +327,24 @@ function VlaArchitectureLimitSection() {
         </div>
       </div>
 
-      <figure className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] shadow-[0_18px_45px_rgba(42,33,28,0.08)]">
-        <figcaption className="border-t border-[#d8ccbb] px-5 py-4">
-          <p className="text-sm font-semibold text-[#2a211c]">
-            交换方块失败案例 —— 完成任务后继续执行多余动作
-          </p>
-        </figcaption>
-        <div className="bg-[#2a211c] p-2">
+      <figure className="overflow-hidden rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] shadow-sm ring-1 ring-[#2c2421]/5">
+        <div className="bg-[#2a211c] p-3">
           <video
             src="/videos/failure.mp4"
             controls
             preload="metadata"
             playsInline
             aria-label="交换方块失败回放"
-            className="aspect-video w-full rounded-[1rem] bg-[#2a211c] object-contain"
+            className="aspect-video w-full rounded-xl bg-[#2a211c] object-contain"
           >
             交换方块失败回放
           </video>
         </div>
+        <figcaption className="border-t border-[#e8e0d5] px-6 py-4">
+          <p className="text-sm font-semibold text-[#2a211c]">
+            交换方块失败案例 —— 完成任务后继续执行多余动作
+          </p>
+        </figcaption>
       </figure>
     </section>
   );
@@ -352,8 +352,8 @@ function VlaArchitectureLimitSection() {
 
 function MemoryUrgencySection() {
   return (
-    <section className="mx-auto mt-12 max-w-7xl rounded-[1.5rem] bg-[#2a211c] px-6 py-7 text-[#f4eee7] md:px-8 md:py-8">
-      <p className="text-center text-lg font-semibold leading-9 text-[#fffaf4] md:text-xl">
+    <section className="mx-auto mt-12 max-w-7xl rounded-2xl bg-[#2a211c] p-10 text-[#f4eee7]">
+      <p className="text-center text-xl font-semibold leading-10 text-[#fffaf4]">
         给 VLA 添加记忆系统，才能让它真正理解和完成长程任务。
       </p>
     </section>

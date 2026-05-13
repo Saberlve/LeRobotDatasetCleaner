@@ -19,26 +19,26 @@ export function MethodPage({ page }: StoryPageProps) {
 
   return (
     <StoryShell page={page}>
-      <section className="mx-auto max-w-7xl">
+      <section className="mx-auto max-w-7xl pb-12 pt-8">
         <PageKicker page={page} label="方法结构" />
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-start">
-          <div>
-            <h1 className="max-w-xl text-3xl font-semibold leading-snug text-[#1f1a17] md:text-4xl">
-              {page.title}
-            </h1>
-            <p className="mt-4 max-w-xl text-lg leading-8 text-[#3a3029]">
-              <MathText text={page.hook} />
-            </p>
-          </div>
-          <p className="max-w-2xl text-base leading-7 text-[#665c52] lg:pt-2">
-            <MathText text={page.summary} />
+        <div className="mt-6 border-b border-[#d8ccbb] pb-8">
+          <h1 className="text-4xl font-semibold leading-tight tracking-normal text-[#1f1a17] md:text-5xl md:leading-[1.1]">
+            {page.title}
+          </h1>
+        </div>
+        <div className="mt-8 grid gap-12 md:grid-cols-[1.2fr_1fr]">
+          <p className="text-xl leading-9 text-[#3a3029]">
+            <MathText text={page.hook} />
           </p>
+          <div className="text-base leading-8 text-[#665c52]">
+            <MathText text={page.summary} />
+          </div>
         </div>
       </section>
 
       <section className="mx-auto mt-8 max-w-7xl">
-        <div className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5 md:p-7">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end">
+        <div className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-end">
             <div>
               <p className="text-sm font-medium text-[#c15f3c]">
                 形式化 · 策略建模对比
@@ -243,11 +243,11 @@ export function MethodPage({ page }: StoryPageProps) {
             Extract · Aggregate · Inject
           </p>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
           {methodStages.map((stage, index) => (
             <article
               key={stage.title}
-              className="rounded-[1.25rem] bg-[#2a211c] p-6 text-[#f4eee7]"
+              className="rounded-2xl bg-[#2a211c] p-8 text-[#f4eee7] shadow-lg ring-1 ring-[#2c2421]/5"
             >
               <div className="flex items-baseline justify-between">
                 <p className="font-mono text-xs text-[#f0cbb8]">0{index + 1}</p>
@@ -267,9 +267,9 @@ export function MethodPage({ page }: StoryPageProps) {
       </section>
 
       {architectureFigure ? (
-        <section className="mx-auto mt-8 grid max-w-7xl gap-5 lg:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] lg:items-start">
-          <figure className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4]">
-            <div className="flex flex-wrap items-baseline justify-between gap-3 px-6 pt-6">
+        <section className="mx-auto mt-12 grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)] lg:items-start">
+          <figure className="overflow-hidden rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] shadow-sm ring-1 ring-[#2c2421]/5">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 px-8 pt-8">
               <p className="text-sm font-medium text-[#c15f3c]">
                 {architectureFigure.title}
               </p>
@@ -278,7 +278,7 @@ export function MethodPage({ page }: StoryPageProps) {
               </p>
             </div>
             {architectureFigure.src ? (
-              <div className="mt-5 bg-[#efe6d9]">
+              <div className="mt-6 bg-[#f8f3ea]">
                 <img
                   src={architectureFigure.src}
                   alt={architectureFigure.title}
@@ -286,20 +286,20 @@ export function MethodPage({ page }: StoryPageProps) {
                 />
               </div>
             ) : null}
-            <figcaption className="border-t border-[#d8ccbb] px-6 py-4">
+            <figcaption className="border-t border-[#e8e0d5] px-8 py-5">
               <p className="text-sm leading-7 text-[#665c52]">
                 {architectureFigure.caption}
               </p>
             </figcaption>
           </figure>
 
-          <aside className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
+          <aside className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
             <p className="text-sm font-medium text-[#c15f3c]">系统流程</p>
-            <div className="mt-4 grid gap-0">
+            <div className="mt-6 grid gap-0">
               {page.highlights.map((item, index) => (
                 <article
                   key={item}
-                  className="border-t border-[#d8ccbb] py-4 text-sm leading-7 text-[#3a3029]"
+                  className="border-t border-[#e8e0d5] py-5 text-sm leading-7 text-[#3a3029]"
                 >
                   <span className="mb-2 block text-xs font-semibold text-[#c15f3c]">
                     0{index + 1}
@@ -312,20 +312,20 @@ export function MethodPage({ page }: StoryPageProps) {
         </section>
       ) : null}
 
-      <section className="mx-auto mt-8 grid max-w-7xl gap-5 lg:grid-cols-2">
-        <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
+      <section className="mx-auto mt-12 grid max-w-7xl gap-8 lg:grid-cols-2">
+        <article className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
           <p className="text-sm font-medium text-[#c15f3c]">
             实现细节 · 块级因果掩码
           </p>
-          <div className="mt-5">
+          <div className="mt-8">
             <BlockCausalMaskDiagram />
           </div>
         </article>
-        <article className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
+        <article className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
           <p className="text-sm font-medium text-[#c15f3c]">
             实现细节 · 连续回合采样
           </p>
-          <div className="mt-5">
+          <div className="mt-8">
             <SamplingComparisonAnimation />
           </div>
         </article>

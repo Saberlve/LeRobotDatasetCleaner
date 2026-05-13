@@ -46,7 +46,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
     title: "缓存上下文记忆",
     badge: "Cache",
     caption:
-      "历史帧的键值缓存直接拼入当前帧的 VLM 前缀，实现路径最短，但前缀长度随历史窗口线性增长。",
+      "历史帧的键值缓存直接拼入当前帧的 VLM 前缀，但没有进行时序聚合，",
     steps: [
       {
         label: "当前观测",
@@ -79,7 +79,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
     title: "压缩式上下文记忆",
     badge: "Comp",
     caption:
-      "每帧提取记忆词元输出，经轻量级 MemoryModule 聚合成固定数量的记忆表示。",
+      "每帧提取记忆词元输出，经记忆模块聚合成固定数量的记忆表示，但是直接拼接到 VLM 嵌入后",
     steps: [
       {
         label: "Moment Tokens",
@@ -148,7 +148,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
     title: "门控交叉注意力",
     badge: "GCA",
     caption:
-      "以动作专家的隐藏状态查询压缩后的历史记忆，经门控残差按需注入，记忆通道与 VLM 主路径保持解耦。",
+      "以动作的隐藏状态查询压缩后的历史记忆，通过门控残差注入。",
     steps: [
       {
         label: "HistoryCache",

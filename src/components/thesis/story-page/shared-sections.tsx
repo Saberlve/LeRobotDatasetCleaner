@@ -21,15 +21,15 @@ export function SplitNarrative({
   label: string;
 }) {
   return (
-    <section className="mx-auto mt-12 max-w-7xl">
+    <section className="mx-auto mt-16 max-w-7xl">
       <p className="text-sm font-medium text-[#c15f3c]">{label}</p>
-      <div className="mt-5 grid gap-x-10 gap-y-0 md:grid-cols-2">
+      <div className="mt-8 grid gap-x-16 gap-y-0 md:grid-cols-2">
         {page.highlights.map((item, index) => (
           <article
             key={item}
-            className="border-t border-[#d8ccbb] py-5 text-base leading-8 text-[#3a3029]"
+            className="border-t border-[#e8e0d5] py-6 text-base leading-8 text-[#3a3029]"
           >
-            <span className="mb-3 block text-sm font-semibold text-[#c15f3c]">
+            <span className="mb-4 block text-sm font-semibold text-[#c15f3c]">
               0{index + 1}
             </span>
             <MathText text={item} />
@@ -73,16 +73,16 @@ export function FigureEvidence({ page }: StoryPageProps) {
 function FigureCard({ figure }: { figure: ThesisFigure }) {
   return (
     <figure
-      className={`overflow-hidden rounded-[1rem] border border-[#d8ccbb] bg-[#fffaf4] ${
+      className={`overflow-hidden rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] shadow-sm ring-1 ring-[#2c2421]/5 ${
         figure.layout === "wide" ? "lg:col-span-2" : ""
       }`}
     >
-      <div className="bg-[#efe6d9] p-2">
+      <div className="bg-[#f8f3ea] p-3">
         {figure.src ? (
           <img
             src={figure.src}
             alt={figure.title}
-            className={`w-full rounded-[0.75rem] object-contain ${
+            className={`w-full rounded-xl object-contain ${
               figure.layout === "wide"
                 ? "max-h-[360px]"
                 : figure.layout === "portrait"
@@ -92,7 +92,7 @@ function FigureCard({ figure }: { figure: ThesisFigure }) {
           />
         ) : null}
       </div>
-      <figcaption className="border-t border-[#d8ccbb] px-4 py-3">
+      <figcaption className="border-t border-[#e8e0d5] px-6 py-4">
         <p className="text-sm font-semibold leading-6 text-[#2a211c]">
           {figure.title}
         </p>
@@ -110,15 +110,15 @@ export function BenchmarkSection({
   section: ThesisBenchmarkSection;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-5">
-      <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
+    <section className="rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
+      <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
         <div>
           <p className="text-sm font-medium text-[#c15f3c]">{section.kicker}</p>
           <h2 className="mt-3 text-3xl font-semibold text-[#2a211c]">
             {section.name}
           </h2>
         </div>
-        <div className="space-y-3 text-base leading-8 text-[#665c52]">
+        <div className="space-y-4 text-base leading-8 text-[#665c52]">
           {section.intro.map((item) => (
             <p key={item}>{item}</p>
           ))}
@@ -127,7 +127,7 @@ export function BenchmarkSection({
       <VideoGrid section={section} />
       {section.name === "SimplerEnv WidowX" && <SimplerEnvSuccessRateCharts />}
       {section.table ? (
-        <div className="mt-5">
+        <div className="mt-8">
           <BenchmarkTable table={section.table} />
         </div>
       ) : null}
@@ -138,14 +138,14 @@ export function BenchmarkSection({
 function VideoGrid({ section }: { section: ThesisBenchmarkSection }) {
   return (
     <div
-      className={`mt-6 grid gap-4 ${
+      className={`mt-8 grid gap-4 ${
         section.videoColumns === 4 ? "lg:grid-cols-4" : "lg:grid-cols-1"
       }`}
     >
       {section.videos.map((video) => (
         <article
           key={video.src}
-          className="overflow-hidden rounded-2xl border border-[#d8ccbb] bg-[#f8f3ea]"
+          className="overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f8f3ea]"
         >
           <video
             src={video.src}
@@ -158,7 +158,7 @@ function VideoGrid({ section }: { section: ThesisBenchmarkSection }) {
             preload="metadata"
             className="aspect-video w-full bg-[#2a211c] object-cover"
           />
-          <div className="p-4">
+          <div className="p-5">
             <p className="font-semibold text-[#2a211c]">{video.title}</p>
             <p className="mt-1 text-sm text-[#665c52]">{video.caption}</p>
           </div>
@@ -178,8 +178,8 @@ export function BenchmarkTables({
   }
 
   return (
-    <section className="mx-auto mt-10 max-w-7xl border-t border-[#d8ccbb] pt-6">
-      <div className="grid gap-5">
+    <section className="mx-auto mt-12 max-w-7xl border-t border-[#d8ccbb] pt-8">
+      <div className="grid gap-8">
         {tables.map((table) => (
           <BenchmarkTable key={table.title} table={table} />
         ))}
@@ -190,17 +190,17 @@ export function BenchmarkTables({
 
 function BenchmarkTable({ table }: { table: ThesisBenchmarkTable }) {
   return (
-    <article className="overflow-hidden rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4]">
-      <div className="px-5 py-4">
+    <article className="overflow-hidden rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] shadow-sm ring-1 ring-[#2c2421]/5">
+      <div className="px-8 py-6">
         <h2 className="text-xl font-semibold text-[#2a211c]">{table.title}</h2>
         <p className="mt-2 text-sm leading-7 text-[#665c52]">{table.caption}</p>
       </div>
-      <div className="overflow-x-auto border-t border-[#d8ccbb]">
-        <table className="min-w-[720px] w-full border-collapse text-left text-sm">
-          <thead className="bg-[#2a211c] text-[#f4eee7]">
+      <div className="overflow-x-auto border-t border-[#e8e0d5]">
+        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+          <thead className="bg-[#f8f3ea]/50 text-[#2c2421]">
             <tr>
               {table.columns.map((column) => (
-                <th key={column} className="px-5 py-3 font-medium">
+                <th key={column} className="px-8 py-4 font-semibold text-[#2a211c]">
                   {column}
                 </th>
               ))}
@@ -210,12 +210,12 @@ function BenchmarkTable({ table }: { table: ThesisBenchmarkTable }) {
             {table.rows.map((row) => (
               <tr
                 key={row.join("-")}
-                className="border-t border-[#d8ccbb] text-[#3a3029]"
+                className="border-t border-[#e8e0d5] text-[#3a3029] transition-colors hover:bg-[#f8f3ea]/20"
               >
                 {row.map((cell, index) => (
                   <td
                     key={`${cell}-${index}`}
-                    className="px-5 py-4 align-top leading-6"
+                    className="px-8 py-5 align-top leading-6"
                   >
                     {cell}
                   </td>
@@ -239,12 +239,12 @@ export function PlatformCallout({
   }
 
   return (
-    <section className="mx-auto mt-10 max-w-7xl rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4] p-6">
-      <div className="grid gap-5 lg:grid-cols-[320px_1fr_auto] lg:items-center">
+    <section className="mx-auto mt-12 max-w-7xl rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
+      <div className="grid gap-8 lg:grid-cols-[320px_1fr_auto] lg:items-center">
         <img
           src={platform.image}
           alt={platform.title}
-          className="aspect-video w-full rounded-[1rem] border border-[#d8ccbb] bg-[#f8f3ea] object-cover"
+          className="aspect-video w-full rounded-xl border border-[#e8e0d5] bg-[#f8f3ea] object-cover"
         />
         <div>
           <p className="text-sm font-medium text-[#c15f3c]">一体化平台入口</p>
@@ -254,11 +254,11 @@ export function PlatformCallout({
           <p className="mt-3 max-w-3xl text-sm leading-7 text-[#665c52]">
             {platform.caption}
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {platform.chips.map((chip) => (
               <span
                 key={chip}
-                className="rounded-full border border-[#d8ccbb] bg-[#f8f3ea] px-3 py-1 text-xs text-[#665c52]"
+                className="rounded-full border border-[#e8e0d5] bg-[#f8f3ea] px-4 py-1.5 text-xs font-medium text-[#665c52]"
               >
                 {chip}
               </span>
