@@ -115,7 +115,7 @@ export function SuccessRateBarChart({
 // | π₀.5-Cache | 33.3 | 33.3 | 12.5 | 45.8 | 31.2 |
 // | π₀.5-Comp | 66.7 | 58.3 | 62.5 | 58.3 | 61.5 |
 // | π₀.5-Norm | 54.2 | 41.7 | 45.8 | 87.5 | 57.3 |
-// | 本文 π₀.5-GCA | 62.5 | 50.0 | 62.5 | 83.3 | 64.6 |
+// | 本文 π₀.5-门控交叉注意力 | 62.5 | 50.0 | 62.5 | 83.3 | 64.6 |
 
 const MODELS = [
   "RT-1-X",
@@ -130,7 +130,7 @@ const MODELS = [
   "π₀.5-Cache",
   "π₀.5-Comp",
   "π₀.5-Norm",
-  "本文 π₀.5-GCA",
+  "本文 π₀.5-门控交叉注意力",
 ];
 
 const spoonData: SuccessRateData[] = [
@@ -146,7 +146,7 @@ const spoonData: SuccessRateData[] = [
   { name: "π₀.5-Cache", value: 33.3, variant: "pi05" },
   { name: "π₀.5-Comp", value: 66.7, variant: "pi05" },
   { name: "π₀.5-Norm", value: 54.2, variant: "pi05" },
-  { name: "本文 π₀.5-GCA", value: 62.5, isMain: true },
+  { name: "本文 π₀.5-门控交叉注意力", value: 62.5, isMain: true },
 ];
 
 const carrotData: SuccessRateData[] = [
@@ -162,7 +162,7 @@ const carrotData: SuccessRateData[] = [
   { name: "π₀.5-Cache", value: 33.3, variant: "pi05" },
   { name: "π₀.5-Comp", value: 58.3, variant: "pi05" },
   { name: "π₀.5-Norm", value: 41.7, variant: "pi05" },
-  { name: "本文 π₀.5-GCA", value: 50.0, isMain: true },
+  { name: "本文 π₀.5-门控交叉注意力", value: 50.0, isMain: true },
 ];
 
 const stackData: SuccessRateData[] = [
@@ -178,7 +178,7 @@ const stackData: SuccessRateData[] = [
   { name: "π₀.5-Cache", value: 12.5, variant: "pi05" },
   { name: "π₀.5-Comp", value: 62.5, variant: "pi05" },
   { name: "π₀.5-Norm", value: 45.8, variant: "pi05" },
-  { name: "本文 π₀.5-GCA", value: 62.5, isMain: true },
+  { name: "本文 π₀.5-门控交叉注意力", value: 62.5, isMain: true },
 ];
 
 const eggplantData: SuccessRateData[] = [
@@ -194,7 +194,7 @@ const eggplantData: SuccessRateData[] = [
   { name: "π₀.5-Cache", value: 45.8, variant: "pi05" },
   { name: "π₀.5-Comp", value: 58.3, variant: "pi05" },
   { name: "π₀.5-Norm", value: 87.5, variant: "pi05" },
-  { name: "本文 π₀.5-GCA", value: 83.3, isMain: true },
+  { name: "本文 π₀.5-门控交叉注意力", value: 83.3, isMain: true },
 ];
 
 const avgData: SuccessRateData[] = [
@@ -210,7 +210,7 @@ const avgData: SuccessRateData[] = [
   { name: "π₀.5-Cache", value: 31.2, variant: "pi05" },
   { name: "π₀.5-Comp", value: 61.5, variant: "pi05" },
   { name: "π₀.5-Norm", value: 57.3, variant: "pi05" },
-  { name: "本文 π₀.5-GCA", value: 64.6, isMain: true },
+  { name: "本文 π₀.5-门控交叉注意力", value: 64.6, isMain: true },
 ];
 
 export function SimplerEnvSuccessRateCharts() {

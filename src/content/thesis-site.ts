@@ -81,7 +81,7 @@ export const thesisMetrics = [
   {
     value: "4 种",
     label: "记忆方案实现并对比",
-    caption: "Cache / Comp / Norm / GCA",
+    caption: "Cache / Comp / Norm / 门控交叉注意力",
   },
   {
     value: "3 个",
@@ -108,7 +108,7 @@ export const thesisMetrics = [
 export const thesisResultPanels = [
   {
     title: "SimplerEnv 完整对比",
-    caption: "四类短程桌面任务上，GCA 以 64.6% 平均成功率建立可信优势。",
+    caption: "四类短程桌面任务上，门控交叉注意力 以 64.6% 平均成功率建立可信优势。",
   },
   {
     title: "RMBench Swap Blocks",
@@ -194,7 +194,7 @@ export const thesisPages: ThesisStoryPage[] = [
       image: "/images/thesis/platform-training-memory.png",
     },
     takeaway:
-      "GCA 的关键组合是可学习记忆词元、块级因果聚合和动作专家端后注入。",
+      "门控交叉注意力 的关键组合是可学习记忆词元、块级因果聚合和动作专家端后注入。",
   },
   {
     href: "/memory-systems",
@@ -204,7 +204,7 @@ export const thesisPages: ThesisStoryPage[] = [
     title: "其他记忆系统架构探索",
     hook: "本节从结构角度对比四种方案，重点关注注入位置和耦合方式对系统的影响，实验数据作为最终的验证依据。",
     summary:
-      "Cache、Comp、Norm 和 GCA 这四种方案试图回答同一个问题：历史信息应当放在模型的哪个位置。结构层面的对比分析有助于排除显存开销、推理时延、骨干网络侵入度和注意力竞争等潜在风险，从而让主结果页的实验数据具有更清晰的解释。",
+      "Cache、Comp、Norm 和 门控交叉注意力 这四种方案试图回答同一个问题：历史信息应当放在模型的哪个位置。结构层面的对比分析有助于排除显存开销、推理时延、骨干网络侵入度和注意力竞争等潜在风险，从而让主结果页的实验数据具有更清晰的解释。",
     highlights: [],
     media: ["三种融合方式结构对比", "四方案结构表", "关键判断"],
     figures: [
@@ -224,7 +224,7 @@ export const thesisPages: ThesisStoryPage[] = [
       },
       {
         src: "/images/thesis/adaptive-normalization.jpg",
-        title: "自适应归一化",
+        title: "自适应层归一化",
         caption:
           "将压缩后的历史表示转换为归一化参数，对中间特征进行仿射调制，推理时额外开销低，但注入位置与 VLM 内部结构绑定。",
         layout: "portrait",
@@ -242,7 +242,7 @@ export const thesisPages: ThesisStoryPage[] = [
       caption: "四种方案的训练入口和 memory 配置集中在同一个工作区。",
       href: "/evaluation/training",
       action: "打开训练配置",
-      chips: ["Cache", "Comp", "Norm", "GCA"],
+      chips: ["Cache", "Comp", "Norm", "门控交叉注意力"],
       image: "/images/thesis/platform-baseline.png",
     },
     takeaway:
@@ -254,7 +254,7 @@ export const thesisPages: ThesisStoryPage[] = [
     shortLabel: "P4",
     eyebrow: "04 / 06",
     title: "仿真与真机实验结果",
-    hook: "SimplerEnv 平均成功率 64.6% 超越全部对比方法；RMBench 长程任务 20.0%，相对基线提升 5–10 倍；ACONE 真机 14 维控制自由度中 12 维误差低于 0.1。",
+    hook: "SimplerEnv 平均成功率 64.6% 超越全部对比方法；RMBench 长程任务 20.0%，相对基线提升 5–10 倍；ACONE 真机 14 维控制自由度中 13 维误差低于 0.1。",
     summary: "",
     highlights: [
       "SimplerEnv WidowX 在抓取、放置、堆叠、入篮四类桌面操作上平均成功率达到 64.6%，超越所有对比方法。",
@@ -341,7 +341,7 @@ export const thesisPages: ThesisStoryPage[] = [
         videos: [
           {
             title: "RMBench 交换方块",
-            caption: "完整交换 rollout",
+            caption: "模型通过观察历史动作，识别出交换任务阶段并执行抓取。",
             src: "/video/rmbench/nice.mp4",
             poster:
               "/images/thesis/video_storyboards/rmbench_nice_storyboard.png",
@@ -349,12 +349,12 @@ export const thesisPages: ThesisStoryPage[] = [
         ],
         table: {
           title: "交换方块成功率对比",
-          caption: "GCA 在强记忆依赖任务上相对于基线方法取得了显著优势。",
-          columns: ["方法", "成功率", "对比 GCA"],
+          caption: "门控交叉注意力 在强记忆依赖任务上相对于基线方法取得了显著优势。",
+          columns: ["方法", "成功率", "对比 门控交叉注意力"],
           rows: [
             ["Diffusion Policy", "2.0%", "10x"],
             ["π0.5-LoRA", "4.0%", "5x"],
-            ["本文 π-GCA", "20.0%", ""],
+            ["本文 π-门控交叉注意力", "20.0%", ""],
           ],
         },
       },
@@ -384,30 +384,25 @@ export const thesisPages: ThesisStoryPage[] = [
       image: "/images/thesis/platform-replay-simpler.png",
     },
     takeaway:
-      "主结果通过任务介绍、成功案例和定量对比形成完整证据链：GCA 在常规短程任务上保持竞争力，在长程记忆任务上显著超越现有方法。",
+      "主结果通过任务介绍、成功案例和定量对比形成完整证据链：门控交叉注意力 在常规短程任务上保持竞争力，在长程记忆任务上显著超越现有方法。",
   },
   {
     href: "/analysis",
     label: "分析实验",
     shortLabel: "P5",
     eyebrow: "05 / 06",
-    title: "消融 + 注意力捷径分析：为什么 GCA 赢？",
+    title: "消融与分析实验",
     hook: "聚合层决定长程整合能力，注入位置决定是否抢走图像注意力。",
     summary:
-      "分数只说明结果，消融和注意力分析解释机制。去掉聚合 Transformer 后，长程任务几乎塌方；Comp 前缀方案会把动作专家的注意力大量引向记忆，形成注意力捷径。",
-    highlights: [
-      "完整 GCA 在 SimplerEnv 为 64.6%，去掉聚合层后降到 42.7%。",
-      "RMBench 从 20.0% 降到 0.8%，说明聚合层承担了跨时间步的信息整理与压缩。",
-      "不同融合方式对比中，GCA 在稳定性上优于 Norm，在性能上远超 Cache。",
-      "Comp 压缩前缀让记忆占据 89.2% 注意力，形成「注意力捷径」，削弱了对当前观测的感知。",
-    ],
-    media: ["聚合消融", "注意力分布", "时间步稳定性"],
+      "分数只说明结果，消融和注意力分析解释机制。去掉聚合 Transformer 后，长程任务几乎塌方；Comp 前缀方案会把动作专家的注意力大量引向记忆，形成压缩式上下文记忆的注意力捷径。",
+    highlights: [],
+    media: ["记忆聚合模块的作用", "注意力分布", "时间步稳定性"],
     benchmarkTables: [
       {
-        title: "消融 1：去除记忆聚合模块",
+        title: "消融实验：记忆聚合模块的作用：去除记忆聚合模块",
         caption:
-          "去掉跨时间聚合后，依赖空间关系和阶段判断的任务（绿块、茄子）下降最剧烈。",
-        columns: ["任务", "完整 GCA", "去除聚合模块", "变化"],
+          "",
+        columns: ["任务", "具有聚合模块", "去除聚合模块", "变化"],
         rows: [
           ["将勺子放到毛巾上", "62.5%", "66.7%", "+4.2%"],
           ["将胡萝卜放到盘子上", "50.0%", "58.3%", "+8.3%"],
@@ -416,31 +411,6 @@ export const thesisPages: ThesisStoryPage[] = [
           ["平均成功率", "64.6%", "42.7%", "-21.9%"],
           ["RMBench (长程)", "20.0%", "0.8%", "-19.2%"],
         ],
-      },
-      {
-        title: "消融 2：不同记忆融合方式对比",
-        caption: "在 SimplerEnv 四个任务上的完整成功率（%）对比。",
-        columns: ["方法", "勺子", "胡萝卜", "绿块", "茄子", "平均"],
-        rows: [
-          ["-Cache", "33.3", "33.3", "12.5", "45.8", "31.2"],
-          ["-Comp", "66.7", "58.3", "62.5", "58.3", "61.5"],
-          ["-Norm", "54.2", "41.7", "45.8", "87.5", "57.3"],
-          ["-GCA (本文)", "62.5", "50.0", "62.5", "83.3", "64.6"],
-        ],
-      },
-    ],
-    figures: [
-      {
-        src: "/images/thesis/3-7.png",
-        title: "注意力对比图",
-        caption:
-          "无记忆基线主要关注图像与语言；Comp 加入后，动作专家注意力被记忆前缀截走。",
-      },
-      {
-        src: "/images/thesis/3-8.png",
-        title: "注意力随时间步变化",
-        caption:
-          "Comp 的记忆注意力在多个时间步保持高占比，说明捷径不是单帧偶然现象。",
       },
     ],
     platform: {
@@ -452,22 +422,22 @@ export const thesisPages: ThesisStoryPage[] = [
       image: "/images/thesis/platform-config-summary.png",
     },
     takeaway:
-      "GCA 稳定胜出的机制是两点：聚合模块承担跨时间整合，后注入避免记忆抢走原有图像语言通道。",
+      "门控交叉注意力 稳定胜出的机制是两点：聚合模块承担跨时间整合，后注入避免记忆抢走原有图像语言通道。",
   },
   {
     href: "/conclusion",
     label: "总结",
     shortLabel: "P6",
     eyebrow: "06 / 06",
-    title: "四大贡献 · 一处洞察 · 一套平台",
-    hook: "方法、实验、机制分析和工程平台形成完整闭环。",
+    title: "核心方法、实验结果与工程闭环",
+    hook: "本文针对单帧 VLA 的记忆缺失问题，实现了门控交叉注意力记忆系统，并通过仿真与真机实验验证了其在长程任务中的有效性。",
     summary:
-      "本文把 POMDP 压缩、三步走 GCA、连续回合采样、三类评测和一体化平台串到同一条证据链里。最后的结论不是单个模块有效，而是记忆通道应当以解耦方式服务动作决策。",
+      "针对主流 VLA 模型无法利用历史信息完成长程任务的局限，本文设计并实现了一套可插拔的记忆系统。该系统采用记忆词元提取、跨时刻聚合与门控注入的三步走架构，通过与缓存式、压缩式、调制式等方案的对比实验，确定了后注入解耦架构的最优性。实验结果涵盖了从算法有效性验证、消融实验到一体化工程平台的完整闭环。",
     highlights: [
-      "方法贡献：可学习记忆词元、块级因果聚合和门控交叉注入构成轻量可插拔记忆系统。",
-      "实验贡献：SimplerEnv 64.6%、RMBench 20.0%、ACONE 12/14 维误差可控，覆盖仿真和真机。",
-      "关键洞察：Comp 的注意力捷径说明记忆不能简单塞进 VLM的视觉/语言表示，后注入更稳。",
-      "工程贡献：数据查看、训练配置、评测回放和本地清洗工具组成一体化研究平台。",
+      "方法实现：实现了由可学习记忆词元、块级因果聚合模块与门控交叉注意力组成的通用记忆通道。",
+      "实验数据：在 SimplerEnv 建立 64.6% 成功率基准，在 RMBench 交换方块长程任务中取得 20.0% 成功率。",
+      "机制发现：通过对比实验确认了压缩式上下文记忆的注意力捷径问题，并验证了后注入架构对决策路径的稳定性。",
+      "平台支撑：完成了集数据清洗、训练配置与评测回放于一体的本地化研究平台建设。",
     ],
     media: ["四大贡献", "平台总览", "下一步工作"],
     platform: {
@@ -478,10 +448,9 @@ export const thesisPages: ThesisStoryPage[] = [
       chips: ["Overview", "Data", "Training", "Replay"],
       image: "/images/thesis/platform-overview.png",
     },
-    takeaway: "下一步会走向多模态记忆、小时级长时记忆和更多机器人平台接入。",
+    takeaway: "研究总结：记忆系统应以解耦通道方式服务于决策，在保证不侵入骨干的前提下提供长程历史支撑。",
   },
-];
-
+  ];
 export const thesisNavItems: ThesisNavItem[] = thesisPages.map((page) => ({
   href: page.href,
   label: page.label,

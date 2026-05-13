@@ -5,7 +5,7 @@ export function MathText({ text }: { text: string }) {
 
   // Split by common math symbols and VLA/VLM keywords
   const parts = text.split(
-    /(\$N\$|\$t\$|\$\\tau\s+\\le\s+t\$|\$\\tau\$|\$\\le\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-GCA|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
+    /(\$N\$|\$t\$|\$\\tau\s+\\le\s+t\$|\$\\tau\$|\$\\le\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-门控交叉注意力|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
   );
 
   return (
@@ -97,10 +97,10 @@ export function MathText({ text }: { text: string }) {
               <sub className="text-[0.7em] italic">θ</sub>
             </span>
           );
-        if (part === "π-GCA")
+        if (part === "π-门控交叉注意力")
           return (
             <span key={i} className="font-serif">
-              <span className="italic">π</span>-GCA
+              <span className="italic">π</span>-门控交叉注意力
             </span>
           );
         if (part === "ℝ^N")

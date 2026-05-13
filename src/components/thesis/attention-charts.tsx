@@ -23,7 +23,7 @@ const attentionDistributionData = [
     记忆: 0,
   },
   {
-    name: "加 Comp 压缩前缀",
+    name: "压缩式上下文记忆",
     图像: 6.9,
     语言: 3.8,
     记忆: 89.2,

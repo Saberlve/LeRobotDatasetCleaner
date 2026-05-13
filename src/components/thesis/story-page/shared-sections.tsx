@@ -22,6 +22,10 @@ export function SplitNarrative({
   page: ThesisStoryPage;
   label: string;
 }) {
+  if (!page.highlights.length) {
+    return null;
+  }
+
   return (
     <section className="mx-auto mt-16 max-w-7xl">
       <p className="text-sm font-medium text-[#c15f3c]">{label}</p>
@@ -185,15 +189,21 @@ function VideoGrid({ section }: { section: ThesisBenchmarkSection }) {
 
 export function BenchmarkTables({
   tables,
+  noBorder = false,
 }: {
   tables?: ThesisBenchmarkTable[];
+  noBorder?: boolean;
 }) {
   if (!tables?.length) {
     return null;
   }
 
   return (
-    <section className="mx-auto mt-12 max-w-7xl border-t border-[#d8ccbb] pt-8">
+    <section
+      className={`mx-auto ${
+        noBorder ? "mt-0" : "mt-12 border-t border-[#d8ccbb] pt-8"
+      } max-w-7xl`}
+    >
       <div className="grid gap-8">
         {tables.map((table) => (
           <BenchmarkTable key={table.title} table={table} />

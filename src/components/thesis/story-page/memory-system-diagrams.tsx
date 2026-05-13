@@ -93,7 +93,7 @@ function MemorySystemBlueprintCard({
             {diagram.badge === "Cache" ? <CacheContextDiagram /> : null}
             {diagram.badge === "Comp" ? <CompressedContextDiagram /> : null}
             {diagram.badge === "Norm" ? <AdaptiveNormDiagramClean /> : null}
-            {diagram.badge === "GCA" ? (
+            {diagram.badge === "门控交叉注意力" ? (
               <GatedCrossAttentionDiagramClean />
             ) : null}
           </div>

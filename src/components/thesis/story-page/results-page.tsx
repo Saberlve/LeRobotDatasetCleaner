@@ -217,7 +217,7 @@ function AconeRmseChart() {
           开环误差结果
         </p>
         <p className="mt-1 text-sm leading-6 text-[#665c52]">
-          各动作维度均方根误差，12 个维度低于 0.1，只有右手夹爪存在较大误差
+          各动作维度均方根误差，13个维度低于 0.1，只有右手夹爪存在较大误差
         </p>
       </div>
 

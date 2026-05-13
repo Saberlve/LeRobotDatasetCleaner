@@ -100,7 +100,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
     ],
   },
   {
-    title: "自适应归一化",
+    title: "自适应层归一化",
     badge: "Norm",
     caption:
       "记忆表示不进入输入序列，而是映射为调制向量，通过改变层归一化的输出来影响动作生成。",
@@ -133,7 +133,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
   },
   {
     title: "门控交叉注意力",
-    badge: "GCA",
+    badge: "门控交叉注意力",
     caption: "以动作的隐藏状态查询压缩后的历史记忆，通过门控残差注入。",
     steps: [
       {
@@ -165,14 +165,14 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
 ];
 
 export const contributionRows = [
-  ["方法", "POMDP 压缩 + 三步走 GCA", "Ch2"],
-  ["实验", "SimplerEnv 64.6% / RMBench 20.0%", "Ch3.1-3.3"],
-  ["洞察", "注意力捷径现象 + 后注入原则", "Ch3.4"],
-  ["工程", "数据、训练、评测一体化平台", "Ch4"],
+  ["方法设计", "通用记忆系统：提取-聚合-注入三步走策略", "Ch 02"],
+  ["实验验证", "性能飞跃：仿真 64.6% 建立基准，长程任务 5-10 倍提升", "Ch 04"],
+  ["机制洞察", "后注入原则：揭示注意力捷径，实现决策主路径解耦", "Ch 05"],
+  ["工程平台", "全栈平台：真机清洗、训练对比、评测回放一体化", "Ch 01-04"],
 ];
 
 export const nextSteps = [
-  "多模态记忆：视觉、触觉和语言联合压缩。",
-  "长时记忆：面向小时级 episode 的分层压缩。",
-  "平台扩展：接入更多机器人机型与评测基准。",
+  "多模态记忆融合：支持视觉、触觉与力觉的多源异构传感器时序记忆整合。",
+  "超长程任务演进：研究面向小时级作业任务的分层压缩与检索增强记忆 (RAG-VLA)。",
+  "跨平台迁移泛化：将通用记忆模块部署至更多机型，验证在大规模 VLM 骨干下的扩展性。",
 ];

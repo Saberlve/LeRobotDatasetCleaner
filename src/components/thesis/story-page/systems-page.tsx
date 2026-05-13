@@ -17,7 +17,7 @@ export function SystemsPage({ page }: StoryPageProps) {
         </div>
         <div className="mt-8 grid gap-12 md:grid-cols-[1.2fr_1fr]">
           <p className="text-xl leading-9 text-[#3a3029]">
-            除了门控交叉注意力，本课题还探索了缓存式上下文记忆、压缩式缓存式上下文记忆和自适应归一化记忆这三种不同的架构。
+            除了门控交叉注意力，本课题还探索了缓存式上下文记忆、压缩式缓存式上下文记忆和自适应层归一化记忆这三种不同的架构。
           </p>
           <div className="text-base leading-8 text-[#665c52]">
             针对记忆如何使用这一核心问题，它们分别代表了在模型中注入记忆的不同位置和方式，展示了在长程任务中维持一致性的不同权衡。

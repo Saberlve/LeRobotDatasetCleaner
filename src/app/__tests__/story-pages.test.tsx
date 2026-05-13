@@ -51,7 +51,7 @@ describe("story pages", () => {
     expect(pages[1]).toContain("让VLA不再「只看当下」");
     expect(pages[2]).toContain("同一个动机，四种实现：哪种最合理？");
     expect(pages[3]).toContain("仿真与真机实验结果");
-    expect(pages[4]).toContain("消融 + 注意力捷径分析：为什么 GCA 赢？");
+    expect(pages[4]).toContain("消融与分析实验");
     expect(pages[5]).toContain("四大贡献 · 一处洞察 · 一套平台");
 
     for (const html of pages) {
@@ -99,7 +99,7 @@ describe("story pages", () => {
     expect(html).not.toContain("Cache 将历史帧的键值缓存作为前缀拼入");
     expect(html).not.toContain("Comp 将历史压缩为固定数量的记忆词元");
     expect(html).not.toContain("Norm 将压缩后的历史表示映射为层归一化");
-    expect(html).not.toContain("GCA 将注入点移至动作专家一侧");
+    expect(html).not.toContain("门控交叉注意力 将注入点移至动作专家一侧");
   });
 
   test("places memory access paths above the systems comparison table", () => {
@@ -163,8 +163,93 @@ describe("story pages", () => {
     expect(systemsHtml).toContain("四种 memory 接入路径");
     expect(systemsHtml).not.toContain('src="/images/thesis/2-5.png"');
 
-    expect(analysisHtml).toContain("注意力对比图");
-    expect(analysisHtml).toContain("注意力随时间步变化");
+    expect(analysisHtml).not.toContain("注意力对比图");
+    expect(analysisHtml).not.toContain("注意力随时间步变化");
+    expect(analysisHtml).not.toContain(
+      "无记忆基线主要关注图像与语言；Comp 加入后，动作专家注意力被记忆前缀截走。",
+    );
+    expect(analysisHtml).not.toContain(
+      "Comp 的记忆注意力在多个时间步保持高占比，说明捷径不是单帧偶然现象。",
+    );
+    expect(analysisHtml).not.toContain('src="/images/thesis/3-7.png"');
+    expect(analysisHtml).not.toContain('src="/images/thesis/3-8.png"');
+  });
+
+  test("omits attention evidence figures from the analysis page", () => {
+    const html = renderToStaticMarkup(<AnalysisPage />);
+
+    expect(html).not.toContain("注意力对比图");
+    expect(html).not.toContain("注意力随时间步变化");
+    expect(html).not.toContain(
+      "无记忆基线主要关注图像与语言；Comp 加入后，动作专家注意力被记忆前缀截走。",
+    );
+    expect(html).not.toContain(
+      "Comp 的记忆注意力在多个时间步保持高占比，说明捷径不是单帧偶然现象。",
+    );
+    expect(html).not.toContain('src="/images/thesis/3-7.png"');
+    expect(html).not.toContain('src="/images/thesis/3-8.png"');
+  });
+
+  test("summarizes the four analysis sections below the page title", () => {
+    const html = renderToStaticMarkup(<AnalysisPage />);
+
+    expect(html).toContain("记忆聚合模块的作用");
+    expect(html).toContain("长程整合");
+    expect(html).toContain("压缩式上下文记忆的注意力捷径");
+    expect(html).toContain("连续回合采样 vs 固定窗口采样");
+    expect(html).toContain("自适应层归一化记忆对动作的扰动分析");
+    expect(html).toContain("自适应层归一化在 VLM 骨干 18 层反复调制");
+    expect(html).toContain("font-mono text-5xl");
+  });
+
+  test("introduces what the attention distribution and temporal stability figures diagnose", () => {
+    const html = renderToStaticMarkup(<AnalysisPage />);
+
+    expect(html).toContain("压缩式上下文记忆的捷径诊断");
+    expect(html).toContain("Figure 3-7, 3-8");
+    expect(html).not.toContain("注意力分布图回答的是「模型在看哪里」");
+    expect(html).not.toContain(
+      "时序稳定性图回答的是「这种偏移是不是持续存在」",
+    );
+  });
+
+  test("omits the analysis key clue highlight block", () => {
+    const html = renderToStaticMarkup(<AnalysisPage />);
+
+    expect(html).not.toContain("关键线索");
+    expect(html).not.toContain(
+      "具有聚合模块 在 SimplerEnv 为 64.6%，去掉聚合层后降到 42.7%。",
+    );
+    expect(html).not.toContain(
+      "RMBench 从 20.0% 降到 0.8%，说明聚合层承担了跨时间步的信息整理与压缩。",
+    );
+    expect(html).not.toContain(
+      "不同融合方式对比中，门控交叉注意力 在稳定性上优于 Norm，在性能上远超 Cache。",
+    );
+    expect(html).not.toContain(
+      "Comp 压缩前缀让记忆占据 89.2% 注意力，形成「压缩式上下文记忆的注意力捷径」，削弱了对当前观测的感知。",
+    );
+  });
+
+  test("sizes the 自适应层归一化and 门控交叉注意力 architecture image like the aggregation ablation diagram", () => {
+    const html = renderToStaticMarkup(<AnalysisPage />);
+
+    expect(html).toContain(
+      '<div class="mx-auto max-w-4xl"><img src="/images/thesis/normalization-comparison.jpg"',
+    );
+  });
+
+  test("places continuous sampling before the attention shortcut on the analysis page", () => {
+    const html = renderToStaticMarkup(<AnalysisPage />);
+
+    expect(html.indexOf("连续回合采样 vs 固定窗口采样")).toBeLessThan(
+      html.indexOf("压缩式上下文记忆的注意力捷径"),
+    );
+    expect(
+      html.indexOf("为什么「连续回合采样」是记忆注入的关键？"),
+    ).toBeLessThan(
+      html.indexOf("注意力分布对比"),
+    );
   });
 
   test("explains the baseline VLA path as single-frame, component-shaped, and memory-free", () => {
@@ -295,7 +380,7 @@ describe("story pages", () => {
 
     expect(html).toContain("缓存上下文记忆");
     expect(html).toContain("压缩式上下文记忆");
-    expect(html).toContain("自适应归一化");
+    expect(html).toContain("自适应层归一化");
     expect(html).toContain("门控交叉注意力");
     expect(html).toContain("记忆缓存库");
     expect(html).toContain("拼接记忆缓存");
@@ -493,8 +578,8 @@ describe("story pages", () => {
     expect(resultsHtml).toContain(
       'poster="/images/thesis/video_storyboards/rmbench_nice_storyboard.png"',
     );
-    expect(analysisHtml).toContain('src="/images/thesis/3-7.png"');
-    expect(analysisHtml).toContain('src="/images/thesis/3-8.png"');
+    expect(analysisHtml).not.toContain('src="/images/thesis/3-7.png"');
+    expect(analysisHtml).not.toContain('src="/images/thesis/3-8.png"');
   });
 
   test("does not render text-only evidence placeholders without images", () => {
