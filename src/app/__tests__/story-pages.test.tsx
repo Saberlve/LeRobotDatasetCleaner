@@ -81,6 +81,18 @@ describe("story pages", () => {
     expect(hasDuplicateKeyWarning).toBe(false);
   });
 
+  test("places memory access paths above the systems comparison table", () => {
+    const html = renderToStaticMarkup(<MemorySystemsPage />);
+    const comparisonHeaderIndex = html.indexOf(">维度</th>");
+
+    expect(html.indexOf("四种 memory 接入路径")).toBeLessThan(
+      comparisonHeaderIndex,
+    );
+    expect(html.indexOf("从历史保存到动作注入")).toBeLessThan(
+      comparisonHeaderIndex,
+    );
+  });
+
   test("uses audience-facing defense copy instead of task-intent notes", () => {
     const html = [
       renderToStaticMarkup(<WhyMemoryPage />),

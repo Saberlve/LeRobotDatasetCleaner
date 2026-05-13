@@ -14,14 +14,14 @@ export function MemorySystemDiagramGrid() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-[#c15f3c]">
-            四种 memory 接入路径
+            四种记忆接入方式
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-[#2a211c]">
-            从历史保存到动作注入
+            从历史缓存到动作注入
           </h2>
         </div>
         <p className="max-w-xl text-sm leading-7 text-[#665c52]">
-          每张图只画一条真实代码路径：缓存什么、在哪里压缩、最后如何进入动作预测。
+          每个方案对应一条完整的数据流路径：缓存什么、在哪压缩、如何注入动作生成。
         </p>
       </div>
 
@@ -670,83 +670,83 @@ function GatedCrossAttentionDiagramClean() {
             </defs>
             <rect width="620" height="420" fill="#eef5fb" />
             <path
-              d="M110 330 V40 H202"
+              d="M510 330 V40 H418"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M215 76 V53"
+              d="M405 76 V53"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M215 165 V134"
+              d="M405 165 V134"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M215 330 V191"
+              d="M405 330 V191"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M215 27 V15"
+              d="M405 27 V15"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M294 330 V208 H426 V185"
+              d="M326 330 V208 H194 V185"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M461 330 V185"
+              d="M159 330 V185"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
             <path
-              d="M360 177 H232"
+              d="M260 177 H388"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               markerEnd="url(#clean-gca-arrow)"
             />
-            <text x="360" y="202" textAnchor="middle" fontSize="15" fontWeight="700">
+            <text x="260" y="202" textAnchor="middle" fontSize="15" fontWeight="700">
               查询
             </text>
-            <text x="475" y="225" fontSize="15" fontWeight="700">
+            <text x="145" y="225" fontSize="15" fontWeight="700">
               键值
             </text>
-            <text x="295" y="170" fontSize="18">
+            <text x="325" y="170" fontSize="18">
               × γ
             </text>
             <circle
-              cx="215"
+              cx="405"
               cy="40"
               r="13"
               fill="#eef5fb"
               stroke="currentColor"
               strokeWidth="2"
             />
-            <text x="215" y="47" textAnchor="middle" fontSize="22">
+            <text x="405" y="47" textAnchor="middle" fontSize="22">
               +
             </text>
             <rect
-              x="132"
+              x="282"
               y="76"
               width="206"
               height="58"
@@ -756,7 +756,7 @@ function GatedCrossAttentionDiagramClean() {
               strokeWidth="2"
             />
             <text
-              x="235"
+              x="385"
               y="112"
               textAnchor="middle"
               fontSize="28"
@@ -765,18 +765,18 @@ function GatedCrossAttentionDiagramClean() {
               前馈网络
             </text>
             <circle
-              cx="215"
+              cx="405"
               cy="178"
               r="13"
               fill="#eef5fb"
               stroke="currentColor"
               strokeWidth="2"
             />
-            <text x="215" y="185" textAnchor="middle" fontSize="22">
+            <text x="405" y="185" textAnchor="middle" fontSize="22">
               +
             </text>
             <rect
-              x="360"
+              x="80"
               y="132"
               width="180"
               height="52"
@@ -786,7 +786,7 @@ function GatedCrossAttentionDiagramClean() {
               strokeWidth="2"
             />
             <text
-              x="450"
+              x="170"
               y="167"
               textAnchor="middle"
               fontSize="27"
@@ -795,34 +795,45 @@ function GatedCrossAttentionDiagramClean() {
               交叉注意力
             </text>
 
+            <text
+              x={320 + (4 * 54) / 2}
+              y={375}
+              textAnchor="middle"
+              fontSize="15"
+              fontWeight="700"
+              fill="#3a3029"
+            >
+              动作词元
+            </text>
             <SvgTokenRow
-              x={92}
-              y={245}
-              label="动作词元"
+              x={320}
+              y={315}
+              label=""
               tokens={["a1", "a2", "...", "ah"]}
               tone="action"
               cellWidth={54}
             />
 
+            <text
+              x={92 + (4 * 48) / 2}
+              y={375}
+              textAnchor="middle"
+              fontSize="15"
+              fontWeight="700"
+              fill="#3a3029"
+            >
+              记忆词元
+            </text>
             <SvgTokenRow
-              x={350}
-              y={245}
-              label="记忆词元"
+              x={92}
+              y={315}
+              label=""
               tokens={["m1", "m2", "...", "mn"]}
               tone="memory"
               cellWidth={48}
             />
 
-            <text
-              x="310"
-              y="365"
-              textAnchor="middle"
-              fontFamily="monospace"
-              fontSize="13"
-              fill="#665c52"
-            >
-              Gated Cross Attention
-            </text>
+          
             <text x="-999" y="-999">
               查询：动作词元。键值：记忆词元。memory residual gate
             </text>

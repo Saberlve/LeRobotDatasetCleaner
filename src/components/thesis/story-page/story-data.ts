@@ -17,17 +17,17 @@ export const methodStages = [
   {
     title: "从当前观测提取信息",
     detail:
-      "输入序列末尾添加 N 个可学习的词元，通过 VLM 的因果注意力机制，将当前观测信息写入固定长度的记忆词元。",
+      "在输入序列末尾插入 N 个可学习向量，经 VLM 前向计算后，取这些位置对应的输出特征作为当前帧的压缩记忆表示。",
   },
   {
     title: "历史信息的时序聚合",
     detail:
-      "双层 Transformer 对历史的记忆词元进行时序聚合，采用块级因果注意力，进一步抽象历史信息。",
+      "缓存的各帧记忆特征拼接为历史矩阵，经双层 Transformer 和块级因果注意力进行跨时刻聚合，输出固定长度的历史记忆表示。",
   },
   {
     title: "历史信息的注入",
     detail:
-      "通过门控交叉注意力，将压缩后的历史信息注入动作专家，生成记忆增强后的动作。",
+      "聚合后的历史记忆表示作为键和值，动作专家的隐藏状态作为查询，通过门控交叉注意力注入动作生成过程。",
   },
 ];
 
@@ -46,7 +46,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
     title: "缓存上下文记忆",
     badge: "Cache",
     caption:
-      "历史 moment token 的 KV 状态直接接到下一步 VLM 前缀里，路径最短，但上下文随窗口变长。",
+      "历史帧的键值缓存直接拼入当前帧的 VLM 前缀，实现路径最短，但前缀长度随历史窗口线性增长。",
     steps: [
       {
         label: "当前观测",
@@ -73,13 +73,13 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tokens: ["a_t"],
       },
     ],
-    notes: ["历史以 prefix cache 形式保留", "序列长度随缓存窗口增长"],
+    notes: ["历史帧的键值缓存直接保留", "输入序列长度随窗口线性增长"],
   },
   {
     title: "压缩式上下文记忆",
     badge: "Comp",
     caption:
-      "先抽取每步 moment tokens，再用轻量 MemoryModule 聚合成固定数量 Memory Tokens。",
+      "每帧提取记忆词元输出，经轻量级 MemoryModule 聚合成固定数量的记忆表示。",
     steps: [
       {
         label: "Moment Tokens",
@@ -107,15 +107,15 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
       },
     ],
     notes: [
-      "长度固定，训练成本低于直接缓存",
-      "仍容易与图像语言 token 同池竞争",
+      "序列长度固定，训练成本可控",
+      "记忆词元仍需与图像语言词元共享注意力池",
     ],
   },
   {
     title: "自适应归一化",
     badge: "Norm",
     caption:
-      "记忆不作为额外上下文参与竞争，而是转成调制向量，改变模型内部层的归一化输出。",
+      "记忆表示不进入输入序列，而是映射为调制向量，通过改变层归一化的输出来影响动作生成。",
     steps: [
       {
         label: "Memory Tokens",
@@ -142,13 +142,13 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tokens: ["LayerNorm"],
       },
     ],
-    notes: ["推理序列长度不增加", "注入点绑定到底层 Gemma 层结构"],
+    notes: ["推理时序列长度不变", "注入方式与基座模型内部结构绑定"],
   },
   {
     title: "门控交叉注意力",
     badge: "GCA",
     caption:
-      "动作专家隐藏状态查询压缩记忆，再用小门控残差注入，让记忆通道与 VLM 主路径解耦。",
+      "以动作专家的隐藏状态查询压缩后的历史记忆，经门控残差按需注入，记忆通道与 VLM 主路径保持解耦。",
     steps: [
       {
         label: "HistoryCache",
@@ -175,7 +175,7 @@ export const memorySystemDiagrams: MemorySystemDiagram[] = [
         tokens: ["a_t"],
       },
     ],
-    notes: ["不改 VLM 主干输入通道", "后注入降低注意力捷径风险"],
+    notes: ["不修改 VLM 主干输入通道", "动作专家端注入避免注意力捷径"],
   },
 ];
 

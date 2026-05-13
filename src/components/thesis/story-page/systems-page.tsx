@@ -26,6 +26,8 @@ export function SystemsPage({ page }: StoryPageProps) {
           </p>
         </div>
 
+        <MemorySystemDiagramGrid />
+
         <div className="mt-10 overflow-x-auto rounded-[1.5rem] border border-[#d8ccbb] bg-[#fffaf4]">
           <table className="min-w-[900px] w-full border-collapse text-left text-sm">
             <thead className="bg-[#2a211c] text-[#f4eee7]">
@@ -61,7 +63,6 @@ export function SystemsPage({ page }: StoryPageProps) {
         </div>
       </section>
 
-      <MemorySystemDiagramGrid />
       <SplitNarrative page={page} label="关键判断" />
       <PlatformCallout platform={page.platform} />
     </StoryShell>
