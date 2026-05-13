@@ -521,6 +521,12 @@ describe("story pages", () => {
     expect(html).toContain("RMBench 双臂交换方块");
     expect(html).toContain('src="/video/simpler/spoon.mp4"');
     expect(html).toContain('src="/video/rmbench/nice.mp4"');
+    expect(html).toContain('src="/video/real/episode_000009.mp4"');
+    expect(html).toContain('src="/images/thesis/acone-real-task-scene.png"');
+    expect(html).toContain('data-acone-rmse-chart="html"');
+    expect(html).toContain("均方根误差");
+    expect(html).toContain("0.696");
+    expect(html).toContain("ACONE 双臂真机 ");
     expect(html).toContain("<table");
     expect(html).toContain("64.6%");
     expect(html).toContain("20.0%");
@@ -528,6 +534,24 @@ describe("story pages", () => {
       html.indexOf("Diffusion Policy"),
     );
     expect(html).not.toContain("数据待补充");
+  });
+
+  test("omits the results page key clues summary", () => {
+    const html = renderToStaticMarkup(<ResultsPage />);
+
+    expect(html).not.toContain("关键线索");
+    expect(html).not.toContain(
+      "SimplerEnv WidowX 在抓取、放置、堆叠、入篮四类桌面操作上平均成功率达到 64.6%，超越所有对比方法。",
+    );
+    expect(html).not.toContain(
+      "RMBench Swap Blocks 要求模型持续追踪两个方块的位置与任务进度，本文方法达到 20.0%，分别为 DP 和 π₀.5-LoRA 的 10 倍和 5 倍。",
+    );
+    expect(html).not.toContain(
+      "基于 ACONE 双臂机器人平台手工采集 37 条高质量轨迹，总计 34205 帧，平均每回合约 924.5 帧。",
+    );
+    expect(html).not.toContain(
+      "真机开环评测中 14 维控制自由度中 12 维 RMSE 低于 0.1，仅夹爪开合维度预测误差偏高。",
+    );
   });
 
   test("renders SimplerEnv success charts without the old average table", () => {

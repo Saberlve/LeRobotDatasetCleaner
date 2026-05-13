@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 import { PlatformProjectLink } from "@/components/thesis/platform-project-link";
@@ -114,11 +116,15 @@ export function BenchmarkSection({
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
         <div>
           <p className="text-sm font-medium text-[#c15f3c]">{section.kicker}</p>
-          <h2 className="mt-3 text-3xl font-semibold text-[#2a211c]">
+          <h2 className="mt-3 whitespace-pre-line text-3xl font-semibold text-[#2a211c]">
             {section.name}
           </h2>
         </div>
-        <div className="space-y-4 text-base leading-8 text-[#665c52]">
+        <div
+          className={`${
+            section.compact ? "space-y-1 leading-relaxed" : "space-y-4 leading-8"
+          } text-base text-[#665c52]`}
+        >
           {section.intro.map((item) => (
             <p key={item}>{item}</p>
           ))}
@@ -139,7 +145,11 @@ function VideoGrid({ section }: { section: ThesisBenchmarkSection }) {
   return (
     <div
       className={`mt-8 grid gap-4 ${
-        section.videoColumns === 4 ? "lg:grid-cols-4" : "lg:grid-cols-1"
+        section.videoColumns === 4
+          ? "lg:grid-cols-4"
+          : section.videoColumns === 2
+            ? "lg:grid-cols-2"
+            : "lg:grid-cols-1"
       }`}
     >
       {section.videos.map((video) => (
@@ -156,6 +166,11 @@ function VideoGrid({ section }: { section: ThesisBenchmarkSection }) {
             muted
             playsInline
             preload="metadata"
+            onLoadedMetadata={(e) => {
+              if (video.playbackRate) {
+                e.currentTarget.playbackRate = video.playbackRate;
+              }
+            }}
             className="aspect-video w-full bg-[#2a211c] object-cover"
           />
           <div className="p-5">

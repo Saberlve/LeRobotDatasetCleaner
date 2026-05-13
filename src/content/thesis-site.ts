@@ -41,14 +41,16 @@ export type ThesisBenchmarkVideo = {
   caption: string;
   src: string;
   poster: string;
+  playbackRate?: number;
 };
 
 export type ThesisBenchmarkSection = {
   name: string;
   kicker: string;
   intro: string[];
+  compact?: boolean;
   videos: ThesisBenchmarkVideo[];
-  videoColumns: 1 | 4;
+  videoColumns: 1 | 2 | 4;
   table?: ThesisBenchmarkTable;
 };
 
@@ -302,12 +304,39 @@ export const thesisPages: ThesisStoryPage[] = [
         ],
       },
       {
-        name: "RMBench 双臂交换方块",
+        name: "案例分析",
+        kicker: "记忆有效性验证",
+        intro: [
+          "在目标物体被遮挡的复杂场景下，对比模型在「添加记忆」与「无记忆」情况下的表现。",
+          "无记忆：由于无法获知历史信息，当目标物体被遮挡后，模型会出现明显的犹豫和不确定性，最终无法完成任务。",
+          "添加记忆：模型能够利用历史记忆维持对目标位置的追踪，在遮挡发生时依然能果断执行动作，顺利完成任务。",
+        ],
+        compact: true,
+        videoColumns: 2,
+        videos: [
+          {
+            title: "基线无记忆VLA模型",
+            caption: "在目标方块被遮挡后，模型犹豫，无法定位目标导致任务失败",
+            src: "/video/simpler/badcase.mp4",
+            poster: "",
+            playbackRate: 3,
+          },
+          {
+            title: "添加记忆后VLA模型",
+            caption: "模型始终能够记得目标位置，成功完成任务",
+            src: "/video/simpler/goodcase.mp4",
+            poster: "",
+          },
+        ],
+      },
+      {
+        name: "RMBench\n交换方块任务",
         kicker: "② 长程记忆任务",
         intro: [
           "RMBench 交换方块任务要求双臂机器人借助中间格交换两个方块的位置，操作过程中必须持续追踪方块的初始位置与当前流程阶段。",
           "单靠当前帧观测无法获知已放置方块的位置和任务进度，因此该任务对记忆能力有较强的依赖性。",
         ],
+        compact: true,
         videoColumns: 1,
         videos: [
           {
