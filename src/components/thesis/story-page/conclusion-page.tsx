@@ -1,8 +1,8 @@
 import React from "react";
 
 import { MathText } from "./math-text";
-import { PlatformCallout, SplitNarrative } from "./shared-sections";
-import { contributionRows, nextSteps } from "./story-data";
+import { PlatformCallout } from "./shared-sections";
+import { contributionRows, limitations, nextSteps } from "./story-data";
 import { PageKicker, StoryShell } from "./story-navigation";
 import type { StoryPageProps } from "./types";
 
@@ -37,13 +37,28 @@ export function ConclusionPage({ page }: StoryPageProps) {
               <p className="mt-6 text-xl font-semibold leading-8 text-[#2a211c]">
                 {row[1]}
               </p>
-              <p className="mt-4 text-sm text-[#665c52]">{row[2]}</p>
+              {row[2] ? (
+                <p className="mt-4 text-sm text-[#665c52]">{row[2]}</p>
+              ) : null}
             </article>
           ))}
         </div>
       </section>
 
-      <SplitNarrative page={page} label="四大贡献" />
+      <section className="mx-auto mt-16 max-w-7xl">
+        <p className="text-sm font-medium text-[#c15f3c]">局限性</p>
+        <div className="mt-8 grid gap-x-16 gap-y-0 md:grid-cols-2">
+          {limitations.map((item) => (
+            <article
+              key={item}
+              className="border-t border-[#e8e0d5] py-6 text-base leading-8 text-[#3a3029]"
+            >
+              <MathText text={item} />
+            </article>
+          ))}
+        </div>
+      </section>
+
       <PlatformCallout platform={page.platform} />
 
       <section className="mx-auto mt-12 max-w-7xl rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">

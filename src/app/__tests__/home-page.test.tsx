@@ -14,13 +14,14 @@ describe("home page", () => {
     expect(html).toContain("64.6%");
     expect(html).toContain("37 条 / 34205 帧");
     expect(html).toContain("背景与研究动机");
-    expect(html).toContain("真机平台与数据清洗工具");
+    expect(html).toContain("结果概览");
+    expect(html).toContain("方案架构");
     expect(html).not.toContain("打开数据集");
     expect(html).not.toContain("选择本地文件夹");
     expect(html).not.toContain("最近导入");
   });
 
-  test("keeps seven landing entry cards while avoiding the removed story route", () => {
+  test("keeps story navigation while avoiding removed routes and home label", () => {
     const html = renderToStaticMarkup(<Home />);
 
     expect(html).toContain('href="/why-memory"');
@@ -29,7 +30,7 @@ describe("home page", () => {
     expect(html).toContain('href="/results"');
     expect(html).toContain('href="/analysis"');
     expect(html).toContain('href="/conclusion"');
-    expect(html).toContain("真机平台与数据清洗工具");
+    expect(html).not.toContain(">首页</a>");
     expect(html).not.toContain('href="/dataset-and-tooling"');
   });
 
@@ -40,9 +41,10 @@ describe("home page", () => {
     expect(html).toContain('data-playback-rate="0.5"');
     expect(html).not.toContain("huggingface.co/datasets");
     expect(html).toContain('preload="auto"');
-    expect(html).toContain("radial-gradient(ellipse_at_center");
-    expect(html).toContain("成果证据链");
-    expect(html).toContain("超越 11 个对比方法");
+    expect(html).toContain("bg-gradient-to-b");
+    expect(html).not.toContain("成果证据链");
+    expect(html).not.toContain("VLA 记忆增强");
+    expect(html).not.toContain("超越 11 个对比方法");
     expect(html).not.toContain("结果先开口");
     expect(html).not.toContain("主页不再");
     expect(html).not.toContain("数字塞成一墙卡片");
@@ -50,15 +52,14 @@ describe("home page", () => {
     expect(html).not.toContain("Key Metrics");
   });
 
-  test("uses a Claude-style research demo visual system", () => {
+  test("uses the current dark evidence visual system", () => {
     const html = renderToStaticMarkup(<Home />);
 
     expect(html).toContain("bg-[#f8f3ea]");
-    expect(html).toContain("bg-[#2a211c]");
-    expect(html).toContain("text-[#c15f3c]");
-    expect(html).toContain("实际应用演示");
-    expect(html).toContain("MemoryVLA Demo");
-    expect(html).toContain("当前帧歧义");
-    expect(html).toContain("记忆时间轴");
+    expect(html).toContain("bg-[#1a1512]");
+    expect(html).toContain("bg-white/5");
+    expect(html).toContain("Memory System Architecture");
+    expect(html).not.toContain("Plug-and-play Module");
+    expect(html).toContain("结果速览");
   });
 });
