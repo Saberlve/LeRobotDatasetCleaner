@@ -3,14 +3,21 @@ import React from "react";
 export function MathText({ text }: { text: string }) {
   if (!text) return null;
 
-  // Split by common math symbols and VLA/VLM keywords
+  // Split by common math symbols, VLA/VLM keywords, and bold text
   const parts = text.split(
-    /(\$N\$|\$t\$|\$\\tau\s+\\le\s+t\$|\$\\tau\$|\$\\le\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-门控交叉注意力|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
+    /(\*\*.*?\*\*|\$N\$|\$t\$|\$\\tau\s+\\le\s+t\$|\$\\tau\$|\$\\le\$|H_t|m_t|o_t|a_t|φ|ℓ|π_θ|π-门控交叉注意力|ℝ\^N|VLA|VLM|φ\(H_t\))/g,
   );
 
   return (
     <>
       {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={i} className="font-semibold text-[#1f1a17]">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
         if (part === "$N$")
           return (
             <span key={i} className="font-serif italic">

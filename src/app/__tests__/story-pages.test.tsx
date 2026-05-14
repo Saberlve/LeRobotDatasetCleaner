@@ -138,9 +138,17 @@ describe("story pages", () => {
 
   test("renders story pages without quiet conclusion panels", () => {
     const html = renderToStaticMarkup(<MethodPage />);
+    const conclusionHtml = renderToStaticMarkup(<ConclusionPage />);
 
     expect(html).toContain("bg-[#f8f3ea]");
     expect(html).not.toContain("收束判断");
+    expect(conclusionHtml).not.toContain(
+      "针对主流 VLA 模型无法利用历史信息完成长程任务的局限",
+    );
+    expect(conclusionHtml).not.toContain("下一步工作");
+    expect(conclusionHtml).not.toContain("多模态记忆融合");
+    expect(conclusionHtml).not.toContain("超长程任务演进");
+    expect(conclusionHtml).not.toContain("跨平台迁移泛化");
   });
 
   test("renders block-causal inequality symbols as math text", () => {

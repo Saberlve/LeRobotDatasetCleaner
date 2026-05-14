@@ -2,7 +2,7 @@ import React from "react";
 
 import { MathText } from "./math-text";
 import { PlatformCallout } from "./shared-sections";
-import { contributionRows, limitations, nextSteps } from "./story-data";
+import { contributionRows, limitations } from "./story-data";
 import { PageKicker, StoryShell } from "./story-navigation";
 import type { StoryPageProps } from "./types";
 
@@ -19,11 +19,13 @@ export function ConclusionPage({ page }: StoryPageProps) {
             <MathText text={page.hook} />
           </p>
         </div>
-        <div className="mt-10 border-t border-[#d8ccbb] pt-8">
-          <p className="text-base leading-8 text-[#665c52]">
-            <MathText text={page.summary} />
-          </p>
-        </div>
+        {page.summary ? (
+          <div className="mt-10 border-t border-[#d8ccbb] pt-8">
+            <p className="text-base leading-8 text-[#665c52]">
+              <MathText text={page.summary} />
+            </p>
+          </div>
+        ) : null}
       </section>
 
       <section className="mx-auto mt-8 max-w-7xl">
@@ -60,20 +62,6 @@ export function ConclusionPage({ page }: StoryPageProps) {
       </section>
 
       <PlatformCallout platform={page.platform} />
-
-      <section className="mx-auto mt-12 max-w-7xl rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-8 shadow-sm ring-1 ring-[#2c2421]/5">
-        <p className="text-sm font-medium text-[#c15f3c]">下一步工作</p>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {nextSteps.map((item) => (
-            <p
-              key={item}
-              className="rounded-xl bg-[#f8f3ea] p-5 text-sm leading-7 text-[#3a3029]"
-            >
-              {item}
-            </p>
-          ))}
-        </div>
-      </section>
     </StoryShell>
   );
 }

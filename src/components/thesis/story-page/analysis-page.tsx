@@ -37,8 +37,8 @@ const analysisOverviewItems = [
   },
   {
     number: "04",
-    title: "归一化调制的侵入性分析",
-    text: "自适应层归一化的全路径干预具有高侵入性，会系统性扰动 VLM 表示空间；而 门控交叉注意力 通过解耦注入位置，确保了预训练特征的稳定性。",
+    title: "归一化调制的扰动强度分析",
+    text: "自适应层归一化的全路径干预具有高扰动强度，会系统性扰动 VLM 表示空间；而 门控交叉注意力 通过解耦注入位置，确保了预训练特征的稳定性。",
   },
 ];
 
@@ -137,7 +137,7 @@ export function AnalysisPage({ page }: StoryPageProps) {
                 </div>
                 <div className="flex flex-col rounded-xl border border-[#e8ccba] bg-[#fdf5f0] p-8">
                   <h4 className="text-lg font-bold text-[#c15f3c]">
-                    为什么去掉聚合模块会导致「塌方」？
+                    为什么去掉聚合模块会导致性能下降？
                   </h4>
                   <div className="mt-6 flex-1 text-sm leading-6 text-[#8a5d4b]">
                     <p>记忆聚合做了两件事：</p>
@@ -307,11 +307,6 @@ export function AnalysisPage({ page }: StoryPageProps) {
               />
             </div>
           </div>
-          <figcaption className="border-t border-[#e8e0d5] bg-[#fdfcfb] px-8 py-5 text-sm leading-7 text-[#665c52]">
-            自适应层归一化（AdaLN）通过预测缩放与平移参数来动态调制层归一化（LayerNorm），是生成式模型中主流的条件注入技术。
-            <span className="font-bold text-[#2a211c] ml-1">结构侵入性差异：</span>
-            AdaLN（左）直接修改骨干网络的所有 18 层，造成记忆信号逐层累积放大，严重扰乱动作分布。GCA（右）则将注入点严格限制在动作专家的交叉注意力层，确保预训练骨干输出稳定的、未受干扰的表征，从而维持了动作输出的鲁棒性。
-          </figcaption>
         </div>
 
         <div className="mb-6">
@@ -319,7 +314,7 @@ export function AnalysisPage({ page }: StoryPageProps) {
             记忆注入强度的定量分析
           </h4>
           <p className="mt-2 text-sm leading-7 text-[#665c52]">
-            为了科学地衡量“侵入性”，本课题对两种机制定义了统一的测量指标：<strong className="text-[#2a211c]">调制贡献比例 ρ<sub>mod</sub></strong>。该指标反映了记忆信号对模型原始表征空间的干预程度。
+            为了公平地对比扰动强度，本课题对两种机制定义了统一的测量指标：<strong className="text-[#2a211c]">调制贡献比例 ρ<sub>mod</sub></strong>。该指标反映了记忆信号对模型原始表征空间的干预程度。
           </p>
           <div className="my-6 overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f8f3ea]">
             <div className="flex flex-col items-center justify-center border-b border-[#e8e0d5] py-6 text-center">

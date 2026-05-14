@@ -21,7 +21,7 @@ describe("home page", () => {
     expect(html).not.toContain("最近导入");
   });
 
-  test("keeps story navigation while avoiding removed routes and home label", () => {
+  test("keeps story navigation and home label while avoiding removed routes", () => {
     const html = renderToStaticMarkup(<Home />);
 
     expect(html).toContain('href="/why-memory"');
@@ -30,7 +30,7 @@ describe("home page", () => {
     expect(html).toContain('href="/results"');
     expect(html).toContain('href="/analysis"');
     expect(html).toContain('href="/conclusion"');
-    expect(html).not.toContain(">首页</a>");
+    expect(html).toContain(">首页</a>");
     expect(html).not.toContain('href="/dataset-and-tooling"');
   });
 
@@ -60,6 +60,10 @@ describe("home page", () => {
     expect(html).toContain("bg-white/5");
     expect(html).toContain("Memory System Architecture");
     expect(html).not.toContain("Plug-and-play Module");
-    expect(html).toContain("结果速览");
+    expect(html).not.toContain("结果速览");
+    expect(html).not.toContain("基于不同维度的定量与定性证据");
+    expect(html).not.toContain("SimplerEnv 完整对比");
+    expect(html).not.toContain("强记忆依赖场景下");
+    expect(html).not.toContain("真机迁移快报");
   });
 });

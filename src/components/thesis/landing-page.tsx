@@ -3,7 +3,6 @@ import Image from "next/image";
 import {
   thesisHeroVideoSrc,
   thesisMetrics,
-  thesisResultPanels,
   thesisSubtitle,
   thesisTitle,
 } from "@/content/thesis-site";
@@ -106,34 +105,6 @@ export function LandingPage() {
                 />
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Result Quick Look (Grid) */}
-      <section className="bg-transparent">
-        <div className="mx-auto max-w-7xl px-6 py-20">
-          <div className="flex flex-col gap-2 mb-10">
-            <h2 className="text-2xl font-semibold text-[#f4ece2]">结果速览</h2>
-            <p className="text-sm text-[#8c8279]">
-              基于不同维度的定量与定性证据
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {thesisResultPanels.map((panel) => (
-              <div
-                key={panel.title}
-                className="group rounded-2xl border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10 backdrop-blur-sm"
-              >
-                <h3 className="text-lg font-semibold text-[#f0cbb8]">
-                  {panel.title}
-                </h3>
-                <p className="mt-4 text-sm leading-6 text-[#dcd3cb]">
-                  {panel.caption}
-                </p>
-              </div>
-            ))}
           </div>
         </div>
       </section>

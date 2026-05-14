@@ -104,7 +104,7 @@ export function ModulationAnalysisCharts() {
         <ChartWrapper
           id="3-13"
           title="图 3-13: 门控交叉注意力 vs 归一化调制 逐层影响比例对比"
-          description="对比 自适应层归一化与交叉注意力机制对隐藏状态的影响。自适应层归一化在中间层的侵入性显著高于 门控交叉注意力。"
+          description="对比 自适应层归一化与交叉注意力机制对隐藏状态的影响。自适应层归一化在中间层的扰动强度显著高于 门控交叉注意力。"
         >
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
