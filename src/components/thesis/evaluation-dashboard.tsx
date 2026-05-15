@@ -22,6 +22,7 @@ import {
   FiTrendingUp,
 } from "react-icons/fi";
 
+import { SimplerLaunchPanel } from "@/components/evaluation/simpler-launch-panel";
 import { TrainingCurves } from "./training-curves";
 import type {
   EvaluationDashboard,
@@ -29,7 +30,7 @@ import type {
 } from "@/server/eval-results/summary";
 import type { TrainingConfigSummary } from "@/server/eval-results/training-config";
 
-type WorkbenchMode = "overview" | "data" | "training" | "replay";
+type WorkbenchMode = "overview" | "data" | "training" | "replay" | "launch";
 type EvaluationBenchmark = EvaluationResultRow["benchmark"];
 
 type EvaluationDashboardProps = {
@@ -123,6 +124,13 @@ const workbenchNav: Array<{
     label: "评测查看和回放",
     caption: "SimplerEnv 与 RMBench",
     icon: FiPlayCircle,
+  },
+  {
+    mode: "launch",
+    href: "/evaluation/launch",
+    label: "评测启动与监控",
+    caption: "单任务 SimplerEnv 实时评测",
+    icon: FiTarget,
   },
 ];
 
@@ -255,6 +263,7 @@ export function EvaluationDashboardView({
   const showData = mode === "data";
   const showTraining = mode === "training";
   const showReplay = mode === "replay";
+  const showLaunch = mode === "launch";
   const resultRows = dashboard.results.rows;
   const [selectedResultBenchmark, setSelectedResultBenchmark] =
     useState<EvaluationBenchmark>("SimplerEnv");
@@ -468,7 +477,7 @@ export function EvaluationDashboardView({
           </Link>
         </div>
 
-        <nav className="mt-5 grid gap-2 md:grid-cols-4">
+        <nav className="mt-5 grid gap-2 md:grid-cols-5">
           {workbenchNav.map((item) => {
             const active = item.mode === mode;
             const NavIcon = item.icon;
@@ -538,6 +547,15 @@ export function EvaluationDashboardView({
         action: "进入评测回放",
         icon: FiPlayCircle,
       },
+      {
+        href: "/evaluation/launch",
+        label: "Launch",
+        title: "评测启动与监控",
+        caption: "启动单任务 SimplerEnv 评测，并实时查看 prompt、图像和动作。",
+        meta: "4 fixed tasks / 1 active run",
+        action: "进入评测启动",
+        icon: FiTarget,
+      },
     ];
 
     return (
@@ -551,7 +569,7 @@ export function EvaluationDashboardView({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="mt-5 grid gap-4 lg:grid-cols-4">
           {entries.map((entry) => {
             const EntryIcon = entry.icon;
             return (
@@ -699,6 +717,37 @@ export function EvaluationDashboardView({
             title: "URDF 回放",
             caption: "用机器人姿态验证动作轨迹是否合理。",
             icon: FiCpu,
+          },
+        ]}
+      />
+    );
+  }
+
+  function LaunchWorkspaceCue() {
+    return (
+      <WorkspaceFeatureStrip
+        workspace="launch"
+        eyebrow="Launch Workspace"
+        title="评测启动与监控"
+        caption="单任务 SimplerEnv 实时评测，固定任务启动，1Hz 轮询查看 prompt、最新渲染图和 pi05 原始 7 维动作曲线。"
+        items={[
+          {
+            id: "launch-control",
+            title: "单任务控制",
+            caption: "启动冲突控制、运行中禁用切换、支持手动停止。",
+            icon: FiTarget,
+          },
+          {
+            id: "launch-frame",
+            title: "实时渲染图",
+            caption: "始终显示当前 runtime 写出的最新一帧。",
+            icon: FiCamera,
+          },
+          {
+            id: "launch-actions",
+            title: "原始动作曲线",
+            caption: "直接查看 pi05 的 7 维 raw action 序列。",
+            icon: FiActivity,
           },
         ]}
       />
@@ -2042,6 +2091,12 @@ export function EvaluationDashboardView({
             <ResultTablePanel />
             <SimplerPanel />
             <RmbenchPanel />
+          </>
+        ) : null}
+        {showLaunch ? (
+          <>
+            <LaunchWorkspaceCue />
+            <SimplerLaunchPanel />
           </>
         ) : null}
       </div>

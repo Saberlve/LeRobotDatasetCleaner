@@ -858,7 +858,7 @@
     "continuous_gate": 0.0151184434071183,
     "baseline_gate": 0.0005395243060775,
     "continuous_grad": 0.022922271862626,
-    "baseline_grad": 7.24793717381e-05
+    "baseline_grad": 7.24793717381e-5
   },
   {
     "step": 18450,
@@ -1033,7 +1033,7 @@
     "continuous_gate": 0.0157126560807228,
     "baseline_gate": 0.0004792738182004,
     "continuous_grad": 0.0183343365788459,
-    "baseline_grad": 6.69403452775e-05
+    "baseline_grad": 6.69403452775e-5
   },
   {
     "step": 22200,
@@ -1292,7 +1292,7 @@
     "continuous_gate": 0.0161686073988676,
     "baseline_gate": 0.0005685059586539,
     "continuous_grad": 0.003234582953155,
-    "baseline_grad": 9.36168580665e-05
+    "baseline_grad": 9.36168580665e-5
   },
   {
     "step": 27750,
@@ -1362,7 +1362,7 @@
     "continuous_gate": 0.016481015831232,
     "baseline_gate": 0.0005695424624718,
     "continuous_grad": 0.0197444111108779,
-    "baseline_grad": 7.6785487181e-05
+    "baseline_grad": 7.6785487181e-5
   },
   {
     "step": 29250,

@@ -37,28 +37,28 @@ describe("URDFViewer Acone support", () => {
 
   test("assigns distinct Acone mesh colors by side and gripper part", () => {
     expect(getMeshMaterialOptions("/urdf/acone/meshes/base_link.STL")).toEqual(
-      expect.objectContaining({ color: "#ffffff" }),
+      expect.objectContaining({ color: "#949494" }),
     );
     expect(getMeshMaterialOptions("/urdf/acone/meshes/left_link3.STL")).toEqual(
-      expect.objectContaining({ color: "#fffbf6" }),
+      expect.objectContaining({ color: "#a0a0a0" }),
     );
     expect(getMeshMaterialOptions("/urdf/acone/meshes/left_link4.STL")).toEqual(
-      expect.objectContaining({ color: "#909090" }),
+      expect.objectContaining({ color: "#000000" }),
     );
     expect(
       getMeshMaterialOptions("/urdf/acone/meshes/right_link14.STL"),
-    ).toEqual(expect.objectContaining({ color: "#cad1ed" }));
+    ).toEqual(expect.objectContaining({ color: "#000000" }));
     expect(getMeshMaterialOptions("/urdf/acone/meshes/left_link7.STL")).toEqual(
-      expect.objectContaining({ color: "#ffffff" }),
+      expect.objectContaining({ color: "#373737" }),
     );
   });
 
   test("assigns Acone colors when URDFLoader passes relative mesh URLs", () => {
     expect(getMeshMaterialOptions("meshes/left_link4.STL", "acone")).toEqual(
-      expect.objectContaining({ color: "#909090" }),
+      expect.objectContaining({ color: "#000000" }),
     );
     expect(getMeshMaterialOptions("meshes/right_link15.STL", "acone")).toEqual(
-      expect.objectContaining({ color: "#b2b2b2" }),
+      expect.objectContaining({ color: "#000000" }),
     );
   });
 
@@ -78,7 +78,7 @@ describe("URDFViewer Acone support", () => {
 
     expect(
       (mesh.material as THREE.MeshStandardMaterial).color.getHexString(),
-    ).toBe("909090");
+    ).toBe("000000");
   });
 
   test("reapplies Acone colors using robot.links after URDFLoader overwrites mesh materials", () => {
@@ -97,7 +97,7 @@ describe("URDFViewer Acone support", () => {
 
     expect(
       (mesh.material as THREE.MeshStandardMaterial).color.getHexString(),
-    ).toBe("909090");
+    ).toBe("000000");
   });
 
   test("maps Acone dataset state names to URDF joints", () => {

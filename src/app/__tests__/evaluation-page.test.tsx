@@ -5,9 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import EvaluationPage from "@/app/evaluation/page";
-import EvaluationDataPage from "@/app/evaluation/data/page";
-import EvaluationReplayPage from "@/app/evaluation/replay/page";
-import EvaluationTrainingPage from "@/app/evaluation/training/page";
+import EvaluationLaunchPage from "@/app/evaluation/launch/page";
 import { EvaluationDashboardView } from "@/components/thesis/evaluation-dashboard";
 import type { EvaluationDashboard } from "@/server/eval-results/summary";
 import type { TrainingConfigSummary } from "@/server/eval-results/training-config";
@@ -288,10 +286,13 @@ describe("evaluation page", () => {
     expect(html).toContain("训练配置和曲线");
     expect(html).toContain('href="/evaluation/replay"');
     expect(html).toContain("评测查看和回放");
+    expect(html).toContain('href="/evaluation/launch"');
+    expect(html).toContain("评测启动与监控");
     expect(html).toContain("选择工作区");
     expect(html).toContain("进入数据查看");
     expect(html).toContain("进入训练工作区");
     expect(html).toContain("进入评测回放");
+    expect(html).toContain("进入评测启动");
     expect(html).not.toContain("Weights &amp; Biases");
     expect(html).not.toContain("外部监控入口");
     expect(html).not.toContain("W&amp;B 项目页需要在新标签页打开");
@@ -317,15 +318,19 @@ describe("evaluation page", () => {
     expect(html).not.toContain("%2Fimages%2Facone-data-preview.jpg");
   });
 
-  test("renders focused evaluation workspaces", async () => {
-    const [dataPage, trainingPage, replayPage] = await Promise.all([
-      EvaluationDataPage(),
-      EvaluationTrainingPage(),
-      EvaluationReplayPage(),
-    ]);
-    const dataHtml = renderToStaticMarkup(dataPage);
-    const trainingHtml = renderToStaticMarkup(trainingPage);
-    const replayHtml = renderToStaticMarkup(replayPage);
+  test("renders focused evaluation workspaces", () => {
+    const dataHtml = renderToStaticMarkup(
+      <EvaluationDashboardView dashboard={trainingDashboard} mode="data" />,
+    );
+    const trainingHtml = renderToStaticMarkup(
+      <EvaluationDashboardView dashboard={trainingDashboard} mode="training" />,
+    );
+    const replayHtml = renderToStaticMarkup(
+      <EvaluationDashboardView dashboard={replayDashboard} mode="replay" />,
+    );
+    const launchHtml = renderToStaticMarkup(
+      <EvaluationDashboardView dashboard={replayDashboard} mode="launch" />,
+    );
 
     expect(dataHtml).toContain("数据查看");
     expect(dataHtml).toContain("打开 ACONE 数据集");
@@ -360,7 +365,7 @@ describe("evaluation page", () => {
     expect(trainingHtml).toContain('data-workspace-cue="training"');
     expect(trainingHtml).toContain('data-workspace-icon="training-baseline"');
     expect(trainingHtml).toContain("Baseline 对照");
-    expect(trainingHtml.indexOf("学习率 schedule")).toBeLessThan(
+    expect(trainingHtml.indexOf("学习率 Schedule")).toBeLessThan(
       trainingHtml.indexOf("Memory 参数"),
     );
     expect(trainingHtml).not.toContain("Episode 快速定位");
@@ -375,6 +380,22 @@ describe("evaluation page", () => {
     expect(replayHtml).toContain("最高分表格");
     expect(replayHtml).not.toContain("数据巡检清单");
     expect(replayHtml).not.toContain("保存配置");
+
+    expect(launchHtml).toContain("评测启动与监控");
+    expect(launchHtml).toContain("单任务 SimplerEnv 实时评测");
+    expect(launchHtml).toContain("启动评测");
+    expect(launchHtml).toContain("停止评测");
+    expect(launchHtml).toContain('data-workspace-cue="launch"');
+    expect(launchHtml).not.toContain("SimplerEnv 回放");
+  });
+
+  test("renders the dedicated launch route", async () => {
+    const page = await EvaluationLaunchPage();
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("评测启动与监控");
+    expect(html).toContain("单任务 SimplerEnv 实时评测");
+    expect(html).toContain('href="/evaluation/launch"');
   });
 
   test("keeps RMBench replay compact and crops horizontally without scaling", () => {

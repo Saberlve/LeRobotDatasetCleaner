@@ -56,7 +56,11 @@ export function SuccessRateBarChart({
           data={data}
           margin={{ top: 5, right: 20, left: 0, bottom: 80 }}
         >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6dccb" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            stroke="#e6dccb"
+          />
           <XAxis
             dataKey="name"
             angle={-45}
@@ -116,22 +120,6 @@ export function SuccessRateBarChart({
 // | π₀.5-Comp | 66.7 | 58.3 | 62.5 | 58.3 | 61.5 |
 // | π₀.5-Norm | 54.2 | 41.7 | 45.8 | 87.5 | 57.3 |
 // | 本文 π₀.5-门控交叉注意力 | 62.5 | 50.0 | 62.5 | 83.3 | 64.6 |
-
-const MODELS = [
-  "RT-1-X",
-  "Octo-Base",
-  "Octo-Small",
-  "OpenVLA",
-  "CogACT",
-  "SpatialVLA",
-  "π₀",
-  "π₀-FAST",
-  "π₀.5",
-  "π₀.5-Cache",
-  "π₀.5-Comp",
-  "π₀.5-Norm",
-  "本文 π₀.5-门控交叉注意力",
-];
 
 const spoonData: SuccessRateData[] = [
   { name: "RT-1-X", value: 0.0 },
@@ -219,8 +207,14 @@ export function SimplerEnvSuccessRateCharts() {
       <div className="grid gap-6 md:grid-cols-2">
         <SuccessRateBarChart taskName="将勺子放到毛巾上" data={spoonData} />
         <SuccessRateBarChart taskName="将胡萝卜放到盘子上" data={carrotData} />
-        <SuccessRateBarChart taskName="将绿色方块放到黄色方块上" data={stackData} />
-        <SuccessRateBarChart taskName="将茄子放进黄色篮子里" data={eggplantData} />
+        <SuccessRateBarChart
+          taskName="将绿色方块放到黄色方块上"
+          data={stackData}
+        />
+        <SuccessRateBarChart
+          taskName="将茄子放进黄色篮子里"
+          data={eggplantData}
+        />
       </div>
       <div className="mx-auto max-w-4xl">
         <SuccessRateBarChart

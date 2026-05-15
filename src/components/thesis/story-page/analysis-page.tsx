@@ -292,7 +292,8 @@ export function AnalysisPage({ page }: StoryPageProps) {
             分析实验：自适应层归一化调制对动作分布的扰动
           </h3>
           <p className="mt-4 text-sm leading-8 text-[#665c52]">
-            自适应层归一化记忆的性能下降，根源在于其<strong className="text-[#2a211c]">过度扰动了动作分布</strong>。
+            自适应层归一化记忆的性能下降，根源在于其
+            <strong className="text-[#2a211c]">过度扰动了动作分布</strong>。
           </p>
         </div>
 
@@ -314,21 +315,42 @@ export function AnalysisPage({ page }: StoryPageProps) {
             记忆注入强度的定量分析
           </h4>
           <p className="mt-2 text-sm leading-7 text-[#665c52]">
-            为了公平地对比扰动强度，本课题对两种机制定义了统一的测量指标：<strong className="text-[#2a211c]">调制贡献比例 ρ<sub>mod</sub></strong>。该指标反映了记忆信号对模型原始表征空间的干预程度。
+            为了公平地对比扰动强度，本课题对两种机制定义了统一的测量指标：
+            <strong className="text-[#2a211c]">
+              调制贡献比例 ρ<sub>mod</sub>
+            </strong>
+            。该指标反映了记忆信号对模型原始表征空间的干预程度。
           </p>
           <div className="my-6 overflow-hidden rounded-xl border border-[#e8e0d5] bg-[#f8f3ea]">
             <div className="flex flex-col items-center justify-center border-b border-[#e8e0d5] py-6 text-center">
-              <div className="font-mono text-2xl font-bold text-[#c15f3c]">ρ<sub>mod</sub> = ‖Δh<sub>mod</sub>‖ / ‖Δh‖</div>
-              <p className="mt-2 text-xs text-[#8a7e72]">（其中 ‖Δh<sub>mod</sub>‖ 是注入机制引入的状态变化量，‖Δh‖ 是该层隐藏状态的总规模）</p>
+              <div className="font-mono text-2xl font-bold text-[#c15f3c]">
+                ρ<sub>mod</sub> = ‖Δh<sub>mod</sub>‖ / ‖Δh‖
+              </div>
+              <p className="mt-2 text-xs text-[#8a7e72]">
+                （其中 ‖Δh<sub>mod</sub>‖ 是注入机制引入的状态变化量，‖Δh‖
+                是该层隐藏状态的总规模）
+              </p>
             </div>
             <div className="grid gap-px bg-[#e8e0d5] lg:grid-cols-2">
               <div className="bg-[#fcfaf7] p-5">
-                <p className="text-sm font-bold text-[#2a211c]">对于 自适应层归一化调制：</p>
-                <p className="mt-2 text-xs leading-6 text-[#8a7e72]">Δh<sub>mod</sub> 为仿射变换引入的偏移。由于调制作用于所有通道且逐层叠加，ρ<sub>mod</sub> 极易在深层累积并突破阈值。</p>
+                <p className="text-sm font-bold text-[#2a211c]">
+                  对于 自适应层归一化调制：
+                </p>
+                <p className="mt-2 text-xs leading-6 text-[#8a7e72]">
+                  Δh<sub>mod</sub>{" "}
+                  为仿射变换引入的偏移。由于调制作用于所有通道且逐层叠加，ρ
+                  <sub>mod</sub> 极易在深层累积并突破阈值。
+                </p>
               </div>
               <div className="bg-[#fcfaf7] p-5">
-                <p className="text-sm font-bold text-[#2a211c]">对于 门控交叉注意力（GCA）：</p>
-                <p className="mt-2 text-xs leading-6 text-[#8a7e72]">Δh<sub>mod</sub> 为门控记忆残差。得益于解耦的架构和极小的初始门控系数，其 ρ<sub>mod</sub> 始终保持在极低水平。</p>
+                <p className="text-sm font-bold text-[#2a211c]">
+                  对于 门控交叉注意力（GCA）：
+                </p>
+                <p className="mt-2 text-xs leading-6 text-[#8a7e72]">
+                  Δh<sub>mod</sub>{" "}
+                  为门控记忆残差。得益于解耦的架构和极小的初始门控系数，其 ρ
+                  <sub>mod</sub> 始终保持在极低水平。
+                </p>
               </div>
             </div>
           </div>
@@ -338,7 +360,6 @@ export function AnalysisPage({ page }: StoryPageProps) {
         </div>
 
         <ModulationAnalysisCharts />
-
       </section>
 
       <FigureEvidence page={page} />

@@ -30,7 +30,11 @@ export function AblationAggregationChart() {
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
           barGap={8}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#d8ccbb" vertical={false} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="#d8ccbb"
+            vertical={false}
+          />
           <XAxis
             dataKey="name"
             stroke="#665c52"

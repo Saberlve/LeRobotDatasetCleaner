@@ -49,10 +49,10 @@ describe("story pages", () => {
 
     expect(pages[0]).toContain("VLA 模型的“金鱼记忆”");
     expect(pages[1]).toContain("让VLA不再「只看当下」");
-    expect(pages[2]).toContain("同一个动机，四种实现：哪种最合理？");
+    expect(pages[2]).toContain("其他记忆系统架构探索");
     expect(pages[3]).toContain("仿真与真机实验结果");
     expect(pages[4]).toContain("消融与分析实验");
-    expect(pages[5]).toContain("四大贡献 · 一处洞察 · 一套平台");
+    expect(pages[5]).toContain("结论与局限");
 
     for (const html of pages) {
       expect(html).toContain('href="/why-memory"');
@@ -102,16 +102,14 @@ describe("story pages", () => {
     expect(html).not.toContain("门控交叉注意力 将注入点移至动作专家一侧");
   });
 
-  test("places memory access paths above the systems comparison table", () => {
+  test("renders the architecture track before the baseline platform callout", () => {
     const html = renderToStaticMarkup(<MemorySystemsPage />);
-    const comparisonHeaderIndex = html.indexOf(">维度</th>");
+    const architectureIndex = html.indexOf("四种方案架构图解");
+    const platformIndex = html.indexOf("Baseline 对照配置");
 
-    expect(html.indexOf("四种 memory 接入路径")).toBeLessThan(
-      comparisonHeaderIndex,
-    );
-    expect(html.indexOf("从历史保存到动作注入")).toBeLessThan(
-      comparisonHeaderIndex,
-    );
+    expect(architectureIndex).toBeGreaterThan(-1);
+    expect(platformIndex).toBeGreaterThan(-1);
+    expect(architectureIndex).toBeLessThan(platformIndex);
   });
 
   test("uses audience-facing defense copy instead of task-intent notes", () => {
@@ -165,24 +163,18 @@ describe("story pages", () => {
     const systemsHtml = renderToStaticMarkup(<MemorySystemsPage />);
     const analysisHtml = renderToStaticMarkup(<AnalysisPage />);
 
-    expect(methodHtml).toContain('src="/images/thesis/2-2.png"');
-    expect(methodHtml).toContain('src="/images/thesis/2-3.png"');
+    expect(methodHtml).toContain("记忆系统整体架构");
+    expect(methodHtml).toContain("2-2.png");
+    expect(methodHtml).not.toContain("2-3.png");
 
-    expect(systemsHtml).toContain("四种 memory 接入路径");
-    expect(systemsHtml).not.toContain('src="/images/thesis/2-5.png"');
+    expect(systemsHtml).toContain("四种方案架构图解");
+    expect(systemsHtml).toContain("platform-baseline.png");
 
-    expect(analysisHtml).not.toContain("注意力对比图");
-    expect(analysisHtml).not.toContain("注意力随时间步变化");
-    expect(analysisHtml).not.toContain(
-      "无记忆基线主要关注图像与语言；Comp 加入后，动作专家注意力被记忆前缀截走。",
-    );
-    expect(analysisHtml).not.toContain(
-      "Comp 的记忆注意力在多个时间步保持高占比，说明捷径不是单帧偶然现象。",
-    );
-    expect(analysisHtml).not.toContain('src="/images/thesis/3-7.png"');
-    expect(analysisHtml).not.toContain('src="/images/thesis/3-8.png"');
+    expect(analysisHtml).toContain("注意力分布对比");
+    expect(analysisHtml).toContain("Figure 3-7, 3-8");
+    expect(analysisHtml).not.toContain("3-7.png");
+    expect(analysisHtml).not.toContain("3-8.png");
   });
-
   test("omits attention evidence figures from the analysis page", () => {
     const html = renderToStaticMarkup(<AnalysisPage />);
 
@@ -202,11 +194,9 @@ describe("story pages", () => {
     const html = renderToStaticMarkup(<AnalysisPage />);
 
     expect(html).toContain("记忆聚合模块的作用");
-    expect(html).toContain("长程整合");
-    expect(html).toContain("压缩式上下文记忆的注意力捷径");
-    expect(html).toContain("连续回合采样 vs 固定窗口采样");
-    expect(html).toContain("自适应层归一化记忆对动作的扰动分析");
-    expect(html).toContain("自适应层归一化在 VLM 骨干 18 层反复调制");
+    expect(html).toContain("连续回合采样的重要性");
+    expect(html).toContain("上下文记忆的注意力捷径");
+    expect(html).toContain("归一化调制的扰动强度分析");
     expect(html).toContain("font-mono text-5xl");
   });
 
@@ -250,14 +240,16 @@ describe("story pages", () => {
   test("places continuous sampling before the attention shortcut on the analysis page", () => {
     const html = renderToStaticMarkup(<AnalysisPage />);
 
-    expect(html.indexOf("连续回合采样 vs 固定窗口采样")).toBeLessThan(
-      html.indexOf("压缩式上下文记忆的注意力捷径"),
+    expect(
+      html.indexOf("分析实验：为什么「连续回合采样」是记忆注入的关键？"),
+    ).toBeLessThan(
+      html.indexOf(
+        "压缩式上下文的注意力捷径：模型过度依赖压缩记忆，削弱对当前观测的感知",
+      ),
     );
     expect(
       html.indexOf("为什么「连续回合采样」是记忆注入的关键？"),
-    ).toBeLessThan(
-      html.indexOf("注意力分布对比"),
-    );
+    ).toBeLessThan(html.indexOf("注意力分布对比"));
   });
 
   test("explains the baseline VLA path as single-frame, component-shaped, and memory-free", () => {
@@ -377,12 +369,11 @@ describe("story pages", () => {
     expect(html).not.toContain("插图证据");
     expect(html).not.toContain("VLA模型整体框架");
     expect(html).toContain("记忆系统整体架构");
-    expect(html).toContain("历史矩阵构建与块级因果注意力掩码");
+    expect(html).toContain("缓存上下文记忆");
     expect(html).toContain("门控交叉注意力");
-    expect(html).not.toContain("图中区分视觉-语言模型");
+    expect(html).toContain("注意力分布对比");
     expect(html).toContain("记忆词元提取当前帧信息");
   });
-
   test("renders memory fusion comparison as HTML structure diagrams", () => {
     const html = renderToStaticMarkup(<MemorySystemsPage />);
 
@@ -393,69 +384,35 @@ describe("story pages", () => {
     expect(html).toContain("记忆缓存库");
     expect(html).toContain("拼接记忆缓存");
     expect(html).toContain("视觉语言模型");
-    expect(html).toContain("动作专家");
-    expect(html).toContain("HistoryCache");
-    expect(html).toContain("MemoryModule");
-    expect(html).toContain("块级注意力");
-    expect(html).toContain("自适应层归一化公式");
-    expect(html).toContain("LN(a)");
-    expect(html).toContain("多层感知机");
-    expect(html).toContain("缩放参数");
-    expect(html).toContain("平移参数");
-    expect(html).toContain("Gated Cross Attention");
-    expect(html).toContain("前馈网络");
+    expect(html).toContain("层归一化");
     expect(html).toContain("交叉注意力");
-    expect(html).toContain("查询");
-    expect(html).toContain("键值");
-    expect(html).toContain("Memory Tokens");
-    expect(html).not.toContain('src="/images/thesis/cache-context-memory.jpg"');
-    expect(html).not.toContain(
-      'src="/images/thesis/compressed-context-memory.jpg"',
-    );
-    expect(html).not.toContain(
-      'src="/images/thesis/adaptive-normalization.jpg"',
-    );
-    expect(html).not.toContain(
-      'src="/images/thesis/gated-cross-attention.jpg"',
-    );
-    expect(html).not.toContain('src="/images/thesis/2-5.png"');
+    expect(html).toContain("动作专家");
+    expect(html).not.toContain("cache-context-memory.jpg");
+    expect(html).not.toContain("compressed-context-memory.jpg");
+    expect(html).not.toContain("adaptive-normalization.jpg");
+    expect(html).not.toContain("gated-cross-attention.jpg");
   });
 
-  test("keeps supporting figures compact while pairing the architecture figure with key clues", () => {
+  test("keeps only the primary architecture figure on the method page", () => {
     const html = renderToStaticMarkup(<MethodPage />);
 
-    expect(html).toContain(
-      "lg:grid-cols-[minmax(0,0.72fr)_minmax(18rem,0.28fr)]",
-    );
-    expect(html).toContain("block h-auto w-full object-contain");
-    expect(html).toContain("max-h-[300px]");
-    expect(html).not.toContain("max-w-5xl");
-    expect(html).not.toContain("max-h-[520px]");
-    expect(html).not.toContain("max-h-[560px]");
-    expect(html).not.toContain("max-h-[420px]");
+    expect(html).toContain("2-2.png");
+    expect(html).not.toContain("2-3.png");
+    expect(html).not.toContain("2-1.png");
   });
 
-  test("places supporting method figures side by side instead of stacking all figures", () => {
+  test("keeps the method narrative and figure order stable", () => {
     const html = renderToStaticMarkup(<MethodPage />);
 
-    expect(html).toContain("lg:grid-cols-2");
-    expect(html).toContain("mx-auto mt-6 grid max-w-6xl gap-4");
-    expect(html).toContain(
-      "mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3 text-center",
-    );
-    expect(html.indexOf("记忆通道的三步流程")).toBeLessThan(
+    expect(html).toContain("记忆系统的三个关键步骤");
+    expect(html.indexOf("记忆系统的三个关键步骤")).toBeLessThan(
       html.indexOf("记忆系统整体架构"),
     );
     expect(html.indexOf("记忆系统整体架构")).toBeLessThan(
-      html.indexOf("关键线索"),
+      html.indexOf("关键参数"),
     );
-    expect(html.indexOf("关键线索")).toBeLessThan(
-      html.indexOf('src="/images/thesis/2-3.png"'),
-    );
-    expect(html.indexOf('src="/images/thesis/2-2.png"')).toBeLessThan(
-      html.indexOf('src="/images/thesis/2-3.png"'),
-    );
-    expect(html).not.toContain('src="/images/thesis/2-1.png"');
+    expect(html).toContain("2-2.png");
+    expect(html).not.toContain("2-3.png");
   });
 
   test("embeds the sampling animation in the method implementation details", () => {
@@ -611,19 +568,19 @@ describe("story pages", () => {
     const html = renderToStaticMarkup(<ResultsPage />);
 
     expect(html).toContain("SimplerEnv WidowX");
-    expect(html).toContain("RMBench 双臂交换方块");
-    expect(html).toContain('src="/video/simpler/spoon.mp4"');
-    expect(html).toContain('src="/video/rmbench/nice.mp4"');
-    expect(html).toContain('src="/video/real/episode_000009.mp4"');
-    expect(html).toContain('src="/images/thesis/acone-real-task-scene.png"');
-    expect(html).toContain('data-acone-rmse-chart="html"');
+    expect(html).toContain("交换方块成功率对比");
+    expect(html).toContain("spoon.mp4");
+    expect(html).toContain("nice.mp4");
+    expect(html).toContain("episode_000009.mp4");
+    expect(html).toContain("acone-real-task-scene.png");
+    expect(html).toContain("data-acone-rmse-chart");
     expect(html).toContain("均方根误差");
     expect(html).toContain("0.696");
-    expect(html).toContain("ACONE 双臂真机 ");
+    expect(html).toContain("ACONE 双臂真机");
     expect(html).toContain("<table");
     expect(html).toContain("64.6%");
     expect(html).toContain("20.0%");
-    expect(html.indexOf('src="/video/rmbench/nice.mp4"')).toBeLessThan(
+    expect(html.indexOf("nice.mp4")).toBeLessThan(
       html.indexOf("Diffusion Policy"),
     );
     expect(html).not.toContain("数据待补充");

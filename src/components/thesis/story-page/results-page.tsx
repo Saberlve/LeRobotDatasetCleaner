@@ -9,8 +9,7 @@ const aconeEvidenceMedia = [
   {
     kind: "image" as const,
     title: "硬件平台",
-    caption:
-      "方舟无线ACONE双臂机器人",
+    caption: "方舟无线ACONE双臂机器人",
     src: "/images/thesis/acone-real-task-scene.png",
     alt: "ACONE 双臂硬件平台",
   },
@@ -155,9 +154,7 @@ function AconeTransferReport() {
   return (
     <section className="mx-auto mt-12 max-w-7xl rounded-2xl border border-[#e8e0d5] bg-[#fffcf8] p-6 shadow-sm ring-1 ring-[#2c2421]/5 md:p-8">
       <div className="mx-auto max-w-3xl text-center">
-        <p className="text-sm font-medium text-[#c15f3c]">
-          ACONE 双臂真机 
-        </p>
+        <p className="text-sm font-medium text-[#c15f3c]">ACONE 双臂真机</p>
         <h2 className="mt-3 text-2xl font-semibold leading-8 text-[#2a211c] md:text-3xl">
           真机数据采集与开环评测
         </h2>

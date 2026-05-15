@@ -108,7 +108,8 @@ export const thesisMetrics = [
 export const thesisResultPanels = [
   {
     title: "SimplerEnv 完整对比",
-    caption: "四类短程桌面任务上，门控交叉注意力 以 64.6% 平均成功率建立可信优势。",
+    caption:
+      "四类短程桌面任务上，门控交叉注意力 以 64.6% 平均成功率建立可信优势。",
   },
   {
     title: "RMBench Swap Blocks",
@@ -349,7 +350,8 @@ export const thesisPages: ThesisStoryPage[] = [
         ],
         table: {
           title: "交换方块成功率对比",
-          caption: "门控交叉注意力 在强记忆依赖任务上相对于基线方法取得了显著优势。",
+          caption:
+            "门控交叉注意力 在强记忆依赖任务上相对于基线方法取得了显著优势。",
           columns: ["方法", "成功率", "对比 门控交叉注意力"],
           rows: [
             ["Diffusion Policy", "2.0%", "10x"],
@@ -400,8 +402,7 @@ export const thesisPages: ThesisStoryPage[] = [
     benchmarkTables: [
       {
         title: "消融实验：记忆聚合模块的作用：去除记忆聚合模块",
-        caption:
-          "",
+        caption: "",
         columns: ["任务", "具有聚合模块", "去除聚合模块", "变化"],
         rows: [
           ["将勺子放到毛巾上", "62.5%", "66.7%", "+4.2%"],
@@ -447,9 +448,10 @@ export const thesisPages: ThesisStoryPage[] = [
       chips: ["Overview", "Data", "Training", "Replay"],
       image: "/images/thesis/platform-overview.png",
     },
-    takeaway: "研究总结：记忆系统应以解耦通道方式服务于决策，在保证不侵入骨干的前提下提供长程历史支撑。",
+    takeaway:
+      "研究总结：记忆系统应以解耦通道方式服务于决策，在保证不侵入骨干的前提下提供长程历史支撑。",
   },
-  ];
+];
 export const thesisNavItems: ThesisNavItem[] = thesisPages.map((page) => ({
   href: page.href,
   label: page.label,

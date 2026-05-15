@@ -88,9 +88,7 @@ export function SamplingComparisonAnimation() {
           selectedVisible={fixedSampleVisible}
           fixedOutsideVisible={fixedOutsideVisible}
           sample={
-            fixedSampleVisible
-              ? windowText(frames.slice(0, 4))
-              : "一次性构造中"
+            fixedSampleVisible ? windowText(frames.slice(0, 4)) : "一次性构造中"
           }
           sampleActive={fixedSampleVisible}
           mode="fixed"

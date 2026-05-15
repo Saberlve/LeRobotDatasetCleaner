@@ -167,7 +167,9 @@ describe("EpisodeViewer replay tab", () => {
   test("stores the content scroll position before episode keyboard navigation", async () => {
     render(<EpisodeViewer org="local" dataset="demo_g1" episodeId={0} />);
 
-    await screen.findByRole("button", { name: "回放" });
+    const replayButton = await screen.findByRole("button", { name: "回放" });
+    replayButton.click();
+
     const content = screen.getByTestId("episode-content-scroll");
     Object.defineProperty(content, "scrollTop", {
       configurable: true,
@@ -178,7 +180,7 @@ describe("EpisodeViewer replay tab", () => {
 
     await waitFor(() => {
       expect(sessionStorage.getItem("episodeContentScrollTop")).toBe("320");
-      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1", {
+      expect(mocks.routerPush).toHaveBeenCalledWith("./episode_1?tab=replay", {
         scroll: false,
       });
     });

@@ -126,7 +126,9 @@ export function BenchmarkSection({
         </div>
         <div
           className={`${
-            section.compact ? "space-y-1 leading-relaxed" : "space-y-4 leading-8"
+            section.compact
+              ? "space-y-1 leading-relaxed"
+              : "space-y-4 leading-8"
           } text-base text-[#665c52]`}
         >
           {section.intro.map((item) => (
@@ -225,7 +227,10 @@ function BenchmarkTable({ table }: { table: ThesisBenchmarkTable }) {
           <thead className="bg-[#f8f3ea]/50 text-[#2c2421]">
             <tr>
               {table.columns.map((column) => (
-                <th key={column} className="px-8 py-4 font-semibold text-[#2a211c]">
+                <th
+                  key={column}
+                  className="px-8 py-4 font-semibold text-[#2a211c]"
+                >
                   {column}
                 </th>
               ))}

@@ -13,6 +13,7 @@
 ### Task 1: Add Static Demo Structure
 
 **Files:**
+
 - Create: `public/sampling-demo.html`
 
 - [ ] **Step 1: Write the initial HTML skeleton**
@@ -46,7 +47,10 @@ Create `public/sampling-demo.html` with this structure:
         <fieldset class="speed-control">
           <legend>播放速度</legend>
           <label><input type="radio" name="speed" value="slow" /> 慢</label>
-          <label><input type="radio" name="speed" value="normal" checked /> 中</label>
+          <label
+            ><input type="radio" name="speed" value="normal" checked />
+            中</label
+          >
           <label><input type="radio" name="speed" value="fast" /> 快</label>
         </fieldset>
       </section>
@@ -56,7 +60,10 @@ Create `public/sampling-demo.html` with this structure:
       </p>
 
       <section class="comparison-stack" aria-label="采样方式对比">
-        <article class="sampling-panel fixed-panel" aria-labelledby="fixedTitle">
+        <article
+          class="sampling-panel fixed-panel"
+          aria-labelledby="fixedTitle"
+        >
           <aside class="side-label blue">固定窗口采样</aside>
           <div class="panel-content">
             <div class="panel-heading">
@@ -69,9 +76,19 @@ Create `public/sampling-demo.html` with this structure:
                 <div class="timeline-line" aria-hidden="true"></div>
                 <span>回合结束</span>
               </div>
-              <div id="fixedFrames" class="frame-track" aria-label="固定窗口原始帧序列"></div>
-              <div id="fixedWindow" class="selection-window fixed-window" aria-hidden="true"></div>
-              <div id="fixedOutside" class="outside-callout">窗口外帧不参与</div>
+              <div
+                id="fixedFrames"
+                class="frame-track"
+                aria-label="固定窗口原始帧序列"
+              ></div>
+              <div
+                id="fixedWindow"
+                class="selection-window fixed-window"
+                aria-hidden="true"
+              ></div>
+              <div id="fixedOutside" class="outside-callout">
+                窗口外帧不参与
+              </div>
             </div>
             <div class="samples-area">
               <span class="samples-label">训练样本</span>
@@ -80,7 +97,10 @@ Create `public/sampling-demo.html` with this structure:
           </div>
         </article>
 
-        <article class="sampling-panel continuous-panel" aria-labelledby="continuousTitle">
+        <article
+          class="sampling-panel continuous-panel"
+          aria-labelledby="continuousTitle"
+        >
           <aside class="side-label green">连续回合采样</aside>
           <div class="panel-content">
             <div class="panel-heading">
@@ -93,8 +113,16 @@ Create `public/sampling-demo.html` with this structure:
                 <div class="timeline-line" aria-hidden="true"></div>
                 <span>回合结束</span>
               </div>
-              <div id="continuousFrames" class="frame-track" aria-label="连续回合原始帧序列"></div>
-              <div id="slidingWindow" class="selection-window sliding-window" aria-hidden="true"></div>
+              <div
+                id="continuousFrames"
+                class="frame-track"
+                aria-label="连续回合原始帧序列"
+              ></div>
+              <div
+                id="slidingWindow"
+                class="selection-window sliding-window"
+                aria-hidden="true"
+              ></div>
               <div id="removeCallout" class="remove-callout">移除第一帧</div>
             </div>
             <div class="samples-area">
@@ -129,6 +157,7 @@ Expected: command exits with status 0.
 ### Task 2: Add Visual Design And Responsive Layout
 
 **Files:**
+
 - Modify: `public/sampling-demo.html`
 
 - [ ] **Step 1: Add embedded CSS in `<head>`**
@@ -395,8 +424,17 @@ input:focus-visible + span,
   border: 1px solid oklch(78% 0.032 70);
   border-radius: 10px;
   background:
-    radial-gradient(circle at 38% 62%, oklch(78% 0.1 95) 0 5px, transparent 6px),
-    linear-gradient(160deg, oklch(79% 0.07 180), oklch(50% 0.08 180) 62%, oklch(36% 0.05 180));
+    radial-gradient(
+      circle at 38% 62%,
+      oklch(78% 0.1 95) 0 5px,
+      transparent 6px
+    ),
+    linear-gradient(
+      160deg,
+      oklch(79% 0.07 180),
+      oklch(50% 0.08 180) 62%,
+      oklch(36% 0.05 180)
+    );
   opacity: 0.24;
   transform: translateY(8px);
   transition:
@@ -678,6 +716,7 @@ Expected: matches for all four terms.
 ### Task 3: Add Animation State Machine
 
 **Files:**
+
 - Modify: `public/sampling-demo.html`
 
 - [ ] **Step 1: Add embedded JavaScript before `</body>`**
@@ -742,7 +781,8 @@ Add this script:
       summary: false,
     },
     {
-      status: "当前步骤：固定窗口采样抽取 [f1, f2, f3, f4]，训练样本只生成一次。",
+      status:
+        "当前步骤：固定窗口采样抽取 [f1, f2, f3, f4]，训练样本只生成一次。",
       fixedVisible: 4,
       continuousVisible: 0,
       fixedSample: true,
@@ -833,7 +873,8 @@ Add this script:
       summary: false,
     },
     {
-      status: "当前步骤：对比完成。固定窗口只抽一次；连续回合每一步生成样本并滑动更新。",
+      status:
+        "当前步骤：对比完成。固定窗口只抽一次；连续回合每一步生成样本并滑动更新。",
       fixedVisible: 5,
       continuousVisible: 5,
       fixedSample: true,
@@ -877,7 +918,10 @@ Add this script:
   function setFrameVisibility(container, visibleCount, removedFirst) {
     [...container.children].forEach((card, index) => {
       card.classList.toggle("visible", index < visibleCount);
-      card.classList.toggle("outside", container === fixedFramesEl && index === 4 && visibleCount === 5);
+      card.classList.toggle(
+        "outside",
+        container === fixedFramesEl && index === 4 && visibleCount === 5,
+      );
       card.classList.toggle("removed", removedFirst && index === 0);
     });
   }
@@ -901,7 +945,11 @@ Add this script:
     currentStep = index;
     statusTextEl.textContent = step.status;
     setFrameVisibility(fixedFramesEl, step.fixedVisible, false);
-    setFrameVisibility(continuousFramesEl, step.continuousVisible, step.removed);
+    setFrameVisibility(
+      continuousFramesEl,
+      step.continuousVisible,
+      step.removed,
+    );
     fixedWindowEl.classList.toggle("active", step.fixedWindow);
     fixedOutsideEl.classList.toggle("active", step.fixedOutside);
     removeCalloutEl.classList.toggle("active", step.removed);
@@ -988,6 +1036,7 @@ Expected: prints `embedded script parses`.
 ### Task 4: Verify Behavior Hooks And Repository Health
 
 **Files:**
+
 - Verify: `public/sampling-demo.html`
 
 - [ ] **Step 1: Verify required copy and state labels**

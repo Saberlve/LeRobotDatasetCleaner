@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   Line,
   LineChart,
@@ -39,7 +38,11 @@ export function AttentionDistributionChart() {
           layout="vertical"
           margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#d8ccbb" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            horizontal={false}
+            stroke="#d8ccbb"
+          />
           <XAxis type="number" domain={[0, 100]} hide />
           <YAxis
             dataKey="name"
@@ -58,10 +61,24 @@ export function AttentionDistributionChart() {
               fontSize: "12px",
             }}
           />
-          <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
-          <Bar dataKey="图像" stackId="a" fill="#2a211c" radius={[0, 0, 0, 0]} barSize={40} />
+          <Legend
+            iconType="circle"
+            wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
+          />
+          <Bar
+            dataKey="图像"
+            stackId="a"
+            fill="#2a211c"
+            radius={[0, 0, 0, 0]}
+            barSize={40}
+          />
           <Bar dataKey="语言" stackId="a" fill="#7a6f64" />
-          <Bar dataKey="记忆" stackId="a" fill="#c15f3c" radius={[0, 4, 4, 0]} />
+          <Bar
+            dataKey="记忆"
+            stackId="a"
+            fill="#c15f3c"
+            radius={[0, 4, 4, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -89,18 +106,32 @@ export function AttentionOverTimeChart() {
           data={attentionOverTimeData}
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#d8ccbb" vertical={false} />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="#d8ccbb"
+            vertical={false}
+          />
           <XAxis
             dataKey="step"
             stroke="#665c52"
             fontSize={11}
-            label={{ value: "时间步 (Step)", position: "bottom", offset: 0, fontSize: 11 }}
+            label={{
+              value: "时间步 (Step)",
+              position: "bottom",
+              offset: 0,
+              fontSize: 11,
+            }}
           />
           <YAxis
             stroke="#665c52"
             fontSize={11}
             domain={[0, 100]}
-            label={{ value: "注意力权重 (%)", angle: -90, position: "insideLeft", fontSize: 11 }}
+            label={{
+              value: "注意力权重 (%)",
+              angle: -90,
+              position: "insideLeft",
+              fontSize: 11,
+            }}
           />
           <Tooltip
             contentStyle={{
@@ -110,7 +141,12 @@ export function AttentionOverTimeChart() {
               fontSize: "12px",
             }}
           />
-          <Legend verticalAlign="top" height={36} iconType="plainline" wrapperStyle={{ fontSize: "12px" }} />
+          <Legend
+            verticalAlign="top"
+            height={36}
+            iconType="plainline"
+            wrapperStyle={{ fontSize: "12px" }}
+          />
           <Line
             name="Comp 记忆注意力"
             type="monotone"
