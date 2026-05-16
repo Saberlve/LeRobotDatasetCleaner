@@ -3,6 +3,13 @@ import pandas as pd
 import json
 import os
 
+EVAL_RESULTS_ROOT = os.path.abspath(
+    os.environ.get(
+        "EVAL_RESULTS_ROOT",
+        os.path.join(os.path.expanduser("~"), "autodl-tmp", "SimplerBridge_evaluation_result"),
+    )
+)
+
 def fetch_data():
     try:
         api = wandb.Api()
@@ -14,7 +21,7 @@ def fetch_data():
         summary_list, config_list, name_list, id_list = [], [], [], []
         
         # Create directory for histories
-        os.makedirs("eval_results/wandb_histories", exist_ok=True)
+        os.makedirs(os.path.join(EVAL_RESULTS_ROOT, "wandb_histories"), exist_ok=True)
         
         for run in runs:
             # Summary and Config
@@ -28,7 +35,10 @@ def fetch_data():
             print(f"Fetching history for {run.name} ({run.id})...")
             history = run.history(samples=500) # Get up to 500 points for smoothness
             if not history.empty:
-                history.to_json(f"eval_results/wandb_histories/{run.id}.json", orient="records")
+                history.to_json(
+                    os.path.join(EVAL_RESULTS_ROOT, "wandb_histories", f"{run.id}.json"),
+                    orient="records",
+                )
 
         runs_df = pd.DataFrame({
             "id": id_list,
@@ -37,8 +47,9 @@ def fetch_data():
             "config": config_list
         })
         
-        runs_df.to_csv("eval_results/wandb_runs.csv", index=False)
-        print("Exported summary to eval_results/wandb_runs.csv")
+        runs_csv = os.path.join(EVAL_RESULTS_ROOT, "wandb_runs.csv")
+        runs_df.to_csv(runs_csv, index=False)
+        print(f"Exported summary to {runs_csv}")
         
     except Exception as e:
         print(f"Error: {e}")

@@ -1,10 +1,13 @@
+import path from "node:path";
 import { describe, expect, test } from "vitest";
 
 import { loadEvaluationDashboard } from "@/server/eval-results/summary";
 
+const FIXTURE_EVAL_RESULTS_ROOT = path.resolve(process.cwd(), "eval_results");
+
 describe("eval result summary", () => {
-  test("loads SimplerEnv summaries and RMBench videos from local eval_results", async () => {
-    const dashboard = await loadEvaluationDashboard();
+  test("loads SimplerEnv summaries and RMBench videos from the eval_results fixture", async () => {
+    const dashboard = await loadEvaluationDashboard(FIXTURE_EVAL_RESULTS_ROOT);
 
     expect(dashboard.simpler.runs.length).toBeGreaterThan(0);
     expect(dashboard.simpler.runs[0].steps.length).toBeGreaterThan(0);
@@ -30,7 +33,7 @@ describe("eval result summary", () => {
   });
 
   test("exposes the configured W&B URL", async () => {
-    const dashboard = await loadEvaluationDashboard();
+    const dashboard = await loadEvaluationDashboard(FIXTURE_EVAL_RESULTS_ROOT);
 
     expect(dashboard.wandbUrl).toBe(
       "https://wandb.ai/saberlve9-massachusetts-institute-of-technology/openpi?nw=nwusersaberlve9",
@@ -38,7 +41,7 @@ describe("eval result summary", () => {
   });
 
   test("loads training hyperparameters from openpi-simpler config.py", async () => {
-    const dashboard = await loadEvaluationDashboard();
+    const dashboard = await loadEvaluationDashboard(FIXTURE_EVAL_RESULTS_ROOT);
 
     expect(dashboard.training.configs.length).toBeGreaterThan(0);
     expect(
@@ -53,7 +56,7 @@ describe("eval result summary", () => {
   });
 
   test("flattens CSV and TXT evaluation scores into table rows and finds the current best", async () => {
-    const dashboard = await loadEvaluationDashboard();
+    const dashboard = await loadEvaluationDashboard(FIXTURE_EVAL_RESULTS_ROOT);
 
     expect(dashboard.results.rows.length).toBeGreaterThan(0);
     expect(

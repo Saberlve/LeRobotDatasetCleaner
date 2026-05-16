@@ -19,7 +19,8 @@ OPENPI_ROOT="${OPENPI_CODE_ROOT:-/VLA/openpi}"
 CHECKPOINT_PATH="${SIMPLERENV_LAUNCH_CHECKPOINT_PATH:-/root/autodl-tmp/checkpoints/pi05_simpler/pi05_bridge_v2_full/26000}"
 SERVER_PORT="${SIMPLERENV_LAUNCH_SERVER_PORT:-8000}"
 RENDER_SCALE="${SIMPLERENV_LAUNCH_RENDER_SCALE:-2.0}"
-POLICY_CONFIG="pi05_simpler"
+SUCCESS_RENDER_SECONDS="${SIMPLERENV_LAUNCH_SUCCESS_RENDER_SECONDS:-2}"
+MAX_EPISODE_STEPS="${SIMPLERENV_LAUNCH_MAX_EPISODE_STEPS:-250}"
 SEED=42
 SERVER_GPU=0
 
@@ -52,7 +53,7 @@ case "$TASK_ID" in
     RGB_OVERLAY="ManiSkill2_real2sim/data/real_inpainting/bridge_real_eval_1.png"
     ROBOT_INIT_X="0.147"
     ROBOT_INIT_Y="0.028"
-    OBJ_EPISODE_RANGE="0 24"
+    OBJ_EPISODE_RANGE="0 26"
     ;;
   bridge_stack)
     ENV_NAME="StackGreenCubeOnYellowCubeBakedTexInScene-v0"
@@ -61,7 +62,7 @@ case "$TASK_ID" in
     RGB_OVERLAY="ManiSkill2_real2sim/data/real_inpainting/bridge_real_eval_1.png"
     ROBOT_INIT_X="0.147"
     ROBOT_INIT_Y="0.028"
-    OBJ_EPISODE_RANGE="0 24"
+    OBJ_EPISODE_RANGE="0 26"
     ;;
   bridge_spoon)
     ENV_NAME="PutSpoonOnTableClothInScene-v0"
@@ -70,7 +71,7 @@ case "$TASK_ID" in
     RGB_OVERLAY="ManiSkill2_real2sim/data/real_inpainting/bridge_real_eval_1.png"
     ROBOT_INIT_X="0.147"
     ROBOT_INIT_Y="0.028"
-    OBJ_EPISODE_RANGE="0 24"
+    OBJ_EPISODE_RANGE="0 26"
     ;;
   eggplant)
     ENV_NAME="PutEggplantInBasketScene-v0"
@@ -79,7 +80,7 @@ case "$TASK_ID" in
     RGB_OVERLAY="ManiSkill2_real2sim/data/real_inpainting/bridge_sink.png"
     ROBOT_INIT_X="0.127"
     ROBOT_INIT_Y="0.06"
-    OBJ_EPISODE_RANGE="0 24"
+    OBJ_EPISODE_RANGE="0 26"
     ;;
   *)
     log "unsupported task: $TASK_ID"
@@ -104,47 +105,37 @@ cleanup() {
     log "stopping task process $TASK_PID"
     kill_tree "$TASK_PID"
   fi
-  if [ -n "${SERVER_PID:-}" ]; then
-    log "stopping policy server $SERVER_PID"
-    kill_tree "$SERVER_PID"
-  fi
 }
 trap cleanup EXIT INT TERM
 
-SEED_CLI=()
-if [ -n "$SEED" ]; then
-  SEED_CLI+=("--seed=$SEED")
-fi
-
-log "starting policy server on port ${SERVER_PORT}"
-(
-  cd "$OPENPI_ROOT"
-  CUDA_VISIBLE_DEVICES=${SERVER_GPU}     "$PYTHON" scripts/serve_policy.py "${SEED_CLI[@]}" --port=${SERVER_PORT} policy:checkpoint       --policy.config=${POLICY_CONFIG}       --policy.dir="$CHECKPOINT_PATH"
-) >>"$SERVER_LOG" 2>&1 &
-SERVER_PID=$!
-log "policy server pid ${SERVER_PID}"
-
-SERVER_READY_MARKER="INFO:websockets.server:server listening on"
-for i in $(seq 1 60); do
-  sleep 1
-  if grep -Fq "$SERVER_READY_MARKER" "$SERVER_LOG"; then
-    log "policy server is ready"
-    break
-  fi
-  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-    log "policy server exited before becoming ready"
-    exit 1
-  fi
-  if [ "$i" -eq 60 ]; then
-    log "policy server did not start in time"
-    exit 1
-  fi
-done
-
+printf '[%s] using persistent policy server on port %s
+' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$SERVER_PORT" >>"$SERVER_LOG"
+log "using persistent policy server on port ${SERVER_PORT}"
 log "launching SimplerEnv client for ${TASK_ID}"
 (
   cd "$OPENPI_ROOT/third_party/SimplerEnv"
-  CUDA_VISIBLE_DEVICES=${SERVER_GPU}     OPENPI_POLICY_HOST=localhost     OPENPI_POLICY_PORT=${SERVER_PORT}     PYTHONPATH="$OPENPI_ROOT/third_party/SimplerEnv:$OPENPI_ROOT/third_party/SimplerEnv/ManiSkill2_real2sim:${PYTHONPATH:-}"     "$PYTHON" simpler_env/main_inference.py       --policy-model pi05       --ckpt-path "$CHECKPOINT_PATH"       --logging-dir "$RUNTIME_DIR"       --robot "$ROBOT"       --policy-setup widowx_bridge       --control-freq 5 --sim-freq 500 --max-episode-steps 540       --env-name "$ENV_NAME" --scene-name "$SCENE_NAME"       --rgb-overlay-path "$RGB_OVERLAY"       --robot-init-x-range "$ROBOT_INIT_X" "$ROBOT_INIT_X" 1       --robot-init-y-range "$ROBOT_INIT_Y" "$ROBOT_INIT_Y" 1       --obj-variation-mode episode --obj-episode-range ${OBJ_EPISODE_RANGE}       --robot-init-rot-quat-center 0 0 0 1       --robot-init-rot-rpy-range 0 0 1 0 0 1 0 0 1       --render-scale "$RENDER_SCALE"       --seed "$SEED"
+  CUDA_VISIBLE_DEVICES=${SERVER_GPU} \
+    OPENPI_POLICY_HOST=localhost \
+    OPENPI_POLICY_PORT=${SERVER_PORT} \
+    PYTHONPATH="$OPENPI_ROOT/third_party/SimplerEnv:$OPENPI_ROOT/third_party/SimplerEnv/ManiSkill2_real2sim:${PYTHONPATH:-}" \
+    "$PYTHON" simpler_env/main_inference.py \
+      --policy-model pi05 \
+      --ckpt-path "$CHECKPOINT_PATH" \
+      --logging-dir "$RUNTIME_DIR" \
+      --robot "$ROBOT" \
+      --policy-setup widowx_bridge \
+      --control-freq 5 --sim-freq 500 --max-episode-steps "$MAX_EPISODE_STEPS" \
+      --env-name "$ENV_NAME" --scene-name "$SCENE_NAME" \
+      --rgb-overlay-path "$RGB_OVERLAY" \
+      --robot-init-x-range "$ROBOT_INIT_X" "$ROBOT_INIT_X" 1 \
+      --robot-init-y-range "$ROBOT_INIT_Y" "$ROBOT_INIT_Y" 1 \
+      --obj-variation-mode episode --obj-episode-range ${OBJ_EPISODE_RANGE} \
+      --random-single-episode \
+      --robot-init-rot-quat-center 0 0 0 1 \
+      --robot-init-rot-rpy-range 0 0 1 0 0 1 0 0 1 \
+      --render-scale "$RENDER_SCALE" \
+      --success-render-seconds "$SUCCESS_RENDER_SECONDS" \
+      --seed "$SEED"
 ) >>"$CLIENT_LOG" 2>&1 &
 TASK_PID=$!
 log "client pid ${TASK_PID}"

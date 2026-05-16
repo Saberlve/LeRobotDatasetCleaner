@@ -67,6 +67,7 @@ export type SimplerLaunchStatusResponse = {
   taskId: SimplerTaskId | null;
   prompt: string;
   status: SimplerLaunchRunStatus;
+  processActive: boolean;
   step: number;
   startedAt: string | null;
   updatedAt: string | null;

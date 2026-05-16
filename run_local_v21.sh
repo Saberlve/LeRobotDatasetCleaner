@@ -5,8 +5,8 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
-DATASET_ALIAS="${DATASET_ALIAS:-local/pickXtimes_v21_filtered}"
-DATASET_ROOT="${DATASET_ROOT:-/mnt/d/pickXtimes_v21_filtered}"
+DATASET_ALIAS="${DATASET_ALIAS:-local/pick_X_times_filterd_twice}"
+DATASET_ROOT="${DATASET_ROOT:-/root/autodl-tmp/pick_X_times_filterd_twice}"
 PORT_WAS_SET=0
 if [ -n "${PORT+x}" ]; then
   PORT_WAS_SET=1

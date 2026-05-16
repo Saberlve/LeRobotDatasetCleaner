@@ -9,7 +9,6 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises";
-import net from "node:net";
 import path from "node:path";
 
 import type {
@@ -24,6 +23,9 @@ import type {
   SimplerTaskId,
 } from "@/types/simpler-launch";
 
+import { getSimplerModelServerStatus } from "@/server/evaluation-model-server/service";
+import type { EvaluationModelServerStatus } from "@/types/evaluation-model-server";
+
 const REPO_ROOT = process.env.NEXTJS_REPO_ROOT || process.cwd();
 const OPENPI_ROOT = process.env.OPENPI_CODE_ROOT || "/VLA/openpi";
 const DEFAULT_RUNTIME_ROOT =
@@ -36,9 +38,14 @@ const FIXED_CHECKPOINT_PATH =
   "/root/autodl-tmp/checkpoints/pi05_simpler/pi05_bridge_v2_full/26000";
 const ACTIVE_RUN_FILE = "active-run.json";
 const LATEST_RUN_FILE = "latest-run.json";
+const STOP_REQUEST_FILE = "stop-requested.json";
 const LOG_TAIL_BYTES = Math.max(
   4096,
   Number(process.env.SIMPLER_LAUNCH_LOG_TAIL_BYTES || 65536),
+);
+const DEFAULT_FRAME_STREAM_POLL_INTERVAL_MS = Math.max(
+  30,
+  Number(process.env.SIMPLER_FRAME_STREAM_POLL_INTERVAL_MS || 40),
 );
 const FINAL_STATUSES = new Set<SimplerLaunchRunStatus>([
   "idle",
@@ -71,13 +78,25 @@ type LaunchDeps = {
   scriptPath: string;
   spawnImpl: typeof spawn;
   now: () => Date;
-  findFreePortImpl: () => Promise<number>;
+  readModelServerStatusImpl: () => Promise<EvaluationModelServerStatus>;
   isProcessRunningImpl: (pid: number) => boolean;
+  killProcessImpl: (pid: number, signal?: NodeJS.Signals | number) => void;
+  readProcessGroupIdImpl: (pid: number) => Promise<number | null>;
   killProcessGroupImpl: (pid: number, signal?: NodeJS.Signals | number) => void;
   waitForExitImpl: (pid: number, timeoutMs: number) => Promise<boolean>;
 };
 
 type ServiceDeps = Partial<LaunchDeps>;
+type FrameStreamDeps = ServiceDeps & {
+  framePollIntervalMs?: number;
+  sleepImpl?: (ms: number) => Promise<void>;
+};
+
+export const FRAME_STREAM_BOUNDARY = "frame";
+export const FRAME_STREAM_CONTENT_TYPE =
+  `multipart/x-mixed-replace; boundary=${FRAME_STREAM_BOUNDARY}`;
+const FRAME_STREAM_STEP_HEADER = "X-Simpler-Step";
+const FRAME_STREAM_ACTION_COUNT_HEADER = "X-Simpler-Action-Count";
 
 const TASK_CONFIGS: Record<SimplerTaskId, TaskConfig> = {
   bridge_carrot: {
@@ -138,7 +157,7 @@ export async function launchSimplerEvaluation(
   await mkdir(resolved.runtimeRoot, { recursive: true });
   await reconcileActiveRun(resolved);
 
-  const activeRun = await readActiveRun(resolved.runtimeRoot);
+  const activeRun = await resolveTrackedActiveRun(resolved);
   if (activeRun && resolved.isProcessRunningImpl(activeRun.pid)) {
     throw new SimplerLaunchError(
       "A SimplerEnv evaluation is already running",
@@ -150,7 +169,15 @@ export async function launchSimplerEvaluation(
   const runRoot = path.join(resolved.runtimeRoot, runId);
   const logFiles = buildLogFiles(runRoot);
   const taskConfig = TASK_CONFIGS[taskId];
-  const serverPort = await resolved.findFreePortImpl();
+  const modelServerStatus = await resolved.readModelServerStatusImpl();
+  if (modelServerStatus.status !== "running") {
+    throw new SimplerLaunchError(
+      "Simpler 模型服务未运行，请先启动 Simpler 模型服务。",
+      409,
+    );
+  }
+
+  const serverPort = modelServerStatus.port;
   const timestamp = resolved.now().toISOString();
   const meta: SimplerLaunchMeta = {
     taskId,
@@ -238,7 +265,7 @@ export async function stopSimplerEvaluation(
   const resolved = resolveDeps(deps);
   await reconcileActiveRun(resolved);
 
-  const activeRun = await readActiveRun(resolved.runtimeRoot);
+  const activeRun = await resolveTrackedActiveRun(resolved, requestedRunId);
   if (!activeRun) {
     const latestRunId = await readLatestRunId(resolved.runtimeRoot);
     if (latestRunId) {
@@ -266,16 +293,34 @@ export async function stopSimplerEvaluation(
     return getSimplerEvaluationStatus(resolved, activeRun.runId);
   }
 
+  const stopTargets = collectStopTargetPids(activeRun, current, resolved);
+  if (stopTargets.length === 0) {
+    await reconcileRun(activeRun.runId, resolved);
+    return getSimplerEvaluationStatus(resolved, activeRun.runId);
+  }
+
   await updateRuntimeStatus(runRoot, {
     status: "stopping",
     updatedAt: resolved.now().toISOString(),
     pid: activeRun.pid,
   });
-  resolved.killProcessGroupImpl(activeRun.pid, "SIGTERM");
-  const exited = await resolved.waitForExitImpl(activeRun.pid, 5000);
-  if (!exited) {
-    resolved.killProcessGroupImpl(activeRun.pid, "SIGKILL");
-    await resolved.waitForExitImpl(activeRun.pid, 2000);
+  await writeJsonAtomic(path.join(runRoot, STOP_REQUEST_FILE), {
+    requestedAt: resolved.now().toISOString(),
+  });
+  for (const pid of stopTargets) {
+    killTrackedProcess(pid, resolved, "SIGTERM");
+  }
+  const exitedStates = await Promise.all(
+    stopTargets.map((pid) => resolved.waitForExitImpl(pid, 5000)),
+  );
+  const remainingTargets = stopTargets.filter((_, index) => !exitedStates[index]);
+  if (remainingTargets.length > 0) {
+    for (const pid of remainingTargets) {
+      killTrackedProcess(pid, resolved, "SIGKILL");
+    }
+    await Promise.all(
+      remainingTargets.map((pid) => resolved.waitForExitImpl(pid, 2000)),
+    );
   }
 
   await updateRuntimeStatus(runRoot, {
@@ -297,7 +342,7 @@ export async function getSimplerEvaluationStatus(
 
   const runId =
     requestedRunId ||
-    (await readActiveRun(resolved.runtimeRoot))?.runId ||
+    (await resolveTrackedActiveRun(resolved))?.runId ||
     (await readLatestRunId(resolved.runtimeRoot));
   if (!runId) {
     return buildIdleStatus();
@@ -309,17 +354,19 @@ export async function getSimplerEvaluationStatus(
   if (!runtimeStatus) {
     return buildIdleStatus();
   }
+  const processActive = isRuntimeProcessActive(runtimeStatus.pid, resolved);
 
   return {
     runId: runtimeStatus.runId,
     taskId: runtimeStatus.taskId,
     prompt: runtimeStatus.prompt,
     status: runtimeStatus.status,
+    processActive,
     step: runtimeStatus.step,
     startedAt: runtimeStatus.startedAt,
     updatedAt: runtimeStatus.updatedAt,
     latestFrameUrl: `/api/evaluation/simpler/frame?runId=${encodeURIComponent(runtimeStatus.runId)}`,
-    frameVersion: runtimeStatus.actionCount,
+    frameVersion: await resolveFrameVersion(runRoot, runtimeStatus),
     actionSeries: await readActions(runRoot),
     errorMessage: runtimeStatus.errorMessage,
     logPath: runtimeStatus.logPath,
@@ -347,6 +394,75 @@ export async function resolveSimplerFramePath(
     throw new SimplerLaunchError("SimplerEnv frame not found", 404);
   }
   return framePath;
+}
+
+export async function createSimplerFrameStream(
+  runId: string,
+  deps?: FrameStreamDeps,
+): Promise<ReadableStream<Uint8Array>> {
+  validateRunId(runId);
+  const resolved = resolveDeps(deps);
+  const runRoot = path.join(resolved.runtimeRoot, runId);
+  const initialStatus = await readRuntimeStatus(runRoot);
+  if (!initialStatus) {
+    throw new SimplerLaunchError("SimplerEnv run not found", 404);
+  }
+
+  const encoder = new TextEncoder();
+  const pollIntervalMs =
+    deps?.framePollIntervalMs ?? DEFAULT_FRAME_STREAM_POLL_INTERVAL_MS;
+  const sleepImpl = deps?.sleepImpl ?? sleep;
+  let cancelled = false;
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let lastFrameSignature: string | null = null;
+      let lastFrameBuffer: Buffer | null = null;
+      let lastActionCount = 0;
+
+      while (!cancelled) {
+        const runtimeStatus = await readRuntimeStatus(runRoot);
+        if (!runtimeStatus) {
+          break;
+        }
+
+        const framePath =
+          runtimeStatus.latestFramePath ?? path.join(runRoot, "latest-frame.jpg");
+        const snapshot = await readFrameSnapshot(framePath);
+        const isFinalStatus = FINAL_STATUSES.has(runtimeStatus.status);
+        const shouldEmitLiveFrame =
+          !!snapshot && runtimeStatus.actionCount > lastActionCount;
+        const shouldEmitFinalFrame =
+          !!snapshot &&
+          isFinalStatus &&
+          (snapshot.signature !== lastFrameSignature ||
+            !lastFrameBuffer?.equals(snapshot.buffer));
+
+        if (shouldEmitLiveFrame || shouldEmitFinalFrame) {
+          lastFrameSignature = snapshot.signature;
+          lastFrameBuffer = snapshot.buffer;
+          lastActionCount = Math.max(lastActionCount, runtimeStatus.actionCount);
+          controller.enqueue(
+            buildMjpegPart(snapshot.buffer, encoder, {
+              step: runtimeStatus.step,
+              actionCount: runtimeStatus.actionCount,
+            }),
+          );
+        }
+
+        if (isFinalStatus) {
+          break;
+        }
+
+        await sleepImpl(pollIntervalMs);
+      }
+
+      controller.close();
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
 }
 
 export async function readSimplerEvaluationLog(
@@ -387,8 +503,11 @@ function resolveDeps(deps?: ServiceDeps): LaunchDeps {
     scriptPath: path.resolve(deps?.scriptPath || DEFAULT_SCRIPT_PATH),
     spawnImpl: deps?.spawnImpl ?? spawn,
     now: deps?.now ?? (() => new Date()),
-    findFreePortImpl: deps?.findFreePortImpl ?? findFreePort,
+    readModelServerStatusImpl:
+      deps?.readModelServerStatusImpl ?? getSimplerModelServerStatus,
     isProcessRunningImpl: deps?.isProcessRunningImpl ?? isProcessRunning,
+    killProcessImpl: deps?.killProcessImpl ?? killProcess,
+    readProcessGroupIdImpl: deps?.readProcessGroupIdImpl ?? readProcessGroupId,
     killProcessGroupImpl: deps?.killProcessGroupImpl ?? killProcessGroup,
     waitForExitImpl: deps?.waitForExitImpl ?? waitForExit,
   };
@@ -418,6 +537,7 @@ function buildIdleStatus(): SimplerLaunchStatusResponse {
     taskId: null,
     prompt: "",
     status: "idle",
+    processActive: false,
     step: 0,
     startedAt: null,
     updatedAt: null,
@@ -451,20 +571,83 @@ async function reconcileActiveRun(deps: LaunchDeps) {
   await reconcileRun(activeRun.runId, deps);
 }
 
+async function resolveTrackedActiveRun(
+  deps: LaunchDeps,
+  requestedRunId?: string,
+): Promise<ActiveRunRecord | null> {
+  const activeRun = await readActiveRun(deps.runtimeRoot);
+  if (activeRun?.pid && deps.isProcessRunningImpl(activeRun.pid)) {
+    return activeRun;
+  }
+
+  const candidateRunIds = Array.from(
+    new Set([requestedRunId, await readLatestRunId(deps.runtimeRoot)].filter(Boolean)),
+  ) as string[];
+  for (const runId of candidateRunIds) {
+    const recovered = await recoverActiveRunFromRunId(runId, deps);
+    if (recovered) {
+      return recovered;
+    }
+  }
+
+  return null;
+}
+
+async function recoverActiveRunFromRunId(runId: string, deps: LaunchDeps) {
+  const runtimeStatus = await readRuntimeStatus(path.join(deps.runtimeRoot, runId));
+  if (!runtimeStatus?.pid || !deps.isProcessRunningImpl(runtimeStatus.pid)) {
+    return null;
+  }
+
+  const recovered = {
+    runId,
+    pid: runtimeStatus.pid,
+  };
+  await writeJsonAtomic(path.join(deps.runtimeRoot, ACTIVE_RUN_FILE), recovered);
+  return recovered;
+}
+
 async function reconcileRun(runId: string, deps: LaunchDeps) {
   const runRoot = path.join(deps.runtimeRoot, runId);
   const runtimeStatus = await readRuntimeStatus(runRoot);
   if (!runtimeStatus) return;
+
+  const stopRequested = await fileExists(path.join(runRoot, STOP_REQUEST_FILE));
+  const processRunning =
+    !!runtimeStatus.pid && deps.isProcessRunningImpl(runtimeStatus.pid);
+
+  if (stopRequested && !processRunning) {
+    if (runtimeStatus.status !== "stopped" || runtimeStatus.errorMessage !== null) {
+      await updateRuntimeStatus(runRoot, {
+        status: "stopped",
+        updatedAt: deps.now().toISOString(),
+        errorMessage: null,
+      });
+    }
+    const activeRun = await readActiveRun(deps.runtimeRoot);
+    if (activeRun?.runId === runId) {
+      await removeFile(path.join(deps.runtimeRoot, ACTIVE_RUN_FILE));
+    }
+    await removeFile(path.join(runRoot, STOP_REQUEST_FILE));
+    return;
+  }
+
+  if (processRunning) {
+    const activeRun = await readActiveRun(deps.runtimeRoot);
+    if (activeRun?.runId !== runId || activeRun.pid !== runtimeStatus.pid) {
+      await writeJsonAtomic(path.join(deps.runtimeRoot, ACTIVE_RUN_FILE), {
+        runId,
+        pid: runtimeStatus.pid,
+      });
+    }
+    return;
+  }
 
   if (FINAL_STATUSES.has(runtimeStatus.status)) {
     const activeRun = await readActiveRun(deps.runtimeRoot);
     if (activeRun?.runId === runId) {
       await removeFile(path.join(deps.runtimeRoot, ACTIVE_RUN_FILE));
     }
-    return;
-  }
-
-  if (runtimeStatus.pid && deps.isProcessRunningImpl(runtimeStatus.pid)) {
     return;
   }
 
@@ -535,6 +718,63 @@ async function removeFile(filePath: string) {
   await rm(filePath, { force: true });
 }
 
+async function readFrameSnapshot(filePath: string) {
+  try {
+    const fileStat = await stat(filePath);
+    const buffer = await readFile(filePath);
+    return {
+      buffer,
+      signature: `${fileStat.mtimeMs}:${fileStat.size}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function resolveFrameVersion(
+  runRoot: string,
+  runtimeStatus: SimplerLaunchRuntimeStatus,
+) {
+  if (!FINAL_STATUSES.has(runtimeStatus.status)) {
+    return runtimeStatus.actionCount;
+  }
+
+  const framePath =
+    runtimeStatus.latestFramePath ?? path.join(runRoot, "latest-frame.jpg");
+  try {
+    const fileStat = await stat(framePath);
+    return Math.max(runtimeStatus.actionCount, Math.trunc(fileStat.mtimeMs));
+  } catch {
+    return runtimeStatus.actionCount;
+  }
+}
+
+function buildMjpegPart(
+  buffer: Buffer,
+  encoder: TextEncoder,
+  metadata: { step: number; actionCount: number },
+) {
+  const header = encoder.encode(
+    `--${FRAME_STREAM_BOUNDARY}\r\n` +
+      `Content-Type: image/jpeg\r\n` +
+      `${FRAME_STREAM_STEP_HEADER}: ${metadata.step}\r\n` +
+      `${FRAME_STREAM_ACTION_COUNT_HEADER}: ${metadata.actionCount}\r\n` +
+      `Content-Length: ${buffer.length}\r\n\r\n`,
+  );
+  const footer = encoder.encode("\r\n");
+  const part = new Uint8Array(header.length + buffer.length + footer.length);
+  part.set(header, 0);
+  part.set(buffer, header.length);
+  part.set(footer, header.length + buffer.length);
+  return part;
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 async function fileExists(filePath: string) {
   try {
     await access(filePath);
@@ -601,34 +841,26 @@ async function waitForSpawn(child: ReturnType<typeof spawn>) {
   });
 }
 
-async function findFreePort(): Promise<number> {
-  return new Promise<number>((resolve, reject) => {
-    const server = net.createServer();
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        server.close(() => reject(new Error("Failed to allocate port")));
-        return;
-      }
-      const port = address.port;
-      server.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(port);
-      });
-    });
-  });
-}
-
 function isProcessRunning(pid: number) {
   try {
     process.kill(pid, 0);
     return true;
   } catch {
     return false;
+  }
+}
+
+function killProcess(pid: number, signal: NodeJS.Signals | number = "SIGTERM") {
+  try {
+    process.kill(pid, signal);
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !("code" in error) ||
+      (error as NodeJS.ErrnoException).code !== "ESRCH"
+    ) {
+      throw error;
+    }
   }
 }
 
@@ -658,4 +890,47 @@ async function waitForExit(pid: number, timeoutMs: number) {
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   return !isProcessRunning(pid);
+}
+
+function isRuntimeProcessActive(pid: number | null, deps: LaunchDeps) {
+  return typeof pid === "number" && pid > 0 && deps.isProcessRunningImpl(pid);
+}
+
+function collectStopTargetPids(
+  activeRun: ActiveRunRecord,
+  runtimeStatus: SimplerLaunchRuntimeStatus,
+  deps: LaunchDeps,
+) {
+  const candidates = [runtimeStatus.pid, activeRun.pid].filter(
+    (pid): pid is number => typeof pid === "number" && pid > 0,
+  );
+  return Array.from(new Set(candidates)).filter((pid) =>
+    deps.isProcessRunningImpl(pid),
+  );
+}
+
+function killTrackedProcess(
+  pid: number,
+  deps: LaunchDeps,
+  signal: NodeJS.Signals | number,
+) {
+  deps.killProcessImpl(pid, signal);
+}
+
+async function readProcessGroupId(pid: number) {
+  try {
+    const statLine = await readFile(`/proc/${pid}/stat`, "utf8");
+    const closingParenIndex = statLine.lastIndexOf(")");
+    if (closingParenIndex === -1) {
+      return null;
+    }
+
+    const fields = statLine.slice(closingParenIndex + 2).trim().split(/\s+/);
+    const processGroupId = Number(fields[2]);
+    return Number.isInteger(processGroupId) && processGroupId > 0
+      ? processGroupId
+      : null;
+  } catch {
+    return null;
+  }
 }

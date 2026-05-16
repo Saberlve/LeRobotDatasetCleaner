@@ -1,0 +1,582 @@
+SoFar (from AnchorVLA4D)	3.5B	—	—	58.3	arXiv:2603.12730	Table I	🤖 opus 4.6	2026-04-21	Only WidowX tasks reported. Score is cited as a baseline in the citing paper.
+78	VP-VLA	—	—	—	58.3	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Fine-tuned on BridgeDataV2 and Fractal datasets for 70k steps.
+put_spoon_on_towel_vm 66.7
+put_carrot_on_plate_vm 50.0
+stack_block_vm 20.8
+put_eggplant_in_basket_vm 95.8
+79	Qwen3VL-8B (VLM4VLA)	8.8B	—	—	58.3	arXiv:2601.03309	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM only, 24 trials per task, trained on Bridge V2 for 50k steps
+put_carrot_on_plate_vm 58.3
+put_eggplant_in_yellow_basket_vm 95.8
+put_spoon_on_towel_vm 79.2
+stack_green_block_on_yellow_block_vm 0.0
+80	VLA-JEPA	—	65.2	—	57.3	arXiv:2602.10098	Table 2	🤖 opus 4.6	2026-04-21	Reports Google Robot VM and WidowX VM separately. Also reports Place Apple task for Google Robot. No VA scores.
+pick_coke_can_vm 88.3
+move_near_vm 64.1
+open_close_drawer_vm 59.3
+put_spoon_on_towel_vm 75.0
+put_carrot_on_plate_vm 70.8
+stack_green_on_yellow_vm 12.5
+put_eggplant_in_basket_vm 70.8
+81	LAPA (from MVP-LAM)	—	—	—	57.3	arXiv:2602.03668	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX tasks evaluated. Score is cited as a baseline in the citing paper.
+stack_green_on_yellow_vm 54.2
+put_carrot_on_plate_vm 45.8
+put_spoon_on_towel_vm 70.8
+put_eggplant_in_basket_vm 58.3
+82	CogACT-Large (from MemoryVLA)	—	82.7	66.2	57.3	arXiv:2508.19236	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Standard SimplerEnv evaluation. CogACT-Large is re-evaluated by MemoryVLA authors using official weights. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 58.3
+put_carrot_on_plate_vm 45.8
+stack_block_vm 29.2
+put_eggplant_in_basket_vm 95.8
+pick_coke_can_vm 91.3
+move_near_vm 85.0
+open_close_drawer_vm 71.8
+pick_coke_can_va 89.6
+move_near_va 80.8
+open_close_drawer_va 28.3
+83	pi0.5 (from PhysBrain-4B)	—	—	—	57.1	arXiv:2512.16793	Table 2	🤖 opus 4.6	2026-04-21	Cited baseline. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 49.3
+put_carrot_on_plate_vm 64.7
+stack_green_block_on_yellow_block_vm 44.7
+put_eggplant_in_yellow_basket_vm 69.7
+84	π₀.₅ (from LaMP)	—	—	—	57.1	arXiv:2603.25399	Table I	🤖 opus 4.6	2026-04-21	Only WidowX tasks. Score is cited as a baseline in the citing paper.
+85	pi_0.5 (from VP-VLA)	—	—	—	57.1	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 49.3
+put_carrot_on_plate_vm 64.7
+stack_block_vm 44.7
+put_eggplant_in_basket_vm 69.7
+86	Isaac-GR00T-N1.6-Bridge (from VP-VLA)	—	—	—	57.1	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 64.5
+put_carrot_on_plate_vm 65.5
+stack_block_vm 5.5
+put_eggplant_in_basket_vm 93.0
+87	Isaac-GR00T-N1.6-Bridge (from TwinBrainVLA (Qwen2.5-VL-3B))	—	—	—	57.1	arXiv:2601.14133	Table 1	🤖 opus 4.6	2026-04-21	Cited baseline. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 64.5
+put_carrot_on_plate_vm 65.5
+stack_green_block_on_yellow_block_vm 5.5
+put_eggplant_in_yellow_basket_vm 93.0
+88	mimic-video (per task tuning)	—	—	—	56.3	arXiv:2512.15692	Table I	🤖 opus 4.6	2026-04-21	WidowX VM with per-task flow time tuning
+put_carrot_on_plate_vm 54.2
+put_spoon_on_towel_vm 41.7
+stack_green_block_on_yellow_block_vm 29.2
+put_eggplant_in_yellow_basket_vm 100.0
+89	ContextVLA (pi0)	—	—	—	56.2	arXiv:2510.04246	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM only. ContextVLA on pi0 with 8 frames. Fine-tuned on BridgeV2.
+spoon_on_towel_vm 53.3
+carrot_on_plate_vm 56.0
+stack_cube_vm 41.3
+put_eggplant_in_basket_vm 74.0
+90	Embodied-R1	3B	—	—	56.2	arXiv:2508.13998	Table 4	🤖 opus 4.6	2026-04-21	Embodied-R1 is a modular/affordance method using CuRobo planner, not an end-to-end VLA. Zero-shot deployment. 24 episodes per task.
+put_spoon_on_towel_vm 62.5
+put_carrot_on_plate_vm 68.0
+stack_green_block_on_yellow_block_vm 36.1
+put_eggplant_in_yellow_basket_vm 58.3
+91	pi0 (from ManiAgent (GPT-4o))	—	—	—	55.7	arXiv:2510.11660	Table I	🤖 opus 4.6	2026-04-21	Only WidowX BridgeTable tasks evaluated (4 tasks). Missing Google Robot VM and VA dimensions entirely. Score is a reproduction by the citing paper.
+stack_block_vm 21.3
+put_carrot_on_plate_vm 58.8
+put_spoon_on_towel_vm 63.3
+put_eggplant_in_basket_vm 79.2
+92	pi0-Uniform (from MemoryVLA)	—	—	—	55.7	arXiv:2508.19236	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper.
+93	LLaDA-VLA	—	—	—	55.5	arXiv:2509.06932	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation.
+put_spoon_on_towel_vm 56.9
+put_carrot_on_plate_vm 76.3
+stack_green_block_on_yellow_block_vm 30.6
+put_eggplant_in_yellow_basket_vm 58.3
+94	pi0 (from Vlaser-All)	3B	58.3	54.8	54.9	arXiv:2510.11027	Table 2, Table 3	🤖 opus 4.6	2026-04-21	WidowX scores cited from open-pi-zero (Zren, 2025). Google Robot scores cited from MolmoAct (Lee et al., 2025). This is a re-implementation, not the official pi0. Cited from https://github.com/allenzren/open-pi-zero. Score is cited as a baseline in the citing paper.
+put_carrot_on_plate_vm 55.8
+put_eggplant_in_basket_vm 79.2
+put_spoon_on_towel_vm 63.3
+stack_block_vm 21.3
+pick_coke_can_vm 72.7
+move_near_vm 65.3
+open_close_drawer_vm 38.3
+pick_coke_can_va 75.2
+move_near_va 63.7
+open_close_drawer_va 25.6
+95	AC2-VLA	—	76.8	61.6	54.5	arXiv:2601.19634	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Standard SIMPLER VM/VA for Google Robot and WidowX VM. Built on CogACT with inference-time adaptive computation.
+pick_coke_can_vm 97.2
+move_near_vm 82.7
+open_close_drawer_vm 80.6
+place_apple_in_drawer_vm 46.8
+pick_coke_can_va 88.7
+move_near_va 84.4
+open_close_drawer_va 28.2
+place_apple_in_drawer_va 45.1
+put_spoon_on_towel_vm 71.2
+put_carrot_on_plate_vm 58.0
+stack_green_block_on_yellow_block_vm 14.8
+put_eggplant_in_yellow_basket_vm 74.0
+96	Discrete Diffusion VLA	7B	71.2	56.9	54.2	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Fine-tuned on Fractal and BridgeData-V2 datasets. Reports Visual Matching, Variant Aggregation, and WidowX success rates. Protocol details match SimplerEnv standard evaluation.
+97	pi_0 (from VideoVLA)	—	53.5	43.4	53.1	arXiv:2512.06963	Table 1	🤖 opus 4.6	2026-04-21	Standard SIMPLER; pi_0 run without proprioception inputs for fair comparison Score is a reproduction by the citing paper.
+pick_coke_can_vm 84.0
+move_near_vm 55.8
+open_close_drawer_vm 34.3
+place_apple_in_drawer_vm 31.5
+pick_coke_can_va 71.4
+move_near_va 57.9
+open_close_drawer_va 26.5
+place_apple_in_drawer_va 18.0
+put_spoon_on_towel_vm 29.2
+put_carrot_on_plate_vm 62.5
+stack_green_block_on_yellow_block_vm 29.2
+put_eggplant_in_yellow_basket_vm 91.6
+98	pi_0 (from VP-VLA)	—	—	—	53.1	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 29.2
+put_carrot_on_plate_vm 62.5
+stack_block_vm 29.2
+put_eggplant_in_basket_vm 91.6
+99	VideoVLA	5B	73.1	62.8	53.1	arXiv:2512.06963	Table 1	🤖 opus 4.6	2026-04-21	Standard SIMPLER VM/VA for Google Robot and WidowX VM
+pick_coke_can_vm 92.3
+move_near_vm 82.9
+open_close_drawer_vm 66.2
+place_apple_in_drawer_vm 50.9
+pick_coke_can_va 89.8
+move_near_va 73.3
+open_close_drawer_va 28.8
+place_apple_in_drawer_va 59.3
+put_spoon_on_towel_vm 75.0
+put_carrot_on_plate_vm 20.8
+stack_green_block_on_yellow_block_vm 45.8
+put_eggplant_in_yellow_basket_vm 70.8
+100	VideoVLA (from PhysBrain-4B)	—	—	—	53.1	arXiv:2512.16793	Table 2	🤖 opus 4.6	2026-04-21	Cited baseline. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 75.0
+put_carrot_on_plate_vm 20.8
+stack_green_block_on_yellow_block_vm 45.8
+put_eggplant_in_yellow_basket_vm 70.8
+101	VideoVLA (from VP-VLA)	—	—	—	53.1	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 75.0
+put_carrot_on_plate_vm 20.8
+stack_block_vm 45.8
+put_eggplant_in_basket_vm 70.8
+102	CogACT (from AR-VLA)	—	—	—	52.1	arXiv:2603.10126	Table I	🤖 opus 4.6	2026-04-21	Evaluates only WidowX Visual Matching with 4 tasks on SimplerEnv. No Google Robot VM or VA dimensions evaluated. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 58.3
+put_carrot_on_plate_vm 37.5
+stack_block_vm 20.8
+put_eggplant_in_basket_vm 91.7
+reported_avg_vm 52.1
+103	CogACT	—	82.7	66.2	51.3	arXiv:2411.19650	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Evaluates standard SIMPLER tasks on Google Robot (VM+VA) and WidowX (VM). 3-task Google Robot averages computed from Pick Coke Can, Move Near, Open/Close Drawer. 4th task (Place Apple) stored separately.
+pick_coke_can_vm 91.3
+move_near_vm 85.0
+open_close_drawer_vm 71.8
+place_apple_in_drawer_vm 50.9
+pick_coke_can_va 89.6
+move_near_va 80.8
+open_close_drawer_va 28.3
+place_apple_in_drawer_va 46.6
+put_spoon_on_towel_vm 71.7
+put_carrot_on_plate_vm 50.8
+stack_green_block_on_yellow_block_vm 15.0
+put_eggplant_in_yellow_basket_vm 67.5
+104	CogACT (from StarVLA-OFT (Qwen3-VL-4B))	—	—	—	51.3	arXiv:2604.05014	Table 3	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX Visual Matching, 5 evaluation runs, official protocol Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 71.7
+put_carrot_on_plate_vm 50.8
+stack_green_block_on_yellow_block_vm 15.0
+put_eggplant_in_yellow_basket_vm 67.5
+105	CogACT (from ManiAgent (GPT-4o))	—	—	—	51.3	arXiv:2510.11660	Table I	🤖 opus 4.6	2026-04-21	Only WidowX BridgeTable tasks evaluated (4 tasks). Missing Google Robot VM and VA dimensions entirely. Score is a reproduction by the citing paper. Same score also reported in: https://arxiv.org/abs/2603.22003.
+stack_block_vm 15.0
+put_carrot_on_plate_vm 50.8
+put_spoon_on_towel_vm 71.7
+put_eggplant_in_basket_vm 67.5
+106	CogACT-Base (from MemoryVLA)	—	—	—	51.3	arXiv:2508.19236	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper. Same score also reported in: https://arxiv.org/abs/2603.12730.
+107	STORM	—	—	—	51.0	arXiv:2512.18477	TABLE I	🤖 opus 4.6	2026-04-21	WidowX VM, 24 procedural variations per task
+put_spoon_on_towel_vm 79.2
+put_carrot_on_plate_vm 50.0
+stack_green_block_on_yellow_block_vm 12.5
+put_eggplant_in_yellow_basket_vm 62.5
+108	Pi-0.5* (from AR-VLA)	3.3B	—	—	51.0	arXiv:2603.10126	Table I	🤖 opus 4.6	2026-04-21	Evaluates only WidowX Visual Matching with 4 tasks on SimplerEnv. No Google Robot VM or VA dimensions evaluated. This is a reimplementation by the AR-VLA authors (asterisk denotes reproduction) using the same 3B+300M architecture. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 58.3
+put_carrot_on_plate_vm 33.3
+stack_block_vm 16.7
+put_eggplant_in_basket_vm 95.8
+reported_avg_vm 51.0
+109	Dream-VLA (from UD-VLA + Fast-dVLA)	—	—	—	51.0	arXiv:2603.25661	Table 4	🤖 opus 4.6	2026-04-21	Only WidowX tasks. Score is cited as a baseline in the citing paper.
+110	VanillaVLA	3B + 400M	—	—	51.0	arXiv:2603.12730	Table I	🤖 opus 4.6	2026-04-21	Only WidowX tasks reported.
+111	InstructVLA-Expert(S.)	1.5B	74.2	67.3	50.5	arXiv:2507.17520	Table 2	🤖 opus 4.6	2026-04-21	Standard SIMPLER evaluation with robot state. 3-task VM avg = (96.0+79.7+46.8)/3=74.2
+pick_coke_can_vm 96.0
+move_near_vm 79.7
+open_close_drawer_vm 46.8
+place_apple_in_drawer_vm 45.7
+112	MG-Select* (pi0-FAST)	—	—	—	50.3	arXiv:2510.05681	Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM 4 tasks. Not standard 3-dimension evaluation.
+spoon_on_towel_vm 69.4
+carrot_on_plate_vm 75.0
+stack_cubes_vm 43.1
+eggplant_in_basket_vm 13.9
+113	QwenOFT (from VP-VLA)	—	—	—	50.0	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks. Fine-tuned on BridgeDataV2 and Fractal datasets for 70k steps. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 58.3
+put_carrot_on_plate_vm 50.0
+stack_block_vm 20.8
+put_eggplant_in_basket_vm 70.8
+114	GR00T-N1 (from Discrete Diffusion VLA)	—	45.0	51.5	49.5	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from original paper. Score is cited as a baseline in the citing paper.
+115	GR00T-N1 (from SimVLA)	2B	—	51.5	49.5	arXiv:2602.18224	Table 4, Table 5	🤖 opus 4.6	2026-04-21	Baseline result cited from original paper. Score is cited as a baseline in the citing paper.
+116	DD-VLA (from X-VLA)	7B	71.2	64.1	49.3	arXiv:2510.10274	Table 2	🤖 opus 4.6	2026-04-21	Three suites reported. Cited scores. Score is cited as a baseline in the citing paper.
+117	MiniVLA (from Palligemma + Naive Tokenizer)	—	—	—	49.0	arXiv:2512.04952	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported; Google Robot VM and VA dimensions are absent. Score is cited as a baseline in the citing paper. Same score also reported in: https://arxiv.org/abs/2602.15397.
+put_spoon_on_towel_vm 68.0
+put_carrot_on_plate_vm 44.0
+stack_block_vm 70.0
+put_eggplant_in_basket_vm 14.0
+118	Pi-0-FAST* (from AR-VLA)	3.3B	—	—	49.0	arXiv:2603.10126	Table I	🤖 opus 4.6	2026-04-21	Evaluates only WidowX Visual Matching with 4 tasks on SimplerEnv. No Google Robot VM or VA dimensions evaluated. This is a reimplementation by the AR-VLA authors (asterisk denotes reproduction) using the same 3B+300M architecture. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 62.5
+put_carrot_on_plate_vm 29.2
+stack_block_vm 20.8
+put_eggplant_in_basket_vm 83.3
+reported_avg_vm 49.0
+119	pi0-fast (from FSD)	—	—	—	48.3	arXiv:2505.08548	Table 4	🤖 opus 4.6	2026-04-21	Only WidowX VM. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 29.1
+put_carrot_on_plate_vm 21.9
+stack_green_block_vm 10.8
+put_eggplant_in_basket_vm 66.6
+120	pi0-FAST (from Discrete Diffusion VLA)	—	61.9	59.0	48.3	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from original paper. Score is cited as a baseline in the citing paper.
+121	pi_0-FAST (from SimVLA)	3B	—	59.0	48.3	arXiv:2602.18224	Table 4, Table 5	🤖 opus 4.6	2026-04-21	Baseline result cited from original paper. Score is cited as a baseline in the citing paper.
+122	RoboMonkey	7B	—	—	47.5	arXiv:2506.17811	Figure 3	🤖 opus 4.6	2026-04-21	Evaluated on SIMPLER WidowX VM setting with 4 standard tasks.
+123	π₀.₅ (from StarVLA-α (Specialist))	—	72.7	68.4	46.9	arXiv:2604.11757	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv evaluation following official protocols Score is cited as a baseline in the citing paper.
+124	mimic-video	—	—	—	46.9	arXiv:2512.15692	Table I	🤖 opus 4.6	2026-04-21	WidowX VM only, trained from scratch on BridgeDataV2
+put_carrot_on_plate_vm 37.5
+put_spoon_on_towel_vm 37.5
+stack_green_block_on_yellow_block_vm 12.5
+put_eggplant_in_yellow_basket_vm 100.0
+125	pi0-FAST (from MG-Select* (pi0-FAST, 100 demos))	—	—	—	46.9	arXiv:2510.05681	Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM 4 tasks, trained on BridgeData V2. Not standard 3-dimension evaluation. Score is a reproduction by the citing paper.
+spoon_on_towel_vm 66.7
+carrot_on_plate_vm 70.8
+stack_cubes_vm 41.7
+eggplant_in_basket_vm 8.3
+126	OmniStream-7B	—	—	—	45.8	arXiv:2603.12265	Table 7	🤖 opus 4.6	2026-04-21	Only WidowX (Simpler-Bridge) results reported, not Google Robot VM/VA. The 45.8% is Success Rate on Bridge V2 dataset tasks (Carrot 33.3%, Eggplant 83.3%, Spoon 41.7%, Cube 25.0%).
+127	UniVLA (from WoG)	—	—	—	45.6	arXiv:2602.22010	Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 52.8
+stack_green_on_yellow_vm 2.8
+put_carrot_on_plate_vm 55.6
+put_eggplant_in_basket_vm 66.7
+128	FLOWER (from mimic-video)	—	—	—	45.0	arXiv:2512.15692	Table I	🤖 opus 4.6	2026-04-21	WidowX VM Score is cited as a baseline in the citing paper.
+put_carrot_on_plate_vm 13.0
+put_spoon_on_towel_vm 71.0
+stack_green_block_on_yellow_block_vm 8.0
+put_eggplant_in_yellow_basket_vm 88.0
+129	Magma (from MemoryVLA)	—	—	—	44.8	arXiv:2508.19236	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper.
+130	Magma (from VP-VLA)	—	—	—	44.8	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 37.5
+put_carrot_on_plate_vm 29.2
+stack_block_vm 20.8
+put_eggplant_in_basket_vm 91.7
+131	ThinkAct	7B	71.5	65.1	43.8	arXiv:2507.16815	Table 1	🤖 opus 4.6	2026-04-21	Standard SIMPLER evaluation across Google-VM, Google-VA, Bridge-VM. 3-task avg for Google VM = (92.0+72.4+50.0)/3=71.5.
+pick_coke_can_vm 92.0
+move_near_vm 72.4
+open_close_drawer_vm 50.0
+pick_coke_can_va 84.0
+move_near_va 63.8
+open_close_drawer_va 47.6
+put_carrot_on_plate_vm 37.5
+stack_green_block_on_yellow_block_vm 8.7
+put_spoon_on_towel_vm 58.3
+put_eggplant_in_yellow_basket_vm 70.8
+132	ThinkAct (from SimVLA)	7B	—	65.1	43.8	arXiv:2602.18224	Table 4, Table 5	🤖 opus 4.6	2026-04-21	Baseline result cited from original paper. Score is cited as a baseline in the citing paper.
+133	ThinkAct (from Qwen2.5VL-7B (VLM4VLA))	7.4B	—	—	43.8	arXiv:2601.03309	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM, cited result. Uses proprioceptive state unlike other baselines. Score is cited as a baseline in the citing paper.
+put_carrot_on_plate_vm 37.5
+put_eggplant_in_yellow_basket_vm 70.8
+put_spoon_on_towel_vm 58.3
+stack_green_block_on_yellow_block_vm 8.7
+134	UniVLA (from Palligemma + Naive Tokenizer)	—	—	—	43.8	arXiv:2512.04952	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported; Google Robot VM and VA dimensions are absent. Score is cited as a baseline in the citing paper. Same score also reported in: https://arxiv.org/abs/2602.15397.
+put_spoon_on_towel_vm 54.2
+put_carrot_on_plate_vm 66.7
+stack_block_vm 50.0
+put_eggplant_in_basket_vm 4.2
+135	RoboVLM (from VP-VLA)	—	—	—	42.7	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 50.0
+put_carrot_on_plate_vm 37.5
+stack_block_vm 0.0
+put_eggplant_in_basket_vm 83.3
+136	SpatialVLA (from AR-VLA)	—	—	—	42.7	arXiv:2603.10126	Table I	🤖 opus 4.6	2026-04-21	Evaluates only WidowX Visual Matching with 4 tasks on SimplerEnv. No Google Robot VM or VA dimensions evaluated. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 16.7
+put_carrot_on_plate_vm 25.0
+stack_block_vm 29.2
+put_eggplant_in_basket_vm 100.0
+reported_avg_vm 42.7
+137	SpatialVLA (from MG-Select* (pi0-FAST, 100 demos))	—	—	—	42.7	arXiv:2510.05681	Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM 4 tasks. Not the standard 3-dimension evaluation. Score is cited as a baseline in the citing paper.
+spoon_on_towel_vm 16.7
+carrot_on_plate_vm 25.0
+stack_cubes_vm 29.2
+eggplant_in_basket_vm 100.0
+138	SpatialVLA (from MemoryVLA)	—	—	—	42.7	arXiv:2508.19236	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper. Same score also reported in: https://arxiv.org/abs/2603.12730.
+139	SpatialVLA (from CoWVLA)	—	73.8	—	42.7	arXiv:2603.03195	Table 1, Appendix Table 3	🤖 opus 4.6	2026-04-21	Cited baseline with WidowX VM and Google Robot VM scores. Score is cited as a baseline in the citing paper.
+stack_block_vm 29.2
+put_carrot_vm 25.0
+put_spoon_vm 16.7
+put_eggplant_vm 100.0
+pick_coke_can_vm 86.0
+move_near_vm 77.9
+open_close_drawer_vm 57.4
+place_in_closed_drawer_vm 9.0
+140	InstructVLA-Generalist(S.)	1.5B	67.5	61.5	42.1	arXiv:2507.17520	Table 2	🤖 opus 4.6	2026-04-21	Standard SIMPLER evaluation. Uses robot state input (S.). 3-task VM avg = (91.0+71.7+39.8)/3 = 67.5
+pick_coke_can_vm 91.0
+move_near_vm 71.7
+open_close_drawer_vm 39.8
+place_apple_in_drawer_vm 45.7
+pick_coke_can_va 93.0
+move_near_va 78.3
+open_close_drawer_va 51.1
+place_apple_in_drawer_va 57.3
+141	pi0 (from ContextVLA (pi0))	—	—	—	41.8	arXiv:2510.04246	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM only. pi0 fine-tuned on BridgeV2 by this paper. Score is a reproduction by the citing paper.
+spoon_on_towel_vm 46.7
+carrot_on_plate_vm 38.7
+stack_cube_vm 42.7
+put_eggplant_in_basket_vm 39.3
+142	OpenVLA-OFT (from VP-VLA)	—	—	—	41.8	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 34.2
+put_carrot_on_plate_vm 30.0
+stack_block_vm 30.0
+put_eggplant_in_basket_vm 72.5
+143	OpenVLA-OFT (from Embodied-R1)	7B	—	—	41.8	arXiv:2508.13998	Table 4	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 34.2
+put_carrot_on_plate_vm 30.0
+stack_green_block_on_yellow_block_vm 30.0
+put_eggplant_in_yellow_basket_vm 72.5
+144	OpenVLA-OFT (from FSD)	—	—	—	41.8	arXiv:2505.08548	Table 4	🤖 opus 4.6	2026-04-21	Only WidowX VM. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 34.2
+put_carrot_on_plate_vm 30.0
+stack_green_block_vm 30.0
+put_eggplant_in_basket_vm 72.5
+145	pi_0 (from LoLA)	—	52.7	46.0	41.7	arXiv:2512.20166	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Standard SIMPLER protocol Score is cited as a baseline in the citing paper.
+pick_coke_can_vm 87.3
+move_near_vm 35.0
+open_close_drawer_vm 72.6
+place_apple_in_drawer_vm 16.0
+pick_coke_can_va 85.2
+move_near_va 40.8
+open_close_drawer_va 42.1
+place_apple_in_drawer_va 15.9
+put_spoon_on_towel_vm 62.5
+put_carrot_on_plate_vm 66.7
+stack_green_block_on_yellow_block_vm 25.0
+put_eggplant_in_yellow_basket_vm 12.5
+146	Palligemma + Naive Tokenizer	—	—	—	40.9	arXiv:2512.04952	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported; Google Robot VM and VA dimensions are absent. Ablation baseline from this paper using naive tokenizer.
+put_spoon_on_towel_vm 66.7
+put_carrot_on_plate_vm 29.2
+stack_block_vm 12.5
+put_eggplant_in_basket_vm 54.2
+147	FSD	—	—	—	40.6	arXiv:2505.08548	Table 4	🤖 opus 4.6	2026-04-21	Only WidowX Visual Matching reported, no Google Robot. Zero-shot evaluation with 24 episodes per task. FSD is an affordance-based VLA, not end-to-end.
+put_spoon_on_towel_vm 41.6
+put_carrot_on_plate_vm 50.0
+stack_green_block_vm 33.3
+put_eggplant_in_basket_vm 37.5
+148	pi0 (from Discrete Diffusion VLA)	—	58.8	54.8	40.1	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from original paper. Score is cited as a baseline in the citing paper.
+149	pi_0 (from SimVLA)	3B	—	54.8	40.1	arXiv:2602.18224	Table 4, Table 5	🤖 opus 4.6	2026-04-21	Baseline result cited from original paper. Score is cited as a baseline in the citing paper.
+150	FLOWER (from X-VLA)	1B	—	—	40.0	arXiv:2510.10274	Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM reported. Cited score. Cited from https://openreview.net/forum?id=ifo8oWSLSq. Score is cited as a baseline in the citing paper.
+151	HyperVLA	—	—	63.0	40.0	arXiv:2510.04898	Table 1	🤖 opus 4.6	2026-04-21	Google Robot VA and WidowX VM tasks. Mean and std over 5 seeds reported.
+pick_coke_can_va 58.0
+move_near_va 73.0
+open_close_drawer_va 58.0
+put_spoon_on_towel_vm 48.0
+put_carrot_on_plate_vm 21.0
+stack_green_block_on_yellow_block_vm 39.0
+put_eggplant_in_basket_vm 52.0
+152	OpenVLA-OFT (from Discrete Diffusion VLA)	7B	63.0	45.5	39.6	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from original paper. Score is cited as a baseline in the citing paper.
+153	CronusVLA (0.5B)	0.5B	79.8	69.7	39.6	arXiv:2506.19816	Table 1	🤖 opus 4.6	2026-04-21	Standard SIMPLER evaluation. 3-task avg VM = (96.0+93.0+50.5)/3 = 79.8
+pick_coke_can_vm 96.0
+move_near_vm 93.0
+open_close_drawer_vm 50.5
+pick_coke_can_va 94.6
+move_near_va 78.0
+open_close_drawer_va 36.8
+154	UniVLA (from MVP-LAM)	—	—	—	39.6	arXiv:2602.03668	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX tasks evaluated. Score is a reproduction by the citing paper.
+stack_green_on_yellow_vm 16.7
+put_carrot_on_plate_vm 20.8
+put_spoon_on_towel_vm 54.2
+put_eggplant_in_basket_vm 66.7
+155	pi_0+FAST (from X-VLA)	3B	61.9	60.5	39.5	arXiv:2510.10274	Table 2	🤖 opus 4.6	2026-04-21	Three suites reported. Cited scores. Score is cited as a baseline in the citing paper.
+156	OpenVLA (from RoboMonkey)	7B	—	—	38.5	arXiv:2506.17811	Figure 3	🤖 opus 4.6	2026-04-21	Standard SIMPLER WidowX VM evaluation. Score is a reproduction by the citing paper.
+157	RoboVLM (from Discrete Diffusion VLA)	—	63.4	51.3	38.5	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from original paper. Score is cited as a baseline in the citing paper.
+158	ST-VLA	3B	—	—	38.1	arXiv:2508.09032	TABLE I	🤖 opus 4.6	2026-04-21	Uses only 11 episodes per task (not standard 24). Fine-tuned with only 52 Bridge trajectories from SpatialVLA checkpoint. Non-standard eval count.
+put_spoon_on_towel_vm 36.4
+put_carrot_on_plate_vm 25.0
+stack_green_block_on_yellow_block_vm 36.4
+put_eggplant_in_yellow_basket_vm 54.5
+159	RoboVLMs (from Xiaomi-Robotics-0)	—	60.8	48.7	37.5	arXiv:2602.12684	Table 4, Table 5	🤖 opus 4.6	2026-04-21	Standard SimplerEnv protocol. Cited baseline. Score is cited as a baseline in the citing paper.
+pick_coke_can_vm 77.3
+move_near_vm 61.7
+open_close_drawer_vm 43.5
+place_apple_in_drawer_vm 24.1
+pick_coke_can_va 75.6
+move_near_va 60.0
+open_close_drawer_va 10.6
+place_apple_in_drawer_va 0.0
+put_spoon_on_towel_vm 45.8
+put_carrot_on_plate_vm 20.8
+stack_block_vm 4.2
+put_eggplant_in_basket_vm 79.2
+160	RoboVLMs (from MemoryVLA)	—	—	—	37.5	arXiv:2508.19236	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper.
+161	RoboVLMs (from UniVLA)	—	—	—	37.5	arXiv:2506.19850	Table 3	🤖 opus 4.6	2026-04-21	WidowX Visual Matching evaluation on Bridge-WidowX setup. Overall_score is null per SimplerEnv standard. Only WidowX VM dimension reported. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 45.8
+put_carrot_on_plate_vm 20.8
+stack_green_on_yellow_block_vm 4.2
+put_eggplant_in_yellow_basket_vm 79.2
+162	SpatialVLA + DTP	3B	81.9	80.5	37.5	arXiv:2601.16065	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Google Robot VM/VA only reports Pick Coke Can and Move Near (2 tasks), not Open/Close Drawer. WidowX VM reported. Non-standard 2-task Google Robot avg.
+pick_coke_can_vm 86.7
+move_near_vm 77.1
+pick_coke_can_va 90.2
+move_near_va 70.7
+163	GR00T-N1 (from UD-VLA + Fast-dVLA)	—	—	—	36.5	arXiv:2603.25661	Table 4	🤖 opus 4.6	2026-04-21	Only WidowX tasks. Score is cited as a baseline in the citing paper.
+164	GR00T-N1 (from WoG)	—	45.0	51.5	36.5	arXiv:2602.22010	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Per-dimension. Score is cited as a baseline in the citing paper.
+165	DualVLA	—	72.7	74.0	36.1	arXiv:2511.22134	Table 2	🤖 opus 4.6	2026-04-21	Standard SimplerEnv VM and VA protocol for Google Robot (3 tasks) and WidowX (3 tasks reported). WidowX Eggplant task not reported so widowx_vm is 3-task avg.
+open_close_drawer_vm 63.9
+pick_coke_can_vm 93.3
+move_near_vm 60.9
+open_close_drawer_va 64.0
+pick_coke_can_va 82.7
+move_near_va 75.3
+put_spoon_on_towel_vm 50.0
+put_carrot_on_plate_vm 50.0
+stack_green_block_on_yellow_block_vm 8.3
+166	OpenVLA (from HyperVLA)	7.6B	—	45.0	36.0	arXiv:2510.04898	Table 1	🤖 opus 4.6	2026-04-21	Google Robot VA and WidowX VM tasks. Score is cited as a baseline in the citing paper.
+pick_coke_can_va 10.0
+move_near_va 72.0
+open_close_drawer_va 54.0
+put_spoon_on_towel_vm 25.0
+put_carrot_on_plate_vm 18.0
+stack_green_block_on_yellow_block_vm 34.0
+put_eggplant_in_basket_vm 65.0
+167	Magma	—	52.3	—	35.4	arXiv:2502.13130	Table 2	🤖 opus 4.6	2026-04-21	Paper reports aggregated SE-Google Robot=52.3 and SE-Bridge=35.4 in Table 2. Figure 8 shows per-task breakdown averaged across VM and VA but exact per-protocol split is unclear from table. Zero-shot evaluation without domain-specific finetuning.
+168	Motion-VLA (3B)	3B	—	—	35.3	arXiv:2512.08548	Table 9	🤖 opus 4.6	2026-04-21	WidowX VM only, fine-tuned on Bridge V2
+put_spoon_on_towel_vm 44.0
+put_carrot_on_plate_vm 36.2
+stack_green_block_on_yellow_block_vm 0.0
+put_eggplant_in_yellow_basket_vm 61.1
+169	SpatialVLA (from VP-VLA)	—	—	—	34.4	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 20.8
+put_carrot_on_plate_vm 20.8
+stack_block_vm 25.0
+put_eggplant_in_basket_vm 70.8
+170	SpatialVLA (from ST-VLA)	3B	—	—	34.1	arXiv:2508.09032	TABLE I	🤖 opus 4.6	2026-04-21	Non-standard eval with only 11 episodes per task. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 18.2
+put_carrot_on_plate_vm 36.4
+stack_green_block_on_yellow_block_vm 45.5
+put_eggplant_in_yellow_basket_vm 36.4
+171	π₀-FAST (from Xiaomi-Robotics-0)	—	61.9	59.0	32.1	arXiv:2602.12684	Table 4, Table 5	🤖 opus 4.6	2026-04-21	Standard SimplerEnv protocol. Cited baseline. Score is cited as a baseline in the citing paper.
+pick_coke_can_vm 75.3
+move_near_vm 67.5
+open_close_drawer_vm 42.9
+place_apple_in_drawer_vm 0.0
+pick_coke_can_va 77.6
+move_near_va 68.2
+open_close_drawer_va 31.3
+place_apple_in_drawer_va 0.0
+put_spoon_on_towel_vm 29.1
+put_carrot_on_plate_vm 21.9
+stack_block_vm 10.8
+put_eggplant_in_basket_vm 66.6
+172	pi_0 FAST (from Dong)	—	—	—	32.1	arXiv:2602.15397	Table 2	🤖 opus 4.6	2026-04-21	Only reports WidowX VM tasks. No Google Robot VM or VA scores. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 29.1
+put_carrot_on_plate_vm 21.9
+stack_block_vm 10.8
+put_eggplant_in_basket_vm 66.6
+173	π₀-FAST (from WoG)	—	61.9	59.0	32.1	arXiv:2602.22010	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Per-dimension. Score is cited as a baseline in the citing paper.
+174	pi0 FAST-R (from Palligemma + Naive Tokenizer)	—	—	—	32.1	arXiv:2512.04952	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported; Google Robot VM and VA dimensions are absent. Reproduced by this paper, trained from scratch on Bridge dataset. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 29.1
+put_carrot_on_plate_vm 21.9
+stack_block_vm 10.8
+put_eggplant_in_basket_vm 66.6
+175	OpenVLA-OFT (from X-VLA)	7B	63.0	54.3	31.3	arXiv:2510.10274	Table 2	🤖 opus 4.6	2026-04-21	Three suites reported. Cited scores. Score is cited as a baseline in the citing paper.
+176	RoboVLM (from MG-Select* (pi0-FAST, 100 demos))	—	—	—	31.3	arXiv:2510.05681	Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM 4 tasks. Not the standard 3-dimension evaluation. Score is cited as a baseline in the citing paper.
+spoon_on_towel_vm 29.2
+carrot_on_plate_vm 25.0
+stack_cubes_vm 12.5
+eggplant_in_basket_vm 58.3
+177	RoboVLM (from SpatialVLA (zero-shot))	2B	63.4	51.3	31.3	arXiv:2501.15830	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from SpatialVLA (Qu et al., 2025b) for WidowX and from MolmoAct (Lee et al., 2025) for Google Robot. Score is cited as a baseline in the citing paper.
+put_carrot_on_plate_vm 25.0
+put_eggplant_in_basket_vm 58.3
+put_spoon_on_towel_vm 29.2
+stack_block_vm 12.5
+pick_coke_can_vm 77.3
+move_near_vm 61.7
+open_close_drawer_vm 43.5
+pick_coke_can_va 75.6
+move_near_va 60.0
+open_close_drawer_va 10.6
+178	Octo-Base (from Discrete Diffusion VLA)	—	16.8	1.1	31.3	arXiv:2508.20072	Table 2, Table 3	🤖 opus 4.6	2026-04-21	Scores cited from original paper. Score is cited as a baseline in the citing paper.
+179	Octo-Small (from AR-VLA)	—	—	—	30.0	arXiv:2603.10126	Table I	🤖 opus 4.6	2026-04-21	Evaluates only WidowX Visual Matching with 4 tasks on SimplerEnv. No Google Robot VM or VA dimensions evaluated. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 47.2
+put_carrot_on_plate_vm 9.7
+stack_block_vm 4.2
+put_eggplant_in_basket_vm 56.9
+reported_avg_vm 30.0
+180	Octo-Small (from RoboStream)	—	—	—	30.0	arXiv:2603.12939	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX results reported; no Google Robot VM or VA dimensions. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 47.2
+put_carrot_on_plate_vm 9.7
+stack_block_vm 4.2
+put_eggplant_in_basket_vm 56.9
+181	OpenVLA (from Palligemma + Naive Tokenizer)	—	—	—	29.5	arXiv:2512.04952	Table 1	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported; Google Robot VM and VA dimensions are absent. Score is cited as a baseline in the citing paper. Same score also reported in: https://arxiv.org/abs/2602.15397.
+put_spoon_on_towel_vm 32.0
+put_carrot_on_plate_vm 30.0
+stack_block_vm 18.0
+put_eggplant_in_basket_vm 38.0
+182	Octo-Small (from Xiaomi-Robotics-0)	—	—	—	29.5	arXiv:2602.12684	Table 4	🤖 opus 4.6	2026-04-21	Standard SimplerEnv protocol. Only WidowX results reported. Cited baseline. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 47.2
+put_carrot_on_plate_vm 9.7
+stack_block_vm 4.2
+put_eggplant_in_basket_vm 56.9
+183	Octo-Small (from UniVLA)	—	—	—	29.5	arXiv:2506.19850	Table 3	🤖 opus 4.6	2026-04-21	WidowX Visual Matching evaluation on Bridge-WidowX setup. Overall_score is null per SimplerEnv standard. Only WidowX VM dimension reported. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 47.2
+put_carrot_on_plate_vm 9.7
+stack_green_on_yellow_block_vm 4.2
+put_eggplant_in_yellow_basket_vm 56.9
+184	InstructVLA-E (from DualVLA)	—	67.7	71.3	29.0	arXiv:2511.22134	Table 2	🤖 opus 4.6	2026-04-21	Standard SimplerEnv VM/VA protocol Score is cited as a baseline in the citing paper.
+open_close_drawer_vm 47.2
+pick_coke_can_vm 87.7
+move_near_vm 68.3
+open_close_drawer_va 60.6
+pick_coke_can_va 76.0
+move_near_va 77.3
+put_spoon_on_towel_vm 45.8
+put_carrot_on_plate_vm 20.8
+stack_green_block_on_yellow_block_vm 20.5
+185	pi_0 + RoboVIP (Text prompt)	—	—	—	29.0	arXiv:2601.05241	Table 1	🤖 opus 4.6	2026-04-21	WidowX VM, 100 trials per task, fine-tuned on BridgeDataV2 + augmented data
+put_spoon_on_towel_vm 62.0
+put_carrot_on_plate_vm 21.0
+stack_green_block_on_yellow_block_vm 7.0
+put_eggplant_in_yellow_basket_vm 23.0
+186	pi_0 (from X-VLA)	3B	58.8	56.8	27.8	arXiv:2510.10274	Table 2	🤖 opus 4.6	2026-04-21	Three suites reported. Cited scores. Score is cited as a baseline in the citing paper.
+187	pi_0 + RoboVIP (Text prompt with ID)	—	—	—	27.8	arXiv:2601.05241	Table 1	🤖 opus 4.6	2026-04-21	WidowX VM, 100 trials
+put_spoon_on_towel_vm 47.0
+put_carrot_on_plate_vm 20.0
+stack_green_block_on_yellow_block_vm 7.0
+put_eggplant_in_yellow_basket_vm 37.0
+188	TraceVLA (from MemoryVLA)	—	—	—	27.7	arXiv:2508.19236	Table 1	🤖 opus 4.6	2026-04-21	Standard SimplerEnv WidowX VM evaluation. Score is cited as a baseline in the citing paper.
+189	TraceVLA (from VP-VLA)	—	—	—	27.7	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 12.5
+put_carrot_on_plate_vm 16.6
+stack_block_vm 16.6
+put_eggplant_in_basket_vm 65.0
+190	π₀ (from WoG)	—	58.8	54.8	27.1	arXiv:2602.22010	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Reported per-dimension, overall_score=null per standard. Score is cited as a baseline in the citing paper.
+pick_coke_can_vm 72.7
+move_near_vm 65.3
+open_close_drawer_vm 38.3
+pick_coke_can_va 75.2
+move_near_va 63.7
+open_close_drawer_va 25.6
+put_spoon_on_towel_vm 29.1
+stack_green_on_yellow_vm 0.0
+put_carrot_on_plate_vm 16.7
+put_eggplant_in_basket_vm 62.5
+191	pi0 (from Hume)	—	58.8	54.8	27.1	arXiv:2505.21432	Table 2	🤖 opus 4.6	2026-04-21	All 3 dimensions reported. WidowX success-only avg = (29.1+0+16.6+62.5)/4 = 27.05. Score is cited as a baseline in the citing paper.
+pick_coke_can_vm 72.7
+move_near_vm 65.3
+open_close_drawer_vm 38.3
+pick_coke_can_va 75.2
+move_near_va 63.7
+open_close_drawer_va 25.6
+put_spoon_on_towel_vm 29.1
+put_carrot_on_plate_vm 0.0
+stack_green_block_vm 16.6
+put_eggplant_in_basket_vm 62.5
+192	Octo-Small (from CogACT)	—	—	—	26.7	arXiv:2411.19650	Table 1, Table 2	🤖 opus 4.6	2026-04-21	Only WidowX VM results available for this model. Score is a reproduction by the citing paper.
+put_spoon_on_towel_vm 41.7
+put_carrot_on_plate_vm 8.2
+stack_green_block_on_yellow_block_vm 0.0
+put_eggplant_in_yellow_basket_vm 56.7
+193	Octo-Small (from VP-VLA)	—	—	—	26.7	arXiv:2603.22003	Table 2	🤖 opus 4.6	2026-04-21	WidowX VM evaluation with 4 tasks only. Score is cited as a baseline in the citing paper.
+put_spoon_on_towel_vm 41.7
+put_carrot_on_plate_vm 8.2
+stack_block_vm 0.0
+put_eggplant_in_basket_vm 56.7
+194	Octo (from X-VLA)	0.1B	16.8	1.1	23.4	arXiv:2510.10274	Table 2	🤖 opus 4.6	2026-04-21	Three suites reported. Cited scores. Score is cited as a baseline in the citing paper.
+195	Octo+ReBot	—	—	—	23.2	arXiv:2503.14526	Table I	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported. No Google Robot VM/VA scores. SimplerEnv standard requires all 3 dimensions reported separately. Only 4 WidowX tasks shown here.
+put_spoon_on_towel_vm 54.2
+put_carrot_on_plate_vm 22.0
+stack_green_cube_on_yellow_cube_vm 4.2
+put_eggplant_in_basket_vm 12.5
+196	OpenVLA+ReBot	—	—	—	22.9	arXiv:2503.14526	Table I	🤖 opus 4.6	2026-04-21	Only WidowX VM tasks reported.

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
-const WANDB_DATA_ROOT = path.resolve(process.cwd(), "eval_results");
+import { EVAL_RESULTS_ROOT } from "@/server/eval-results/summary";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   try {
     if (runId) {
       const historyPath = path.join(
-        WANDB_DATA_ROOT,
+        EVAL_RESULTS_ROOT,
         "wandb_histories",
         `${runId}.json`,
       );
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         return NextResponse.json([]);
       }
     } else {
-      const csvPath = path.join(WANDB_DATA_ROOT, "wandb_runs.csv");
+      const csvPath = path.join(EVAL_RESULTS_ROOT, "wandb_runs.csv");
       const content = await readFile(csvPath, "utf8");
 
       const lines = content.split("\n").filter(Boolean);

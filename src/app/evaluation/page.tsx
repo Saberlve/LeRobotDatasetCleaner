@@ -1,10 +1,5 @@
-import React from "react";
+import { redirect } from "next/navigation";
 
-import { EvaluationDashboardView } from "@/components/thesis/evaluation-dashboard";
-import { loadEvaluationDashboard } from "@/server/eval-results/summary";
-
-export default async function EvaluationPage() {
-  const dashboard = await loadEvaluationDashboard();
-
-  return <EvaluationDashboardView dashboard={dashboard} />;
+export default function EvaluationPage() {
+  redirect("/evaluation/data");
 }

@@ -442,10 +442,10 @@ export const thesisPages: ThesisStoryPage[] = [
     media: ["局限性", "平台总览"],
     platform: {
       title: "一体化评测平台",
-      caption: "总览、数据查看、训练配置、评测回放四个工作区可以现场切换。",
+      caption: "数据查看、训练配置、评测回放、评测启动四个工作区可以现场切换。",
       href: "/evaluation",
       action: "打开评测平台",
-      chips: ["Overview", "Data", "Training", "Replay"],
+      chips: ["数据查看", "训练配置", "评测回放", "评测启动"],
       image: "/images/thesis/platform-overview.png",
     },
     takeaway:

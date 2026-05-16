@@ -1,4 +1,5 @@
 import { readdir, readFile, stat } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import {
@@ -6,7 +7,14 @@ import {
   type TrainingConfigSummary,
 } from "@/server/eval-results/training-config";
 
-export const EVAL_RESULTS_ROOT = path.resolve(process.cwd(), "eval_results");
+export const DEFAULT_EVAL_RESULTS_ROOT = path.join(
+  os.homedir(),
+  "autodl-tmp",
+  "SimplerBridge_evaluation_result",
+);
+export const EVAL_RESULTS_ROOT = path.resolve(
+  process.env.EVAL_RESULTS_ROOT ?? DEFAULT_EVAL_RESULTS_ROOT,
+);
 export const WANDB_URL =
   "https://wandb.ai/saberlve9-massachusetts-institute-of-technology/openpi?nw=nwusersaberlve9";
 

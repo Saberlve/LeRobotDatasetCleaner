@@ -4,20 +4,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { flushSync } from "react-dom";
-import type { IconType } from "react-icons";
 import {
-  FiActivity,
-  FiArrowUpRight,
-  FiAward,
-  FiBarChart2,
-  FiCamera,
   FiCpu,
-  FiDatabase,
   FiFileText,
-  FiFilm,
   FiLayers,
-  FiPlayCircle,
-  FiSliders,
   FiTarget,
   FiTrendingUp,
 } from "react-icons/fi";
@@ -30,12 +20,12 @@ import type {
 } from "@/server/eval-results/summary";
 import type { TrainingConfigSummary } from "@/server/eval-results/training-config";
 
-type WorkbenchMode = "overview" | "data" | "training" | "replay" | "launch";
+type WorkbenchMode = "data" | "training" | "replay" | "launch";
 type EvaluationBenchmark = EvaluationResultRow["benchmark"];
 
 type EvaluationDashboardProps = {
   dashboard: EvaluationDashboard;
-  mode?: WorkbenchMode;
+  mode: WorkbenchMode;
 };
 
 type TrainingEditValues = {
@@ -56,17 +46,10 @@ type TrainingEditValues = {
   };
 };
 
-type WorkspaceFeatureItem = {
-  id: string;
-  title: string;
-  caption: string;
-  icon: IconType;
-};
-
 const panelClass =
-  "rounded-2xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.985_0.012_76)] p-5 shadow-[0_12px_34px_rgba(42,33,28,0.06)] md:p-6";
+  "rounded-2xl border border-[oklch(0.86_0.022_72)] bg-[oklch(0.99_0.012_76)] p-5 shadow-[0_1px_0_oklch(0.91_0.018_72),0_18px_42px_-30px_rgba(42,33,28,0.18)] md:p-6";
 const insetClass =
-  "rounded-xl border border-[oklch(0.86_0.023_72)] bg-[oklch(0.96_0.018_75)]";
+  "rounded-xl border border-[oklch(0.88_0.02_72)] bg-[oklch(0.97_0.016_75)]";
 const fieldClass =
   "w-full rounded-lg border border-[oklch(0.84_0.025_72)] bg-[oklch(0.99_0.01_76)] px-3 py-2 text-sm font-medium text-[oklch(0.25_0.025_62)] outline-none transition focus:border-[oklch(0.56_0.11_42)] focus:ring-2 focus:ring-[oklch(0.76_0.08_50_/_0.22)]";
 const selectClass =
@@ -89,50 +72,6 @@ const BASELINE_CONFIG_NAMES = [
 function croppedRmbenchAspectRatio(width: number, height: number) {
   return `${width * RMBENCH_VIDEO_VISIBLE_WIDTH_PERCENT} / ${height * 100}`;
 }
-
-const workbenchNav: Array<{
-  mode: WorkbenchMode;
-  href: string;
-  label: string;
-  caption: string;
-  icon: IconType;
-}> = [
-  {
-    mode: "overview",
-    href: "/evaluation",
-    label: "总览",
-    caption: "一体化平台入口",
-    icon: FiBarChart2,
-  },
-  {
-    mode: "data",
-    href: "/evaluation/data",
-    label: "数据查看",
-    caption: "数据集与样本浏览",
-    icon: FiDatabase,
-  },
-  {
-    mode: "training",
-    href: "/evaluation/training",
-    label: "训练配置和曲线",
-    caption: "训练参数与曲线",
-    icon: FiBarChart2,
-  },
-  {
-    mode: "replay",
-    href: "/evaluation/replay",
-    label: "评测查看和回放",
-    caption: "SimplerEnv 与 RMBench",
-    icon: FiPlayCircle,
-  },
-  {
-    mode: "launch",
-    href: "/evaluation/launch",
-    label: "评测启动与监控",
-    caption: "单任务 SimplerEnv 实时评测",
-    icon: FiTarget,
-  },
-];
 
 function trainingEditValues(
   config?: TrainingConfigSummary,
@@ -171,7 +110,7 @@ function mediaUrl(relativePath: string) {
 
 export function EvaluationDashboardView({
   dashboard,
-  mode = "overview",
+  mode,
 }: EvaluationDashboardProps) {
   const [trainingConfigs, setTrainingConfigs] = useState(
     dashboard.training.configs,
@@ -259,7 +198,6 @@ export function EvaluationDashboardView({
     };
   }, [dashboard.rmbench.runs, dashboard.simpler.runs, trainingConfigs.length]);
 
-  const showOverview = mode === "overview";
   const showData = mode === "data";
   const showTraining = mode === "training";
   const showReplay = mode === "replay";
@@ -457,374 +395,12 @@ export function EvaluationDashboardView({
     }
   }
 
-  function WorkspaceHeader() {
-    return (
-      <section className="mx-auto max-w-7xl py-6 md:py-8">
-        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              Evaluation System
-            </p>
-            <h1 className="mt-2 text-2xl font-semibold text-[oklch(0.25_0.025_62)] md:text-3xl">
-              训练-评测-回放一体化平台
-            </h1>
-          </div>
-          <Link
-            href="/results"
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-[oklch(0.78_0.045_58)] bg-[oklch(0.985_0.012_76)] px-4 text-sm font-medium text-[oklch(0.28_0.04_52)] transition hover:border-[oklch(0.56_0.11_42)] hover:text-[oklch(0.41_0.095_42)]"
-          >
-            返回展示页
-          </Link>
-        </div>
-
-        <nav className="mt-5 grid gap-2 md:grid-cols-5">
-          {workbenchNav.map((item) => {
-            const active = item.mode === mode;
-            const NavIcon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-start gap-3 rounded-2xl border px-4 py-3 transition ${
-                  active
-                    ? "border-[oklch(0.59_0.105_43)] bg-[oklch(0.93_0.045_62)] text-[oklch(0.26_0.035_52)]"
-                    : "border-[oklch(0.84_0.025_72)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.43_0.025_68)] hover:border-[oklch(0.68_0.06_55)] hover:text-[oklch(0.25_0.025_62)]"
-                }`}
-              >
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)]">
-                  <NavIcon aria-hidden="true" className="h-4 w-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold">
-                    {item.label}
-                  </span>
-                  <span className="mt-1 block text-xs opacity-75">
-                    {item.caption}
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </section>
-    );
-  }
-
-  function OverviewEntryPanel() {
-    const entries: Array<{
-      href: string;
-      label: string;
-      title: string;
-      caption: string;
-      meta: string;
-      action: string;
-      icon: IconType;
-    }> = [
-      {
-        href: "/evaluation/data",
-        label: "Data",
-        title: "数据查看",
-        caption: "查看 ACONE 数据集，定位 episode 并核对采集质量。",
-        meta: `${formatInteger(dashboard.acone.episodes)} episodes / ${formatInteger(dashboard.acone.frames)} frames`,
-        action: "进入数据查看",
-        icon: FiDatabase,
-      },
-      {
-        href: "/evaluation/training",
-        label: "Training",
-        title: "训练配置和曲线",
-        caption: "编辑训练参数，对照 baseline 并打开训练曲线。",
-        meta: `${formatInteger(platformStats.trainingConfigs)} configs`,
-        action: "进入训练工作区",
-        icon: FiBarChart2,
-      },
-      {
-        href: "/evaluation/replay",
-        label: "Replay",
-        title: "评测查看和回放",
-        caption: "查看 SimplerEnv 与 RMBench 评测结果及回放视频。",
-        meta: `${formatInteger(platformStats.simplerCheckpoints)} checkpoints / ${formatInteger(platformStats.replayVideos)} videos`,
-        action: "进入评测回放",
-        icon: FiPlayCircle,
-      },
-      {
-        href: "/evaluation/launch",
-        label: "Launch",
-        title: "评测启动与监控",
-        caption: "启动单任务 SimplerEnv 评测，并实时查看 prompt、图像和动作。",
-        meta: "4 fixed tasks / 1 active run",
-        action: "进入评测启动",
-        icon: FiTarget,
-      },
-    ];
-
-    return (
-      <section className={panelClass}>
-        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              Entry Hub
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">选择工作区</h2>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-4">
-          {entries.map((entry) => {
-            const EntryIcon = entry.icon;
-            return (
-              <Link
-                key={entry.href}
-                href={entry.href}
-                className="group flex min-h-60 flex-col justify-between rounded-2xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.965_0.018_75)] p-5 transition hover:border-[oklch(0.59_0.105_43)] hover:bg-[oklch(0.985_0.012_76)] hover:shadow-[0_14px_34px_rgba(42,33,28,0.07)]"
-              >
-                <span>
-                  <span className="flex items-center justify-between gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.41_0.095_42)]">
-                      <EntryIcon aria-hidden="true" className="h-5 w-5" />
-                    </span>
-                    <span className="rounded-full border border-[oklch(0.84_0.025_72)] px-2.5 py-1 text-xs font-semibold text-[oklch(0.49_0.02_68)]">
-                      {entry.label}
-                    </span>
-                  </span>
-                  <span className="mt-5 block text-lg font-semibold text-[oklch(0.25_0.025_62)]">
-                    {entry.title}
-                  </span>
-                  <span className="mt-2 block text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-                    {entry.caption}
-                  </span>
-                </span>
-
-                <span>
-                  <span className="mt-6 block border-t border-[oklch(0.84_0.025_72)] pt-4 text-sm font-medium text-[oklch(0.34_0.035_58)]">
-                    {entry.meta}
-                  </span>
-                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[oklch(0.42_0.09_42)] transition group-hover:text-[oklch(0.31_0.07_42)]">
-                    {entry.action}
-                    <FiArrowUpRight aria-hidden="true" className="h-4 w-4" />
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-    );
-  }
-
-  function WorkspaceFeatureStrip({
-    workspace,
-    eyebrow,
-    title,
-    caption,
-    items,
-    image,
-  }: {
-    workspace: WorkbenchMode;
-    eyebrow: string;
-    title: string;
-    caption: string;
-    items: WorkspaceFeatureItem[];
-    image?: {
-      src: string;
-      alt: string;
-      label: string;
-    };
-  }) {
-    return (
-      <section className={panelClass} data-workspace-cue={workspace}>
-        <div
-          className={`grid gap-5 lg:items-stretch ${
-            image ? "lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.38fr)]" : ""
-          }`}
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              {eyebrow}
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">{title}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
-              {caption}
-            </p>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
-              {items.map((item) => {
-                const ItemIcon = item.icon;
-                return (
-                  <div
-                    key={item.id}
-                    data-workspace-icon={item.id}
-                    className="rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.965_0.018_75)] p-4"
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[oklch(0.82_0.035_66)] bg-[oklch(0.985_0.012_76)] text-[oklch(0.41_0.095_42)]">
-                      <ItemIcon aria-hidden="true" className="h-5 w-5" />
-                    </span>
-                    <h3 className="mt-4 text-sm font-semibold text-[oklch(0.25_0.025_62)]">
-                      {item.title}
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-[oklch(0.43_0.025_68)]">
-                      {item.caption}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {image ? (
-            <div className="overflow-hidden rounded-xl border border-[oklch(0.82_0.028_72)] bg-[oklch(0.18_0.015_60)]">
-              <div className="relative h-full min-h-44">
-                <Image
-                  src={image.src}
-                  alt={image.alt}
-                  width={480}
-                  height={320}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute bottom-3 left-3 rounded-lg border border-[oklch(0.95_0.01_75_/_0.28)] bg-[oklch(0.2_0.015_60_/_0.82)] px-3 py-2 text-xs font-medium text-[oklch(0.96_0.012_76)]">
-                  {image.label}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-    );
-  }
-
-  function DataWorkspaceCue() {
-    return (
-      <WorkspaceFeatureStrip
-        workspace="data"
-        eyebrow="Data Workspace"
-        title="数据查看工作区"
-        caption="查看 ACONE 数据集，浏览同步视频、动作曲线与 URDF 回放。"
-        items={[
-          {
-            id: "data-video",
-            title: "同步视频",
-            caption: "从多相机画面确认每段 episode 的采集状态。",
-            icon: FiCamera,
-          },
-          {
-            id: "data-actions",
-            title: "动作曲线",
-            caption: "快速定位动作尖峰、静止段和异常幅度。",
-            icon: FiActivity,
-          },
-          {
-            id: "data-urdf",
-            title: "URDF 回放",
-            caption: "用机器人姿态验证动作轨迹是否合理。",
-            icon: FiCpu,
-          },
-        ]}
-      />
-    );
-  }
-
-  function LaunchWorkspaceCue() {
-    return (
-      <WorkspaceFeatureStrip
-        workspace="launch"
-        eyebrow="Launch Workspace"
-        title="评测启动与监控"
-        caption="单任务 SimplerEnv 实时评测，固定任务启动，1Hz 轮询查看 prompt、最新渲染图和 pi05 原始 7 维动作曲线。"
-        items={[
-          {
-            id: "launch-control",
-            title: "单任务控制",
-            caption: "启动冲突控制、运行中禁用切换、支持手动停止。",
-            icon: FiTarget,
-          },
-          {
-            id: "launch-frame",
-            title: "实时渲染图",
-            caption: "始终显示当前 runtime 写出的最新一帧。",
-            icon: FiCamera,
-          },
-          {
-            id: "launch-actions",
-            title: "原始动作曲线",
-            caption: "直接查看 pi05 的 7 维 raw action 序列。",
-            icon: FiActivity,
-          },
-        ]}
-      />
-    );
-  }
-
-  function TrainingWorkspaceCue() {
-    return (
-      <WorkspaceFeatureStrip
-        workspace="training"
-        eyebrow="Training Workspace"
-        title="训练配置和曲线工作区"
-        caption="查看训练配置、对照 baseline，并打开训练曲线。"
-        items={[
-          {
-            id: "training-baseline",
-            title: "Baseline 对照",
-            caption: "对照不带 memory 的训练配置。",
-            icon: FiTarget,
-          },
-          {
-            id: "training-config",
-            title: "参数编辑",
-            caption: "编辑 batch、学习率与 memory 参数。",
-            icon: FiSliders,
-          },
-          {
-            id: "training-curves",
-            title: "W&B 曲线",
-            caption: "打开训练 loss、learning rate 和 checkpoint 状态。",
-            icon: FiTrendingUp,
-          },
-        ]}
-      />
-    );
-  }
-
-  function ReplayWorkspaceCue() {
-    return (
-      <WorkspaceFeatureStrip
-        workspace="replay"
-        eyebrow="Replay Workspace"
-        title="评测查看和回放工作区"
-        caption="查看评测结果表格，并回放 SimplerEnv 与 RMBench 视频。"
-        items={[
-          {
-            id: "replay-table",
-            title: "最高分表格",
-            caption: "自动汇总 CSV/TXT，并高亮当前最高结果。",
-            icon: FiAward,
-          },
-          {
-            id: "replay-video",
-            title: "视频回放",
-            caption: "对照 rollout 视频核查策略行为。",
-            icon: FiFilm,
-          },
-          {
-            id: "replay-text",
-            title: "结果文本",
-            caption: "查看 RMBench 原始 result 文本。",
-            icon: FiFileText,
-          },
-        ]}
-      />
-    );
-  }
-
   function WandbPanel() {
     return (
       <article className={panelClass}>
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              Weights & Biases
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">训练曲线监控</h2>
+            <h2 className="text-xl font-semibold">训练曲线监控</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
               查看训练 loss、learning rate 与 checkpoint 状态。
             </p>
@@ -950,7 +526,7 @@ export function EvaluationDashboardView({
             {baselineConfigs.length > 0 && selectedBaselineConfig ? (
               <div className="grid gap-4">
                 <label className="block">
-                  <span className="text-xs font-medium uppercase tracking-[0.08em] text-[oklch(0.49_0.02_68)]">
+                  <span className="text-xs font-medium text-[oklch(0.49_0.025_66)]">
                     选择 Baseline
                   </span>
                   <select
@@ -977,7 +553,7 @@ export function EvaluationDashboardView({
                   data-baseline-config={selectedBaselineConfig.name}
                   className="rounded-lg border border-[oklch(0.86_0.023_72)] bg-[oklch(0.985_0.012_76)] p-4"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[oklch(0.47_0.055_54)]">
+                  <p className="text-xs font-semibold text-[oklch(0.47_0.055_54)]">
                     完整配置
                   </p>
                   <p className="mt-1 text-xs text-[oklch(0.43_0.025_68)]">
@@ -1090,7 +666,7 @@ export function EvaluationDashboardView({
               ))}
             </dl>
             <div className="mt-4 border-t border-[oklch(0.88_0.02_72)] pt-4">
-              <p className="text-xs font-medium uppercase tracking-[0.06em] text-[oklch(0.52_0.02_68)]">
+              <p className="text-xs font-medium text-[oklch(0.49_0.025_66)]">
                 Memory 详情
               </p>
               <dl className="mt-2 grid gap-x-4 gap-y-2 text-xs text-[oklch(0.43_0.025_68)]">
@@ -1129,10 +705,7 @@ export function EvaluationDashboardView({
       <section className={panelClass}>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              OpenPI Training Config
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-[oklch(0.25_0.025_62)]">
+            <h2 className="text-xl font-semibold text-[oklch(0.25_0.025_62)]">
               训练超参数配置
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
@@ -1455,7 +1028,7 @@ export function EvaluationDashboardView({
         <article className={panelClass}>
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
+              <p className="text-xs font-medium text-[oklch(0.49_0.025_66)]">
                 当前 checkpoint
               </p>
               <h2 className="mt-2 text-xl font-semibold">四任务结果</h2>
@@ -1494,10 +1067,7 @@ export function EvaluationDashboardView({
           <div className="mt-5 border-t border-[oklch(0.84_0.025_72)] pt-5">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-                  SimplerEnv 回放
-                </p>
-                <h3 className="mt-2 text-lg font-semibold">Rollout 视频</h3>
+                <h3 className="text-lg font-semibold">SimplerEnv 回放视频</h3>
               </div>
               <select
                 value={simplerVideoIndex}
@@ -1596,10 +1166,7 @@ export function EvaluationDashboardView({
       <section className={panelClass}>
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              Evaluation Results
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">评测结果表格</h2>
+            <h2 className="text-xl font-semibold">评测结果表格</h2>
           </div>
           <div className="inline-flex rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.96_0.018_75)] p-1">
             {benchmarkSections.map((section) => (
@@ -1638,7 +1205,7 @@ export function EvaluationDashboardView({
               data-benchmark-best="selected"
               className="rounded-xl border border-[oklch(0.76_0.065_55)] bg-[oklch(0.94_0.045_62)] px-4 py-2 text-sm text-[oklch(0.29_0.045_52)]"
             >
-              <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
+              <span className="block text-xs font-semibold text-[oklch(0.47_0.055_54)]">
                 当前最高
               </span>
               <span className="mt-1 block font-semibold">
@@ -1864,10 +1431,7 @@ export function EvaluationDashboardView({
       <section className={panelClass}>
         <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
-              ACONE
-            </p>
-            <h2 className="mt-2 text-xl font-semibold">数据查看</h2>
+            <h2 className="text-xl font-semibold">数据查看</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[oklch(0.43_0.025_68)]">
               {dashboard.acone.datasetName} 包含{" "}
               {formatInteger(dashboard.acone.episodes)} 条轨迹、
@@ -1901,7 +1465,7 @@ export function EvaluationDashboardView({
 
           <aside className="grid gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[oklch(0.47_0.055_54)]">
+              <p className="text-xs font-medium text-[oklch(0.49_0.025_66)]">
                 ACONE 数据概览
               </p>
               <h3 className="mt-2 text-lg font-semibold text-[oklch(0.25_0.025_62)]">
@@ -2065,19 +1629,11 @@ export function EvaluationDashboardView({
   }
 
   return (
-    <main className="min-h-screen bg-[oklch(0.96_0.018_75)] px-4 pb-10 text-[oklch(0.25_0.025_62)] md:px-6">
-      <WorkspaceHeader />
+    <main className="min-h-screen bg-[oklch(0.96_0.018_75)] px-4 pb-10 pt-6 text-[oklch(0.25_0.025_62)] md:px-6 md:pt-8">
       <div className="mx-auto grid max-w-7xl gap-5">
-        {showOverview ? <OverviewEntryPanel /> : null}
-        {showData ? (
-          <>
-            <DataWorkspaceCue />
-            <DataPanel />
-          </>
-        ) : null}
+        {showData ? <DataPanel /> : null}
         {showTraining ? (
           <>
-            <TrainingWorkspaceCue />
             <article className={panelClass}>
               <TrainingCurves />
             </article>
@@ -2087,18 +1643,12 @@ export function EvaluationDashboardView({
         ) : null}
         {showReplay ? (
           <>
-            <ReplayWorkspaceCue />
             <ResultTablePanel />
             <SimplerPanel />
             <RmbenchPanel />
           </>
         ) : null}
-        {showLaunch ? (
-          <>
-            <LaunchWorkspaceCue />
-            <SimplerLaunchPanel />
-          </>
-        ) : null}
+        {showLaunch ? <SimplerLaunchPanel /> : null}
       </div>
     </main>
   );

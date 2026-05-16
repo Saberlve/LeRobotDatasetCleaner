@@ -1,10 +1,7 @@
 import React from "react";
 
-import { EvaluationDashboardView } from "@/components/thesis/evaluation-dashboard";
-import { loadEvaluationDashboard } from "@/server/eval-results/summary";
+import { EvaluationLaunchPageView } from "@/components/evaluation/evaluation-launch-page";
 
-export default async function EvaluationLaunchPage() {
-  const dashboard = await loadEvaluationDashboard();
-
-  return <EvaluationDashboardView dashboard={dashboard} mode="launch" />;
+export default function EvaluationLaunchPage() {
+  return <EvaluationLaunchPageView />;
 }

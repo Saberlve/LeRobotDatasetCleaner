@@ -270,52 +270,14 @@ function trainingConfig(
 }
 
 describe("evaluation page", () => {
-  test("renders overview as an entry-only hub", async () => {
-    const page = await EvaluationPage();
-    const html = renderToStaticMarkup(page);
-
-    expect(html).toContain("训练-评测-回放一体化平台");
-    expect(html).not.toContain("面向长程任务的 VLM-VLA 通用记忆系统");
-    expect(html).not.toContain('href="/why-memory"');
-    expect(html).not.toContain('href="/conclusion"');
-    expect(html).toContain('href="/results"');
-    expect(html).toContain("返回展示页");
-    expect(html).toContain('href="/evaluation/data"');
-    expect(html).toContain("数据查看");
-    expect(html).toContain('href="/evaluation/training"');
-    expect(html).toContain("训练配置和曲线");
-    expect(html).toContain('href="/evaluation/replay"');
-    expect(html).toContain("评测查看和回放");
-    expect(html).toContain('href="/evaluation/launch"');
-    expect(html).toContain("评测启动与监控");
-    expect(html).toContain("选择工作区");
-    expect(html).toContain("进入数据查看");
-    expect(html).toContain("进入训练工作区");
-    expect(html).toContain("进入评测回放");
-    expect(html).toContain("进入评测启动");
-    expect(html).not.toContain("Weights &amp; Biases");
-    expect(html).not.toContain("外部监控入口");
-    expect(html).not.toContain("W&amp;B 项目页需要在新标签页打开");
-    expect(html).not.toContain("新标签页查看训练曲线");
-    expect(html).not.toContain("<iframe");
-    expect(html).not.toContain("训练超参数配置");
-    expect(html).not.toContain("保存配置");
-    expect(html).not.toContain("pi05_simpler_memory_pytorch_full");
-    expect(html).not.toContain(
-      "https://wandb.ai/saberlve9-massachusetts-institute-of-technology/openpi?nw=nwusersaberlve9",
-    );
-    expect(html).not.toContain("SimplerEnv 回放");
-    expect(html).not.toContain("Swap Blocks 回放");
-    expect(html).not.toContain("Episode 视频");
-    expect(html).not.toContain("pick_X_times_filterd_twice");
-    expect(html).not.toContain("Episode 快速定位");
-    expect(html).not.toContain("复制数据摘要");
-    expect(html).not.toContain("数据巡检清单");
-    expect(html).not.toContain("首条 episode_0");
-    expect(html).not.toContain("ACONE 三路相机预览");
-    expect(html).not.toContain("ACONE 三路相机数据预览图");
-    expect(html).not.toContain("/mnt/d/share/pick_X_times_filterd_twice");
-    expect(html).not.toContain("%2Fimages%2Facone-data-preview.jpg");
+  test("redirects root evaluation page to /evaluation/data", async () => {
+    try {
+      await EvaluationPage();
+      expect.fail("Expected redirect to throw");
+    } catch (error: unknown) {
+      expect((error as { digest?: string }).digest).toContain("NEXT_REDIRECT");
+      expect((error as { digest?: string }).digest).toContain("/evaluation/data");
+    }
   });
 
   test("renders focused evaluation workspaces", () => {
@@ -337,15 +299,10 @@ describe("evaluation page", () => {
     expect(dataHtml).toContain("Episode 快速定位");
     expect(dataHtml).toContain("打开 episode");
     expect(dataHtml).toContain("从当前 episode 预览进入");
-    expect(dataHtml).toContain("同步视频");
-    expect(dataHtml).toContain("动作曲线");
-    expect(dataHtml).toContain("URDF 回放");
     expect(dataHtml).toContain("代表样本抽查");
     expect(dataHtml).toContain("首条样本");
     expect(dataHtml).toContain("中位样本");
     expect(dataHtml).toContain("末条样本");
-    expect(dataHtml).toContain('data-workspace-cue="data"');
-    expect(dataHtml).toContain('data-workspace-icon="data-video"');
     expect(dataHtml).toContain("ACONE 数据概览");
     expect(dataHtml).toContain("ACONE 三路相机预览");
     expect(dataHtml).toContain("ACONE 三路相机数据预览图");
@@ -354,16 +311,14 @@ describe("evaluation page", () => {
     expect(dataHtml).not.toContain("按清洗流程逐项确认");
     expect(dataHtml).not.toContain("清洗状态");
     expect(dataHtml).not.toContain("保存配置");
-    expect(dataHtml).not.toContain("SimplerEnv 回放");
+    expect(dataHtml).not.toContain("SimplerEnv 回放视频");
 
-    expect(trainingHtml).toContain("训练配置和曲线");
-    expect(trainingHtml).toContain("Weights &amp; Biases");
+    expect(trainingHtml).toContain("训练超参数配置");
+    expect(trainingHtml).toContain("训练曲线监控");
     expect(trainingHtml).toContain("保存配置");
     expect(trainingHtml).toContain("训练规模");
     expect(trainingHtml).toContain("学习率 Schedule");
     expect(trainingHtml).toContain("Memory 参数");
-    expect(trainingHtml).toContain('data-workspace-cue="training"');
-    expect(trainingHtml).toContain('data-workspace-icon="training-baseline"');
     expect(trainingHtml).toContain("Baseline 对照");
     expect(trainingHtml.indexOf("学习率 Schedule")).toBeLessThan(
       trainingHtml.indexOf("Memory 参数"),
@@ -371,31 +326,26 @@ describe("evaluation page", () => {
     expect(trainingHtml).not.toContain("Episode 快速定位");
     expect(trainingHtml).not.toContain("Episode 视频");
 
-    expect(replayHtml).toContain("评测查看和回放");
-    expect(replayHtml).toContain("SimplerEnv 回放");
+    expect(replayHtml).toContain("评测结果表格");
+    expect(replayHtml).toContain("SimplerEnv 回放视频");
     expect(replayHtml).toContain("RMBench");
     expect(replayHtml).toContain('data-simpler-trend-chart="avg-entire"');
-    expect(replayHtml).toContain('data-workspace-cue="replay"');
-    expect(replayHtml).toContain('data-workspace-icon="replay-table"');
-    expect(replayHtml).toContain("最高分表格");
     expect(replayHtml).not.toContain("数据巡检清单");
     expect(replayHtml).not.toContain("保存配置");
 
-    expect(launchHtml).toContain("评测启动与监控");
-    expect(launchHtml).toContain("单任务 SimplerEnv 实时评测");
+    expect(launchHtml).toContain("常驻模型服务");
     expect(launchHtml).toContain("启动评测");
     expect(launchHtml).toContain("停止评测");
-    expect(launchHtml).toContain('data-workspace-cue="launch"');
-    expect(launchHtml).not.toContain("SimplerEnv 回放");
+    expect(launchHtml).not.toContain("SimplerEnv 回放视频");
   });
 
   test("renders the dedicated launch route", async () => {
     const page = await EvaluationLaunchPage();
     const html = renderToStaticMarkup(page);
 
-    expect(html).toContain("评测启动与监控");
-    expect(html).toContain("单任务 SimplerEnv 实时评测");
-    expect(html).toContain('href="/evaluation/launch"');
+    expect(html).toContain("常驻模型服务");
+    expect(html).toContain("启动评测");
+    expect(html).toContain('data-launch-row="controls"');
   });
 
   test("keeps RMBench replay compact and crops horizontally without scaling", () => {

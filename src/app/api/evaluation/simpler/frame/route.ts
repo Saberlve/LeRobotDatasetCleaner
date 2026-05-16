@@ -7,6 +7,9 @@ import {
   resolveSimplerFramePath,
 } from "@/server/simpler-launch/service";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: Request) {
   try {
     const requestUrl = new URL(request.url);
@@ -23,8 +26,12 @@ export async function GET(request: Request) {
     return new NextResponse(buffer, {
       status: 200,
       headers: {
-        "cache-control": "no-store",
+        "cache-control":
+          "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, no-transform",
         "content-type": "image/jpeg",
+        expires: "0",
+        pragma: "no-cache",
+        "x-accel-buffering": "no",
       },
     });
   } catch (error) {

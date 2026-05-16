@@ -33,7 +33,7 @@ from openpi.training import config as openpi_config  # noqa: E402
 
 
 DEFAULT_CHECKPOINT = "/root/autodl-tmp/checkpoints/pi05_arx/pick_X_times/pick_X_times/13000"
-DEFAULT_DATASET = "/root/autodl-tmp/datasets/pick_X_times_filterd_twice"
+DEFAULT_DATASET = "/root/autodl-tmp/pick_X_times_filterd_twice"
 DEFAULT_OUTPUT = "/root/autodl-tmp/eval_results/pi05_arx_13000_open_loop"
 DEFAULT_PROMPT = "Pick up the black pouch three times, then touch the green grommet"
 
