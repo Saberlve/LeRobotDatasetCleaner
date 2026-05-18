@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 afterEach(() => {
@@ -693,7 +693,7 @@ describe("SimplerLaunchPanel", () => {
     });
 
   });
-  test("renders the RMBench workspace with four streaming frame URLs while a run is active", async () => {
+  test("renders the RMBench workspace with four frame URLs while a run is active", async () => {
     const runId = "2026-05-15T12-00-00-000Z_swap_blocks";
     vi.stubGlobal(
       "fetch",
@@ -731,20 +731,20 @@ describe("SimplerLaunchPanel", () => {
     await waitFor(() => {
       expect(
         screen.getByRole("img", { name: "swap_blocks third view" }).getAttribute("src"),
-      ).toBe(`/api/evaluation/rmbench/frame/stream?runId=${runId}&camera=third_view`);
+      ).toBe(`/api/evaluation/rmbench/frame?runId=${runId}&camera=third_view&v=2`);
       expect(
         screen.getByRole("img", { name: "swap_blocks head camera" }).getAttribute("src"),
-      ).toBe(`/api/evaluation/rmbench/frame/stream?runId=${runId}&camera=head_camera`);
+      ).toBe(`/api/evaluation/rmbench/frame?runId=${runId}&camera=head_camera&v=2`);
       expect(
         screen.getByRole("img", { name: "swap_blocks left wrist" }).getAttribute("src"),
-      ).toBe(`/api/evaluation/rmbench/frame/stream?runId=${runId}&camera=left_camera`);
+      ).toBe(`/api/evaluation/rmbench/frame?runId=${runId}&camera=left_camera&v=2`);
       expect(
         screen.getByRole("img", { name: "swap_blocks right wrist" }).getAttribute("src"),
-      ).toBe(`/api/evaluation/rmbench/frame/stream?runId=${runId}&camera=right_camera`);
+      ).toBe(`/api/evaluation/rmbench/frame?runId=${runId}&camera=right_camera&v=2`);
     });
   });
 
-  test("keeps RMBench visuals and actions gated until the primary frame is ready", async () => {
+  test("keeps the RMBench primary frame gated when the image has not been written yet", async () => {
     const runId = "2026-05-15T12-00-00-000Z_swap_blocks";
     vi.stubGlobal(
       "fetch",
@@ -782,10 +782,59 @@ describe("SimplerLaunchPanel", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Third view 尚未生成")).not.toBeNull();
-      expect(screen.getByText("新任务缓冲中，等待首批动作与主视角同步")).not.toBeNull();
     });
 
-    expect(document.querySelector('[data-recharts="line-chart"]')).toBeNull();
+    const rmbenchActionChart = document.querySelector('[data-action-chart="rmbench-actions"]');
+    expect(rmbenchActionChart).not.toBeNull();
+    expect(
+      within(rmbenchActionChart as HTMLElement).getByText("动作序列尚未生成"),
+    ).not.toBeNull();
+  });
+
+  test("shows RMBench frames before actions are available", async () => {
+    const runId = "2026-05-15T12-00-00-000Z_swap_blocks";
+    vi.stubGlobal(
+      "fetch",
+      createFetchMock({
+        simplerServerStatus: createServerStatus("simpler", { status: "running", port: 8123 }),
+        rmbenchServerStatus: createServerStatus("rmbench", { status: "running", port: 9123 }),
+        rmbenchStatus: createRmbenchStatus({
+          runId,
+          status: "running",
+          actionCount: 0,
+          frameVersions: {
+            third_view: 3,
+            head_camera: 1,
+            left_camera: 0,
+            right_camera: 0,
+          },
+          actionSeries: [],
+        }),
+      }),
+    );
+
+    const { SimplerLaunchPanel } = await import(
+      "@/components/evaluation/simpler-launch-panel"
+    );
+
+    render(<SimplerLaunchPanel />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("img", { name: "swap_blocks third view" }).getAttribute("src"),
+      ).toBe(`/api/evaluation/rmbench/frame?runId=${runId}&camera=third_view&v=3`);
+      expect(
+        screen.getByRole("img", { name: "swap_blocks head camera" }).getAttribute("src"),
+      ).toBe(`/api/evaluation/rmbench/frame?runId=${runId}&camera=head_camera&v=1`);
+    });
+
+    expect(screen.queryByRole("img", { name: "swap_blocks left wrist" })).toBeNull();
+    expect(screen.queryByRole("img", { name: "swap_blocks right wrist" })).toBeNull();
+    const rmbenchActionChart = document.querySelector('[data-action-chart="rmbench-actions"]');
+    expect(rmbenchActionChart).not.toBeNull();
+    expect(
+      within(rmbenchActionChart as HTMLElement).getByText("动作序列尚未生成"),
+    ).not.toBeNull();
   });
 
   test("loads RMBench actions through the dedicated actions endpoint", async () => {

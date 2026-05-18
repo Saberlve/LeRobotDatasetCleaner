@@ -44,9 +44,6 @@ const TERMINAL_FRAME_REFRESH_INTERVAL_MS = 150;
 const TERMINAL_FRAME_REFRESH_ATTEMPTS = 8;
 const FRAME_FADE_DURATION_MS = 140;
 const ACTIVE_ACTION_WINDOW_SIZE = 72;
-const multipartHeaderSeparator = new Uint8Array([13, 10, 13, 10]);
-const multipartBoundaryLineBreak = new Uint8Array([13, 10]);
-const multipartHeaderDecoder = new TextDecoder();
 
 type RequestState = "idle" | "launching" | "stopping";
 
@@ -66,12 +63,10 @@ export function RmbenchLaunchWorkspace({
   const [taskRequestState, setTaskRequestState] = useState<RequestState>("idle");
   const [panelError, setPanelError] = useState<string | null>(null);
   const [visualSyncPending, setVisualSyncPending] = useState(false);
-  const [visibleActionCount, setVisibleActionCount] = useState<number | null>(null);
   const mountedRef = useRef(true);
   const actionRequestKeyRef = useRef<string | null>(null);
   const actionRunIdRef = useRef<string | null>(null);
   const pendingVisualSyncRunIdRef = useRef<string | null>(null);
-  const actionSeriesRef = useRef<RmbenchLaunchActionPoint[]>([]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -109,16 +104,11 @@ export function RmbenchLaunchWorkspace({
   }, [status.frameVersions.third_view, status.runId, status.status, status.updatedAt]);
 
   useEffect(() => {
-    actionSeriesRef.current = actionSeries;
-  }, [actionSeries]);
-
-  useEffect(() => {
     if (!status.runId) {
       actionRunIdRef.current = null;
       actionRequestKeyRef.current = null;
       pendingVisualSyncRunIdRef.current = null;
       setActionSeries([]);
-      setVisibleActionCount(null);
       return;
     }
 
@@ -126,7 +116,6 @@ export function RmbenchLaunchWorkspace({
       actionRunIdRef.current = status.runId;
       actionRequestKeyRef.current = null;
       setActionSeries([]);
-      setVisibleActionCount(null);
     }
   }, [status.runId]);
 
@@ -153,7 +142,7 @@ export function RmbenchLaunchWorkspace({
     const awaitingInitialPayload =
       status.runId === pendingVisualSyncRunIdRef.current &&
       shouldGateVisualSync(status) &&
-      !hasVisualSyncPayload(status, actionSeries);
+      !hasVisualSyncPayload(status);
     if (awaitingInitialPayload) {
       setVisualSyncPending(true);
       return;
@@ -170,20 +159,11 @@ export function RmbenchLaunchWorkspace({
   const hasActiveTaskProcess = status.processActive;
   const isTaskRunning = hasActiveTaskProcess || pollingStatuses.has(status.status);
   const visualStatus = visualSyncPending ? createVisualPendingStatus(status) : status;
-  const isStreamingFrame = shouldStreamFrame(visualStatus);
   const thirdViewSrc = resolveFrameImageSrc(visualStatus, "third_view");
   const headViewSrc = resolveFrameImageSrc(visualStatus, "head_camera");
   const leftViewSrc = resolveFrameImageSrc(visualStatus, "left_camera");
   const rightViewSrc = resolveFrameImageSrc(visualStatus, "right_camera");
-  const visibleActionSeries = resolveVisibleActionSeries(
-    actionSeries,
-    visibleActionCount,
-    isStreamingFrame,
-  );
-  const isAwaitingInitialActionSync =
-    visualSyncPending ||
-    (isStreamingFrame && actionSeries.length > 0 && visibleActionCount === null);
-  const deferredActionSeries = useDeferredValue(visibleActionSeries);
+  const deferredActionSeries = useDeferredValue(actionSeries);
   const plottedActionSeries = shouldWindowActionSeries(visualStatus)
     ? deferredActionSeries.slice(-ACTIVE_ACTION_WINDOW_SIZE)
     : deferredActionSeries;
@@ -231,30 +211,11 @@ export function RmbenchLaunchWorkspace({
     }
   }
 
-  function handleVisibleActionCountChange(nextActionCount: number | null) {
-    if (!mountedRef.current) {
-      return;
-    }
-
-    setVisibleActionCount((current) =>
-      current === nextActionCount ? current : nextActionCount,
-    );
-    if (
-      typeof nextActionCount === "number" &&
-      status.runId &&
-      nextActionCount > actionSeriesRef.current.length
-    ) {
-      const afterStep = actionSeriesRef.current.at(-1)?.step ?? 0;
-      void refreshActionSeries(status.runId, afterStep);
-    }
-  }
-
   async function handleLaunch() {
     if (isTaskBusy) return;
     setTaskRequestState("launching");
     setPanelError(null);
     setActionSeries([]);
-    setVisibleActionCount(null);
     try {
       const nextStatus = await fetchJson<RmbenchLaunchStatusResponse>(
         "/api/evaluation/rmbench/launch",
@@ -376,17 +337,9 @@ export function RmbenchLaunchWorkspace({
           <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
             <FrameCard title="Third View" emphasize>
               {thirdViewSrc ? (
-                isStreamingFrame ? (
-                  <StreamingFrameImage
-                    src={thirdViewSrc}
-                    alt="swap_blocks third view"
-                    onVisibleActionCountChange={handleVisibleActionCountChange}
-                  />
-                ) : (
-                  <BufferedFrameImage src={thirdViewSrc} alt="swap_blocks third view" />
-                )
+                <BufferedFrameImage src={thirdViewSrc} alt="swap_blocks third view" />
               ) : visualSyncPending ? (
-                <FramePlaceholder label="新任务缓冲中，等待主视角画面与动作同步" />
+                <FramePlaceholder label="新任务缓冲中，等待主视角画面生成" />
               ) : (
                 <FramePlaceholder label="Third view 尚未生成" />
               )}
@@ -394,28 +347,13 @@ export function RmbenchLaunchWorkspace({
 
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
               <FrameCard title="Head Camera">
-                {renderAuxiliaryFrame(
-                  headViewSrc,
-                  "swap_blocks head camera",
-                  visualSyncPending,
-                  isStreamingFrame,
-                )}
+                {renderAuxiliaryFrame(headViewSrc, "swap_blocks head camera", visualSyncPending)}
               </FrameCard>
               <FrameCard title="Left Wrist">
-                {renderAuxiliaryFrame(
-                  leftViewSrc,
-                  "swap_blocks left wrist",
-                  visualSyncPending,
-                  isStreamingFrame,
-                )}
+                {renderAuxiliaryFrame(leftViewSrc, "swap_blocks left wrist", visualSyncPending)}
               </FrameCard>
               <FrameCard title="Right Wrist">
-                {renderAuxiliaryFrame(
-                  rightViewSrc,
-                  "swap_blocks right wrist",
-                  visualSyncPending,
-                  isStreamingFrame,
-                )}
+                {renderAuxiliaryFrame(rightViewSrc, "swap_blocks right wrist", visualSyncPending)}
               </FrameCard>
             </div>
           </div>
@@ -429,7 +367,7 @@ export function RmbenchLaunchWorkspace({
             data-action-chart="rmbench-actions"
             className="mt-4 rounded-xl border border-[oklch(0.84_0.025_72)] bg-[oklch(0.99_0.01_76)] p-2"
           >
-            {!isAwaitingInitialActionSync && actionDimensions.length > 0 ? (
+            {actionDimensions.length > 0 ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 {actionDimensions.map((dimension) => (
                   <article
@@ -464,9 +402,9 @@ export function RmbenchLaunchWorkspace({
                   </article>
                 ))}
               </div>
-            ) : isAwaitingInitialActionSync ? (
+            ) : visualSyncPending ? (
               <div className="flex min-h-60 items-center justify-center px-6 py-10 text-sm text-[oklch(0.43_0.025_68)]">
-                新任务缓冲中，等待首批动作与主视角同步
+                新任务缓冲中，等待首批动作写入
               </div>
             ) : (
               <div className="flex min-h-60 items-center justify-center px-6 py-10 text-sm text-[oklch(0.43_0.025_68)]">
@@ -484,7 +422,6 @@ function renderAuxiliaryFrame(
   src: string | null,
   alt: string,
   gated: boolean,
-  streaming: boolean,
 ) {
   if (gated) {
     return <FramePlaceholder label="画面尚未生成" compact />;
@@ -492,10 +429,6 @@ function renderAuxiliaryFrame(
 
   if (!src) {
     return <FramePlaceholder label="画面尚未生成" compact />;
-  }
-
-  if (streaming) {
-    return <StreamingFrameImage src={src} alt={alt} />;
   }
 
   return <BufferedFrameImage src={src} alt={alt} />;
@@ -516,8 +449,8 @@ function FrameCard({
         <h3 className="text-sm font-semibold text-[oklch(0.25_0.025_62)]">{title}</h3>
       </div>
       <div
-        className={`flex items-center justify-center overflow-hidden bg-[oklch(0.95_0.02_72)] p-2 ${
-          emphasize ? "min-h-[22rem]" : "min-h-[10rem]"
+        className={`flex items-stretch justify-center overflow-hidden bg-[oklch(0.95_0.02_72)] p-2 ${
+          emphasize ? "h-[22rem]" : "h-[10rem]"
         }`}
       >
         {children}
@@ -551,83 +484,6 @@ function InfoCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1.5 break-all text-sm font-semibold text-[oklch(0.25_0.025_62)]">
         {value}
       </p>
-    </div>
-  );
-}
-
-function StreamingFrameImage({
-  src,
-  alt,
-  onVisibleActionCountChange,
-}: {
-  src: string;
-  alt: string;
-  onVisibleActionCountChange?: (nextActionCount: number | null) => void;
-}) {
-  const onVisibleActionCountChangeRef = useRef(onVisibleActionCountChange);
-
-  useEffect(() => {
-    onVisibleActionCountChangeRef.current = onVisibleActionCountChange;
-  }, [onVisibleActionCountChange]);
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const response = await fetch(src, {
-          cache: "no-store",
-          signal: abortController.signal,
-        });
-        if (!response.ok || !response.body) {
-          return;
-        }
-
-        const boundary = resolveMultipartBoundary(response.headers.get("content-type"));
-        if (!boundary) {
-          return;
-        }
-
-        const reader = response.body.getReader();
-        let buffered: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
-        while (!cancelled) {
-          const chunk = await reader.read();
-          if (chunk.done) {
-            break;
-          }
-          if (!chunk.value) {
-            continue;
-          }
-
-          buffered = concatUint8Arrays(buffered, Uint8Array.from(chunk.value));
-          const parsed = extractMultipartActionCounts(buffered, boundary);
-          buffered = parsed.remainder;
-          for (const actionCount of parsed.actionCounts) {
-            onVisibleActionCountChangeRef.current?.(actionCount);
-          }
-        }
-      } catch (error) {
-        if (!isAbortError(error)) {
-          onVisibleActionCountChangeRef.current?.(null);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-    };
-  }, [src]);
-
-  return (
-    <div className="relative h-full w-full">
-      <img
-        src={src}
-        alt={alt}
-        draggable={false}
-        className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-      />
     </div>
   );
 }
@@ -705,7 +561,7 @@ function BufferedFrameImage({ src, alt }: { src: string; alt: string }) {
     "pointer-events-none absolute inset-0 h-full w-full select-none object-contain";
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full self-stretch">
       {currentSrc ? (
         <img
           src={currentSrc}
@@ -729,146 +585,6 @@ function BufferedFrameImage({ src, alt }: { src: string; alt: string }) {
       ) : null}
     </div>
   );
-}
-
-function resolveVisibleActionSeries(
-  actionSeries: RmbenchLaunchActionPoint[],
-  visibleActionCount: number | null,
-  isStreamingFrame: boolean,
-) {
-  if (!isStreamingFrame) {
-    return actionSeries;
-  }
-
-  if (visibleActionCount === null) {
-    return [];
-  }
-
-  return actionSeries.slice(0, Math.max(0, visibleActionCount));
-}
-
-function resolveMultipartBoundary(contentType: string | null) {
-  const match = /boundary=([^;]+)/i.exec(contentType ?? "");
-  return match?.[1]?.trim().replace(/^"|"$/g, "") ?? null;
-}
-
-function extractMultipartActionCounts(buffer: Uint8Array, boundary: string) {
-  const boundaryBytes = new TextEncoder().encode(`--${boundary}`);
-  const actionCounts: number[] = [];
-  let remainder = buffer;
-
-  while (remainder.length > 0) {
-    const boundaryIndex = findByteSequence(remainder, boundaryBytes);
-    if (boundaryIndex === -1) {
-      return {
-        actionCounts,
-        remainder: remainder.slice(
-          Math.max(0, remainder.length - boundaryBytes.length - multipartHeaderSeparator.length),
-        ),
-      };
-    }
-
-    if (boundaryIndex > 0) {
-      remainder = remainder.slice(boundaryIndex);
-    }
-
-    const afterBoundaryIndex = boundaryBytes.length;
-    if (remainder.length < afterBoundaryIndex + 2) {
-      break;
-    }
-
-    if (
-      remainder[afterBoundaryIndex] === 45 &&
-      remainder[afterBoundaryIndex + 1] === 45
-    ) {
-      return { actionCounts, remainder: new Uint8Array(0) };
-    }
-
-    if (
-      remainder[afterBoundaryIndex] !== multipartBoundaryLineBreak[0] ||
-      remainder[afterBoundaryIndex + 1] !== multipartBoundaryLineBreak[1]
-    ) {
-      remainder = remainder.slice(afterBoundaryIndex);
-      continue;
-    }
-
-    const headerStart = afterBoundaryIndex + multipartBoundaryLineBreak.length;
-    const headerEnd = findByteSequence(remainder, multipartHeaderSeparator, headerStart);
-    if (headerEnd === -1) {
-      break;
-    }
-
-    const headerText = multipartHeaderDecoder.decode(
-      remainder.slice(headerStart, headerEnd),
-    );
-    const contentLength = readMultipartIntegerHeader(headerText, "content-length");
-    if (contentLength === null) {
-      remainder = remainder.slice(headerEnd + multipartHeaderSeparator.length);
-      continue;
-    }
-
-    const payloadStart = headerEnd + multipartHeaderSeparator.length;
-    const payloadEnd = payloadStart + contentLength;
-    const nextPartStart = payloadEnd + multipartBoundaryLineBreak.length;
-    if (remainder.length < nextPartStart) {
-      break;
-    }
-
-    const actionCount = readMultipartIntegerHeader(
-      headerText,
-      "x-rmbench-action-count",
-    );
-    if (actionCount !== null) {
-      actionCounts.push(actionCount);
-    }
-
-    remainder = remainder.slice(nextPartStart);
-  }
-
-  return { actionCounts, remainder };
-}
-
-function readMultipartIntegerHeader(headerText: string, headerName: string) {
-  const match = new RegExp(`^${headerName}:\\s*(\\d+)$`, "im").exec(headerText);
-  if (!match) {
-    return null;
-  }
-
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function concatUint8Arrays(left: Uint8Array, right: Uint8Array) {
-  const joined = new Uint8Array(left.length + right.length);
-  joined.set(left, 0);
-  joined.set(right, left.length);
-  return joined;
-}
-
-function findByteSequence(buffer: Uint8Array, sequence: Uint8Array, from = 0) {
-  if (sequence.length === 0) {
-    return from;
-  }
-
-  for (let index = from; index <= buffer.length - sequence.length; index += 1) {
-    let matches = true;
-    for (let offset = 0; offset < sequence.length; offset += 1) {
-      if (buffer[index + offset] !== sequence[offset]) {
-        matches = false;
-        break;
-      }
-    }
-
-    if (matches) {
-      return index;
-    }
-  }
-
-  return -1;
-}
-
-function isAbortError(error: unknown) {
-  return error instanceof Error && error.name === "AbortError";
 }
 
 function getActionDimensionKeys(actionSeries: RmbenchLaunchActionPoint[]) {
@@ -936,19 +652,12 @@ function resolveFrameImageSrc(
   status: RmbenchLaunchStatusResponse,
   cameraKey: RmbenchCameraKey,
 ) {
-  if (!status.runId || status.frameVersions[cameraKey] <= 0) {
+  const frameUrl = status.frameUrls[cameraKey];
+  if (!status.runId || !frameUrl || status.frameVersions[cameraKey] <= 0) {
     return null;
   }
 
-  if (shouldStreamFrame(status)) {
-    return `/api/evaluation/rmbench/frame/stream?runId=${encodeURIComponent(status.runId)}&camera=${cameraKey}`;
-  }
-
-  const frameUrl = status.frameUrls[cameraKey];
-  if (frameUrl) {
-    return `${frameUrl}&v=${status.frameVersions[cameraKey]}`;
-  }
-  return null;
+  return `${frameUrl}&v=${status.frameVersions[cameraKey]}`;
 }
 
 function shouldPollTask(taskStatus: RmbenchLaunchStatusResponse) {
@@ -971,11 +680,8 @@ function shouldGateVisualSync(status: RmbenchLaunchStatusResponse) {
   return !!status.runId && (status.status === "starting" || status.status === "running");
 }
 
-function hasVisualSyncPayload(
-  status: RmbenchLaunchStatusResponse,
-  actionSeries: RmbenchLaunchActionPoint[],
-) {
-  return !!status.runId && status.frameVersions.third_view > 0 && actionSeries.length > 0;
+function hasVisualSyncPayload(status: RmbenchLaunchStatusResponse) {
+  return !!status.runId && status.frameVersions.third_view > 0;
 }
 
 function createVisualPendingStatus(
@@ -996,10 +702,6 @@ function createVisualPendingStatus(
       right_camera: 0,
     },
   };
-}
-
-function shouldStreamFrame(taskStatus: RmbenchLaunchStatusResponse) {
-  return taskStatus.processActive || pollingStatuses.has(taskStatus.status);
 }
 
 function mergeActionSeries(

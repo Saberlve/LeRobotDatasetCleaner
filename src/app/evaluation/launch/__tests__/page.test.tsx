@@ -25,7 +25,7 @@ describe("evaluation launch page", () => {
 
     expect(html).toContain("Simpler 模型服务");
     expect(html).toContain("启动评测");
-    expect(html).not.toContain("RMBench Live 评测");
+    expect(html).toContain("RMBench Live 评测");
     expect(html).toContain('data-launch-row="controls"');
   });
 });
