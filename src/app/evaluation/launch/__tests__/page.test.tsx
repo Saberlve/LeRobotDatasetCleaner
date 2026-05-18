@@ -23,8 +23,9 @@ describe("evaluation launch page", () => {
     const page = await EvaluationLaunchPage();
     const html = renderToStaticMarkup(page);
 
-    expect(html).toContain("常驻模型服务");
+    expect(html).toContain("Simpler 模型服务");
     expect(html).toContain("启动评测");
+    expect(html).not.toContain("RMBench Live 评测");
     expect(html).toContain('data-launch-row="controls"');
   });
 });

@@ -80,7 +80,11 @@ type ServerStatusState = Record<ServerKey, EvaluationModelServerStatus>;
 type ServerRequestState = Record<ServerKey, ModelServerRequestState>;
 type ServerLogState = Record<ServerKey, LiveLogPanelState>;
 
-export function SimplerLaunchPanel() {
+export function SimplerLaunchPanel({
+  showRmbenchLiveWorkspace = true,
+}: {
+  showRmbenchLiveWorkspace?: boolean;
+} = {}) {
   const [selectedTask, setSelectedTask] = useState<SimplerTaskId>("bridge_carrot");
   const [status, setStatus] = useState<SimplerLaunchStatusResponse>(idleStatus());
   const [visualStatus, setVisualStatus] = useState<SimplerLaunchStatusResponse>(idleStatus());
@@ -629,12 +633,14 @@ export function SimplerLaunchPanel() {
         </section>
       </div>
 
-      <RmbenchLaunchWorkspace
-        serverStatus={serverStatuses.rmbench}
-        serverRequestState={serverRequestState.rmbench}
-        onStartServer={() => void handleServerStart("rmbench")}
-        onStopServer={() => void handleServerStop("rmbench")}
-      />
+      {showRmbenchLiveWorkspace ? (
+        <RmbenchLaunchWorkspace
+          serverStatus={serverStatuses.rmbench}
+          serverRequestState={serverRequestState.rmbench}
+          onStartServer={() => void handleServerStart("rmbench")}
+          onStopServer={() => void handleServerStop("rmbench")}
+        />
+      ) : null}
     </div>
   );
 }
