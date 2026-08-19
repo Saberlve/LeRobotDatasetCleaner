@@ -17,6 +17,7 @@ import Sidebar from "@/components/side-nav";
 import StatsPanel from "@/components/stats-panel";
 import OverviewPanel from "@/components/overview-panel";
 import Loading from "@/components/loading-component";
+import LocalDoctorPanel from "@/components/local-doctor-panel";
 import HfAuthButton from "@/components/hf-auth-button";
 import { hasURDFSupport } from "@/lib/so101-robot";
 import {
@@ -33,6 +34,7 @@ import {
   type CrossEpisodeVarianceData,
 } from "./fetch-data";
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
+import { isLocalDatasetRepoId } from "@/utils/localDatasets";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
 
 const URDFViewer = lazy(() => import("@/components/urdf-viewer"));
@@ -252,6 +254,7 @@ function EpisodeViewerInner({
 
   const [videosReady, setVideosReady] = useState(!videosInfo.length);
   const [chartsReady, setChartsReady] = useState(false);
+  const isLocalDataset = isLocalDatasetRepoId(datasetInfo.repoId);
 
   const loadStartRef = useRef(performance.now());
 
@@ -435,6 +438,13 @@ function EpisodeViewerInner({
       loadStats();
       loadInsights();
     }
+    // The local doctor panel renders from the same cross-episode and
+    // episode-length data as Filtering/Insights (the HF-space iframe used
+    // for hub datasets can't load local datasets).
+    if (activeTab === "doctor" && isLocalDatasetRepoId(datasetInfo.repoId)) {
+      loadStats();
+      loadInsights();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -444,6 +454,10 @@ function EpisodeViewerInner({
     if (tab === "frames") loadFrames();
     if (tab === "insights") loadInsights();
     if (tab === "filtering") {
+      loadStats();
+      loadInsights();
+    }
+    if (tab === "doctor" && isLocalDataset) {
       loadStats();
       loadInsights();
     }
@@ -816,37 +830,45 @@ function EpisodeViewerInner({
             </Suspense>
           )}
 
-          {activeTab === "doctor" && (
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between px-1 pb-2 text-xs text-slate-400">
-                <span>
-                  Dataset quality diagnostics &mdash; powered by{" "}
+          {activeTab === "doctor" &&
+            (isLocalDataset ? (
+              <LocalDoctorPanel
+                crossEpisodeData={crossEpData}
+                crossEpisodeLoading={insightsLoading}
+                episodeLengthStats={episodeLengthStats}
+                statsLoading={statsLoading}
+              />
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between px-1 pb-2 text-xs text-slate-400">
+                  <span>
+                    Dataset quality diagnostics &mdash; powered by{" "}
+                    <a
+                      href="https://github.com/jashshah999/lerobot-doctor"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-slate-200"
+                    >
+                      lerobot-doctor
+                    </a>
+                  </span>
                   <a
-                    href="https://github.com/jashshah999/lerobot-doctor"
+                    href={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline hover:text-slate-200"
                   >
-                    lerobot-doctor
+                    Open in new tab
                   </a>
-                </span>
-                <a
-                  href={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline hover:text-slate-200"
-                >
-                  Open in new tab
-                </a>
+                </div>
+                <iframe
+                  src={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
+                  title="lerobot-doctor"
+                  className="flex-1 w-full rounded border border-slate-700 bg-white"
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                />
               </div>
-              <iframe
-                src={`https://jashshah999-lerobot-doctor.hf.space/?dataset=${org}/${dataset}`}
-                title="lerobot-doctor"
-                className="flex-1 w-full rounded border border-slate-700 bg-white"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              />
-            </div>
-          )}
+            ))}
 
           {activeTab === "urdf" && (
             <Suspense fallback={<Loading />}>

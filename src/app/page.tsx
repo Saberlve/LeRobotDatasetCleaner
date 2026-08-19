@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { authHeaders } from "@/utils/auth";
 import HfAuthButton from "@/components/hf-auth-button";
+import { RecentLocalDatasets } from "@/components/home/recent-local-datasets";
 
 export default function Home() {
   return (
@@ -72,10 +73,13 @@ function HomeInner() {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [isPickingLocal, setIsPickingLocal] = useState(false);
+  const [isOpeningLocal, setIsOpeningLocal] = useState(false);
+  const [localMessage, setLocalMessage] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!query.trim()) {
+    if (!query.trim() || isLikelyLocalPath(query)) {
       setSuggestions([]);
       setShowSuggestions(false);
       setIsLoading(false);
@@ -134,7 +138,73 @@ function HomeInner() {
       activeIndex >= 0 && suggestions[activeIndex]
         ? suggestions[activeIndex]
         : query.trim();
-    if (target) navigate(target);
+    if (!target) return;
+
+    if (isLikelyLocalPath(target)) {
+      void openLocalDataset(target);
+      return;
+    }
+
+    navigate(target);
+  };
+
+  const handlePickLocalDataset = async () => {
+    setIsPickingLocal(true);
+    setLocalMessage("");
+    setShowSuggestions(false);
+
+    try {
+      const response = await fetch("/api/local-datasets/pick-directory", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        path?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.path) {
+        throw new Error(payload.error ?? "Could not pick a local folder");
+      }
+
+      setQuery(payload.path);
+    } catch (error) {
+      setLocalMessage(
+        error instanceof Error ? error.message : "Could not pick a local folder",
+      );
+    } finally {
+      setIsPickingLocal(false);
+    }
+  };
+
+  const openLocalDataset = async (path: string) => {
+    setIsOpeningLocal(true);
+    setLocalMessage("");
+
+    try {
+      const response = await fetch("/api/local-datasets/register", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ path: path.trim(), alias: "" }),
+      });
+      const payload = (await response.json()) as {
+        entryRoute?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.entryRoute) {
+        throw new Error(payload.error ?? "Failed to import local dataset");
+      }
+
+      router.push(payload.entryRoute);
+    } catch (error) {
+      setLocalMessage(
+        error instanceof Error ? error.message : "Failed to import local dataset",
+      );
+    } finally {
+      setIsOpeningLocal(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -152,7 +222,7 @@ function HomeInner() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div className="relative min-h-screen w-screen overflow-x-hidden">
       {/* Video Background */}
       <div className="video-background">
         <video
@@ -169,7 +239,7 @@ function HomeInner() {
       <div className="fixed inset-0 -z-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.35)_0%,rgba(0,0,0,0.80)_100%)]" />
 
       {/* Centered Content */}
-      <div className="relative z-10 h-screen flex flex-col items-center justify-center text-white text-center animate-fade-in-up px-4">
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center text-white text-center animate-fade-in-up px-4 py-8">
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-bold mb-2 drop-shadow-lg tracking-tight">
           LeRobot{" "}
@@ -274,14 +344,34 @@ function HomeInner() {
 
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-md bg-cyan-500 text-white font-semibold text-base hover:bg-cyan-400 active:scale-95 transition-all shadow-md flex items-center gap-2"
+            disabled={isOpeningLocal}
+            className="px-5 py-2.5 rounded-md bg-cyan-500 text-white font-semibold text-base hover:bg-cyan-400 active:scale-95 transition-all shadow-md flex items-center gap-2 disabled:cursor-not-allowed disabled:bg-cyan-500/50"
           >
-            Go
+            {isOpeningLocal ? "Opening…" : "Go"}
             <kbd className="text-xs font-mono bg-white/20 rounded px-1 py-0.5 leading-tight">
               ↵
             </kbd>
           </button>
+
+          <button
+            type="button"
+            onClick={handlePickLocalDataset}
+            disabled={isPickingLocal}
+            className="px-5 py-2.5 rounded-md border border-white/30 bg-white/10 backdrop-blur-sm text-white font-semibold text-base hover:bg-white/15 active:scale-95 transition-all shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPickingLocal ? "Picking…" : "Local folder"}
+          </button>
         </form>
+
+        {localMessage && (
+          <p className="mt-3 max-w-xl rounded-md border border-red-400/30 bg-red-950/35 px-4 py-2 text-sm text-red-100">
+            {localMessage}
+          </p>
+        )}
+
+        <div className="w-full max-w-xl">
+          <RecentLocalDatasets />
+        </div>
 
         <div className="mt-3 animate-fade-in-late">
           <HfAuthButton variant="ghost" />
@@ -329,5 +419,14 @@ function HomeInner() {
         </Link>
       </div>
     </div>
+  );
+}
+
+function isLikelyLocalPath(value: string) {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("~/") ||
+    /^[A-Za-z]:[\\/]/.test(trimmed)
   );
 }

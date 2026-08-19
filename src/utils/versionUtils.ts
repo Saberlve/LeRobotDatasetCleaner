@@ -3,6 +3,7 @@
  */
 
 import { authHeaders } from "./auth";
+import { buildLocalDatasetUrl, isLocalDatasetRepoId } from "./localDatasets";
 
 const DATASET_URL =
   process.env.DATASET_URL || "https://huggingface.co/datasets";
@@ -75,7 +76,10 @@ export async function getDatasetInfo(repoId: string): Promise<DatasetInfo> {
   console.log(`[perf] getDatasetInfo cache MISS for ${repoId} — fetching`);
 
   try {
-    const testUrl = `${DATASET_URL}/${repoId}/resolve/main/meta/info.json`;
+    const isLocal = isLocalDatasetRepoId(repoId);
+    const testUrl = isLocal
+      ? buildLocalDatasetUrl(repoId, "meta/info.json")
+      : `${DATASET_URL}/${repoId}/resolve/main/meta/info.json`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -84,7 +88,8 @@ export async function getDatasetInfo(repoId: string): Promise<DatasetInfo> {
       method: "GET",
       cache: "no-store",
       signal: controller.signal,
-      headers: authHeaders(),
+      // HF auth headers only apply to hub requests, never the local API.
+      ...(isLocal ? {} : { headers: authHeaders() }),
     });
 
     clearTimeout(timeoutId);
@@ -135,14 +140,17 @@ export async function getDatasetStats(
 
   let data: Record<string, unknown> | null = null;
   try {
-    const url = `${DATASET_URL}/${repoId}/resolve/main/meta/stats.json`;
+    const isLocal = isLocalDatasetRepoId(repoId);
+    const url = isLocal
+      ? buildLocalDatasetUrl(repoId, "meta/stats.json")
+      : `${DATASET_URL}/${repoId}/resolve/main/meta/stats.json`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(url, {
       method: "GET",
       cache: "no-store",
       signal: controller.signal,
-      headers: authHeaders(),
+      ...(isLocal ? {} : { headers: authHeaders() }),
     });
     clearTimeout(timeoutId);
     if (response.ok) {
@@ -193,5 +201,8 @@ export function buildVersionedUrl(
   version: string,
   path: string,
 ): string {
+  if (isLocalDatasetRepoId(repoId)) {
+    return buildLocalDatasetUrl(repoId, path);
+  }
   return `${DATASET_URL}/${repoId}/resolve/main/${path}`;
 }

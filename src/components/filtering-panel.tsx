@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
 import type {
   CrossEpisodeVarianceData,
@@ -66,6 +67,75 @@ function FlagAllBtn({ ids, label }: { ids: number[]; label?: string }) {
       {label ?? "Flag all"}
     </button>
   );
+}
+
+// ─── Local dataset export ────────────────────────────────────────
+
+type ExportMode = "flagged" | "unflagged";
+
+type FilteringExportState = {
+  isLocalRepo: boolean;
+  disableForMode: boolean;
+  disabled: boolean;
+  reason: string | null;
+};
+
+export function getFilteringExportState(input: {
+  repoId: string;
+  mode: ExportMode;
+  flaggedCount: number;
+  totalEpisodes: number | null;
+  outputParentDirectory: string;
+  datasetName: string;
+  submitting: boolean;
+}): FilteringExportState {
+  const isLocalRepo = input.repoId.startsWith("local/");
+  const disableForMode =
+    input.mode === "flagged"
+      ? input.flaggedCount === 0
+      : input.totalEpisodes != null &&
+        input.flaggedCount >= input.totalEpisodes;
+
+  let reason: string | null = null;
+  if (!isLocalRepo) {
+    reason = "Export is only available for local datasets.";
+  } else if (input.mode === "flagged" && input.flaggedCount === 0) {
+    reason = "Flag at least one episode before exporting flagged episodes.";
+  } else if (
+    input.mode === "unflagged" &&
+    input.totalEpisodes != null &&
+    input.flaggedCount >= input.totalEpisodes
+  ) {
+    reason = "All episodes are flagged; no unflagged subset to export.";
+  } else if (!input.outputParentDirectory.trim()) {
+    reason = "Pick an output parent directory before exporting.";
+  } else if (!input.datasetName.trim()) {
+    reason = "Enter a dataset name before exporting.";
+  } else if (/[\\/]/.test(input.datasetName)) {
+    reason = "Dataset name must not contain path separators.";
+  }
+
+  return {
+    isLocalRepo,
+    disableForMode,
+    disabled:
+      !isLocalRepo ||
+      disableForMode ||
+      !input.outputParentDirectory.trim() ||
+      !input.datasetName.trim() ||
+      /[\\/]/.test(input.datasetName) ||
+      input.submitting,
+    reason,
+  };
+}
+
+function defaultExportAlias(repoId: string, mode: ExportMode): string {
+  return `${repoId.replace(/^local\//, "")}_${mode}`;
+}
+
+function joinExportPath(parentDirectory: string, datasetName: string): string {
+  const parent = parentDirectory.trim().replace(/[\\/]+$/, "");
+  return `${parent}/${datasetName.trim()}`;
 }
 
 // ─── Lowest-Movement Episodes ────────────────────────────────────
@@ -221,6 +291,245 @@ function EpisodeLengthFilter({ episodes }: { episodes: EpisodeLengthInfo[] }) {
   );
 }
 
+// ─── Flagged subset export (local datasets only) ─────────────────
+
+function FlaggedExportCard({
+  repoId,
+  totalEpisodes,
+}: {
+  repoId: string;
+  totalEpisodes: number | null;
+}) {
+  const { flagged, count } = useFlaggedEpisodes();
+  const flaggedIds = useMemo(
+    () => [...flagged].sort((a, b) => a - b),
+    [flagged],
+  );
+  const [mode, setMode] = useState<ExportMode>("flagged");
+  const [outputParentDirectory, setOutputParentDirectory] = useState("");
+  const [datasetName, setDatasetName] = useState("");
+  const [pickingDirectory, setPickingDirectory] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<null | {
+    entryRoute: string;
+    repoId: string;
+    totalEpisodes: number;
+    path: string;
+  }>(null);
+
+  const exportState = getFilteringExportState({
+    repoId,
+    mode,
+    flaggedCount: count,
+    totalEpisodes,
+    outputParentDirectory,
+    datasetName,
+    submitting,
+  });
+
+  const aliasPlaceholder = defaultExportAlias(repoId, mode);
+  const effectiveDatasetName = datasetName.trim() || aliasPlaceholder;
+  const resolvedOutputPath =
+    outputParentDirectory.trim() && datasetName.trim()
+      ? joinExportPath(outputParentDirectory, datasetName)
+      : "";
+
+  const handlePickOutputParent = useCallback(async () => {
+    setPickingDirectory(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/local-datasets/pick-directory", {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        path?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.path) {
+        throw new Error(payload.error ?? "Could not pick an output directory.");
+      }
+
+      setOutputParentDirectory(payload.path);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not pick an output directory.",
+      );
+    } finally {
+      setPickingDirectory(false);
+    }
+  }, []);
+
+  const handleExport = useCallback(async () => {
+    if (exportState.disabled) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const response = await fetch("/api/local-datasets/export", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          repoId,
+          flaggedEpisodeIds: flaggedIds,
+          mode,
+          outputPath: joinExportPath(outputParentDirectory, datasetName),
+          alias: datasetName.trim(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        entryRoute?: string;
+        repoId?: string;
+        totalEpisodes?: number;
+        path?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Dataset export failed.");
+      }
+
+      setResult({
+        entryRoute: payload.entryRoute ?? "",
+        repoId: payload.repoId ?? "",
+        totalEpisodes: payload.totalEpisodes ?? 0,
+        path: payload.path ?? "",
+      });
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Dataset export failed.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [
+    datasetName,
+    exportState.disabled,
+    flaggedIds,
+    mode,
+    outputParentDirectory,
+    repoId,
+  ]);
+
+  return (
+    <div className="bg-[var(--surface-1)]/60 rounded-lg p-4 border border-white/10 space-y-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-slate-200">
+          Export dataset subset
+        </h3>
+        <p className="text-xs text-slate-400">
+          Export the flagged or unflagged episode subset into a new local
+          dataset directory, preserving the source dataset.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="space-y-1.5">
+          <span className="text-xs text-slate-400">Export mode</span>
+          <select
+            aria-label="Export mode"
+            value={mode}
+            onChange={(event) => setMode(event.target.value as ExportMode)}
+            className="w-full rounded-md border border-white/10 bg-[var(--surface-0)] px-3 py-2 text-sm text-slate-200"
+          >
+            <option value="flagged">flagged</option>
+            <option value="unflagged">unflagged</option>
+          </select>
+        </label>
+
+        <label className="space-y-1.5">
+          <span className="text-xs text-slate-400">Dataset name</span>
+          <input
+            aria-label="Dataset name"
+            value={datasetName}
+            onChange={(event) => setDatasetName(event.target.value)}
+            placeholder={aliasPlaceholder}
+            className="w-full rounded-md border border-white/10 bg-[var(--surface-0)] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
+          />
+        </label>
+      </div>
+
+      <label className="space-y-1.5 block">
+        <span className="text-xs text-slate-400">Output parent directory</span>
+        <div className="flex gap-2">
+          <input
+            aria-label="Output parent directory"
+            value={outputParentDirectory}
+            readOnly
+            placeholder="/tmp"
+            className="w-full rounded-md border border-white/10 bg-[var(--surface-0)] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
+          />
+          <button
+            type="button"
+            onClick={handlePickOutputParent}
+            disabled={pickingDirectory || submitting}
+            className="shrink-0 rounded-md border border-white/10 bg-[var(--surface-0)] px-3 py-2 text-sm text-slate-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:text-slate-500"
+          >
+            {pickingDirectory ? "Picking…" : "Pick directory"}
+          </button>
+        </div>
+      </label>
+
+      {resolvedOutputPath && (
+        <div className="rounded-md bg-[var(--surface-0)]/60 px-3 py-2 text-xs text-slate-400">
+          Will export to{" "}
+          <span className="font-mono text-slate-200">{resolvedOutputPath}</span>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-slate-400">
+          {exportState.reason ??
+            `Ready to export ${mode === "flagged" ? "flagged" : "unflagged"} episodes as ${effectiveDatasetName}.`}
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exportState.disabled}
+          className="rounded-md bg-cyan-500 px-3 py-2 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+        >
+          {submitting ? "Exporting…" : "Export dataset"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-200 space-y-2">
+          <div>
+            Exported <span className="font-semibold">{result.repoId}</span> with{" "}
+            {result.totalEpisodes} episode{result.totalEpisodes !== 1 ? "s" : ""}
+            .
+          </div>
+          <div className="text-emerald-100/80">{result.path}</div>
+          <Link
+            href={result.entryRoute}
+            className="inline-flex rounded-md bg-emerald-400/20 px-2.5 py-1.5 text-emerald-100 hover:bg-emerald-400/30"
+          >
+            Open exported dataset
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Filtering Panel ────────────────────────────────────────
 
 interface FilteringPanelProps {
@@ -357,13 +666,19 @@ function FilteringPanel({
   flatChartData,
   onViewFlaggedEpisodes,
 }: FilteringPanelProps) {
+  const totalEpisodes =
+    episodeLengthStats?.allEpisodeLengths?.length ??
+    crossEpisodeData?.numEpisodes ??
+    null;
+
   return (
     <div className="max-w-5xl mx-auto py-6 space-y-8">
       <div>
         <h2 className="text-xl font-bold text-slate-100">Filtering</h2>
         <p className="text-sm text-slate-400 mt-1">
           Identify and flag problematic episodes for removal. Flagged episodes
-          appear in the sidebar and can be exported as a CLI command.
+          appear in the sidebar, and local datasets can be exported as a new
+          subset directory.
         </p>
       </div>
 
@@ -371,6 +686,8 @@ function FilteringPanel({
         repoId={repoId}
         onViewEpisodes={onViewFlaggedEpisodes}
       />
+
+      <FlaggedExportCard repoId={repoId} totalEpisodes={totalEpisodes} />
 
       {episodeLengthStats?.allEpisodeLengths && (
         <EpisodeLengthFilter episodes={episodeLengthStats.allEpisodeLengths} />
