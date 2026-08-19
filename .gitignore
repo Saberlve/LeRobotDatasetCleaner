@@ -49,5 +49,11 @@ backend/.venv/
 backend/__pycache__/
 **/__pycache__/
 
+# local dataset registry (machine-specific runtime state)
+/data/
+
+# local dev server logs
+*.log
+
 # claude code local settings
 .claude/
