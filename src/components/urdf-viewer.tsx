@@ -42,9 +42,11 @@ const stlGeometryLoading = new Map<string, Promise<THREE.BufferGeometry>>();
 const URDF_BASE_URL =
   process.env.NEXT_PUBLIC_URDF_BASE_URL ??
   "https://huggingface.co/buckets/lerobot/robot-urdfs/resolve";
+// xArm7 URDF + meshes ship with the app under public/urdf/xarm7 so replay
+// works without reaching huggingface.co from the browser. Set
+// NEXT_PUBLIC_XARM7_URDF_BASE_URL to override (e.g. the HF bucket).
 const XARM7_URDF_BASE_URL =
-  process.env.NEXT_PUBLIC_XARM7_URDF_BASE_URL ??
-  "https://huggingface.co/buckets/Saberlve/robot_urdfs/resolve";
+  process.env.NEXT_PUBLIC_XARM7_URDF_BASE_URL ?? "/urdf";
 
 function getRobotConfig(robotType: string | null) {
   const lower = (robotType ?? "").toLowerCase();
