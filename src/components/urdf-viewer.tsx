@@ -23,6 +23,7 @@ import UrdfPlaybackBar from "@/components/urdf-playback-bar";
 import { CHART_CONFIG } from "@/utils/constants";
 import { getDatasetVersionAndInfo } from "@/utils/versionUtils";
 import type { DatasetMetadata } from "@/utils/parquetUtils";
+import { isXArm7Robot } from "@/lib/so101-robot";
 
 const SERIES_DELIM = CHART_CONFIG.SERIES_NAME_DELIMITER;
 const DEG2RAD = Math.PI / 180;
@@ -41,9 +42,19 @@ const stlGeometryLoading = new Map<string, Promise<THREE.BufferGeometry>>();
 const URDF_BASE_URL =
   process.env.NEXT_PUBLIC_URDF_BASE_URL ??
   "https://huggingface.co/buckets/lerobot/robot-urdfs/resolve";
+const XARM7_URDF_BASE_URL =
+  process.env.NEXT_PUBLIC_XARM7_URDF_BASE_URL ??
+  "https://huggingface.co/buckets/Saberlve/robot_urdfs/resolve";
 
 function getRobotConfig(robotType: string | null) {
   const lower = (robotType ?? "").toLowerCase();
+  if (isXArm7Robot(robotType)) {
+    return {
+      urdfUrl: `${XARM7_URDF_BASE_URL}/xarm7/xarm7_with_gripper.urdf`,
+      scale: 1,
+      packages: { xarm_description: `${XARM7_URDF_BASE_URL}/xarm7` },
+    };
+  }
   if (lower.includes("g1") || lower.includes("unitree")) {
     return { urdfUrl: `${URDF_BASE_URL}/g1/g1_body29_hand14.urdf`, scale: 1 };
   }
@@ -132,6 +143,30 @@ function autoMatchJoints(
   for (const jointName of urdfJointNames) {
     const lower = jointName.toLowerCase();
 
+    // xArm7 datasets use J1.pos … J7.pos and gripper.pos. The gripper's
+    // drive_joint propagates its value to the five URDF mimic joints.
+    const xarmJointMatch = lower.match(/^joint([1-7])$/);
+    if (xarmJointMatch) {
+      const index = xarmJointMatch[1];
+      const xarmIdx = suffixes.findIndex((s) =>
+        new RegExp(`^(?:j|joint)_?${index}(?:\\.pos)?$`).test(s),
+      );
+      if (xarmIdx >= 0) {
+        mapping[jointName] = columnKeys[xarmIdx];
+        continue;
+      }
+    }
+    if (lower === "drive_joint") {
+      const gripperIdx = suffixes.findIndex((s) =>
+        /^(?:gripper)(?:\.pos)?$/.test(s),
+      );
+      if (gripperIdx >= 0) {
+        mapping[jointName] = columnKeys[gripperIdx];
+        continue;
+      }
+    }
+    if (XARM_MIMIC_JOINTS.has(lower)) continue;
+
     // Exact match on column suffix
     const exactIdx = suffixes.findIndex((s) => s === lower);
     if (exactIdx >= 0) {
@@ -179,11 +214,19 @@ function autoMatchJoints(
 }
 
 const SINGLE_ARM_TIP_NAMES = [
+  "link_tcp",
   "gripper_frame_link",
   "gripperframe",
   "gripper_link",
   "gripper",
 ];
+const XARM_MIMIC_JOINTS = new Set([
+  "left_finger_joint",
+  "left_inner_knuckle_joint",
+  "right_outer_knuckle_joint",
+  "right_finger_joint",
+  "right_inner_knuckle_joint",
+]);
 const DUAL_ARM_TIP_NAMES = ["openarm_left_hand_tcp", "openarm_right_hand_tcp"];
 const G1_TIP_NAMES = ["left_hand_palm_link", "right_hand_palm_link"];
 const TRAIL_DURATION = 1.0;
@@ -193,6 +236,7 @@ const MAX_TRAIL_POINTS = 300;
 // ─── Robot scene (imperative, inside Canvas) ───
 function RobotScene({
   urdfUrl,
+  packages,
   jointValues,
   onJointsLoaded,
   trailEnabled,
@@ -200,6 +244,7 @@ function RobotScene({
   scale,
 }: {
   urdfUrl: string;
+  packages?: Record<string, string>;
   jointValues: Record<string, number>;
   onJointsLoaded: (names: string[]) => void;
   trailEnabled: boolean;
@@ -281,6 +326,7 @@ function RobotScene({
     const isG1 = urdfUrl.includes("g1");
     const manager = new THREE.LoadingManager();
     const loader = new URDFLoader(manager);
+    if (packages) loader.packages = packages;
     // URDFLoader (node_modules/urdf-loader/src/URDFLoader.js ~line 556) does
     //   `if (obj instanceof THREE.Mesh) obj.material = material;`
     // on every mesh we hand back — overwriting our PBR material with the
@@ -557,7 +603,7 @@ function RobotScene({
       }
       tipLinksRef.current = [];
     };
-  }, [urdfUrl, scale, scene, onJointsLoaded, ensureTrails]);
+  }, [urdfUrl, packages, scale, scene, onJointsLoaded, ensureTrails]);
 
   const tipWorldPos = useMemo(() => new THREE.Vector3(), []);
 
@@ -700,7 +746,8 @@ export default function URDFViewer({
     () => getRobotConfig(datasetInfo.robot_type),
     [datasetInfo.robot_type],
   );
-  const { urdfUrl, scale } = robotConfig;
+  const { urdfUrl, scale, packages } = robotConfig;
+  const isXArm7 = isXArm7Robot(datasetInfo.robot_type);
   const isG1 = urdfUrl.includes("g1");
   const isOpenArm = urdfUrl.includes("openarm");
   const repoId = org && dataset ? `${org}/${dataset}` : null;
@@ -844,10 +891,15 @@ export default function URDFViewer({
     if (playToggleRef) playToggleRef.current = handlePlayPause;
   }, [playToggleRef, handlePlayPause]);
 
-  // Filter out mimic joints (finger_joint2) from the UI list
+  // Filter out mimic joints from the UI list.
   const displayJointNames = useMemo(
     () =>
-      urdfJointNames.filter((n) => !n.toLowerCase().includes("finger_joint2")),
+      urdfJointNames.filter((n) => {
+        const lower = n.toLowerCase();
+        return (
+          !lower.includes("finger_joint2") && !XARM_MIMIC_JOINTS.has(lower)
+        );
+      }),
     [urdfJointNames],
   );
 
@@ -881,12 +933,18 @@ export default function URDFViewer({
     const values: Record<string, number> = {};
 
     for (const jn of urdfJointNames) {
-      if (jn.toLowerCase().includes("finger_joint2")) continue;
+      const lower = jn.toLowerCase();
+      if (lower.includes("finger_joint2") || XARM_MIMIC_JOINTS.has(lower))
+        continue;
       const col = mapping[jn];
       if (!col || typeof row[col] !== "number") continue;
       const raw = row[col];
 
-      if (jn.toLowerCase().includes("finger_joint1")) {
+      if (lower === "drive_joint" && isXArm7) {
+        // xArm7 recordings store 0 = open and 1 = closed. The URDF drive
+        // joint spans 0–0.85 radians and drives the remaining fingers via mimic.
+        values[jn] = Math.min(Math.max(raw, 0), 1) * 0.85;
+      } else if (lower.includes("finger_joint1")) {
         // Map gripper range → 0-0.044m using auto-detected min/max
         const range = gripperRanges[jn];
         if (range) {
@@ -914,7 +972,15 @@ export default function URDFViewer({
       }
     }
     return values;
-  }, [chartData, frame, gripperRanges, mapping, totalFrames, urdfJointNames]);
+  }, [
+    chartData,
+    frame,
+    gripperRanges,
+    isXArm7,
+    mapping,
+    totalFrames,
+    urdfJointNames,
+  ]);
 
   if (data.flatChartData.length === 0) {
     return (
@@ -995,6 +1061,7 @@ export default function URDFViewer({
           </mesh>
           <RobotScene
             urdfUrl={urdfUrl}
+            packages={packages}
             jointValues={jointValues}
             onJointsLoaded={onJointsLoaded}
             trailEnabled={trailEnabled}

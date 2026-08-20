@@ -19,8 +19,15 @@ export function isG1Robot(robotType: string | null): boolean {
   return lower.includes("g1") || lower.includes("unitree");
 }
 
+export function isXArm7Robot(robotType: string | null): boolean {
+  return robotType?.toLowerCase().includes("xarm7") ?? false;
+}
+
 export function hasURDFSupport(robotType: string | null): boolean {
   return (
-    isSO101Robot(robotType) || isOpenArmRobot(robotType) || isG1Robot(robotType)
+    isSO101Robot(robotType) ||
+    isOpenArmRobot(robotType) ||
+    isG1Robot(robotType) ||
+    isXArm7Robot(robotType)
   );
 }
