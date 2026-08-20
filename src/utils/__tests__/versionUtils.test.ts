@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, afterEach } from "bun:test";
+import { describe, expect, test, vi, afterEach } from "vitest";
 import { buildVersionedUrl } from "@/utils/versionUtils";
 
 // ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ describe("getDatasetVersionAndInfo", () => {
       },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(infoV20), { status: 200 })),
     ) as unknown as typeof fetch;
 
@@ -139,7 +139,7 @@ describe("getDatasetVersionAndInfo", () => {
       },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(infoV21), { status: 200 })),
     ) as unknown as typeof fetch;
 
@@ -176,7 +176,7 @@ describe("getDatasetVersionAndInfo", () => {
       },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(infoV30), { status: 200 })),
     ) as unknown as typeof fetch;
 
@@ -194,7 +194,7 @@ describe("getDatasetVersionAndInfo", () => {
       features: { dummy: { dtype: "float32", shape: [1], names: null } },
     };
 
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify(infoUnsupported), { status: 200 }),
       ),
@@ -207,7 +207,7 @@ describe("getDatasetVersionAndInfo", () => {
   });
 
   test("throws when info.json has no features field", async () => {
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(
         new Response(JSON.stringify({ codebase_version: "v3.0" }), {
           status: 200,
@@ -220,7 +220,7 @@ describe("getDatasetVersionAndInfo", () => {
   });
 
   test("throws when fetch fails (network error)", async () => {
-    globalThis.fetch = mock(() =>
+    globalThis.fetch = vi.fn(() =>
       Promise.resolve(new Response("Not Found", { status: 404 })),
     ) as unknown as typeof fetch;
 
