@@ -38,6 +38,26 @@ async function parseExportPayload(request: Request) {
   if (payload.alias != null && typeof payload.alias !== "string") {
     throw new ClientInputError("请求体中的 alias 必须是字符串。");
   }
+  const rawIntervals = payload.removedFrameIntervals;
+  if (
+    rawIntervals != null &&
+    (!isObjectRecord(rawIntervals) ||
+      !Object.entries(rawIntervals).every(
+        ([episodeId, intervals]) =>
+          /^\d+$/.test(episodeId) &&
+          Array.isArray(intervals) &&
+          intervals.every(
+            (interval) =>
+              isObjectRecord(interval) &&
+              typeof interval.start === "number" &&
+              typeof interval.end === "number",
+          ),
+      ))
+  ) {
+    throw new ClientInputError(
+      "removedFrameIntervals 必须是按 episode 编号组织的帧区间。",
+    );
+  }
 
   return {
     repoId: payload.repoId,
@@ -45,6 +65,14 @@ async function parseExportPayload(request: Request) {
     mode: payload.mode as "flagged" | "unflagged",
     outputPath: payload.outputPath,
     alias: payload.alias ?? "",
+    ...(rawIntervals != null
+      ? {
+          removedFrameIntervals: rawIntervals as Record<
+            number,
+            Array<{ start: number; end: number }>
+          >,
+        }
+      : {}),
   };
 }
 

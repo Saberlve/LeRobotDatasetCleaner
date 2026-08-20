@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { postParentMessageWithParams } from "@/utils/postParentMessage";
 import { SimpleVideosPlayer } from "@/components/simple-videos-player";
 import PlaybackBar from "@/components/playback-bar";
+import { ClipControls } from "@/components/clip-controls";
+import { ClipDraftsProvider } from "@/context/clip-drafts-context";
 import { TimeProvider, useTime } from "@/context/time-context";
 import { FlaggedEpisodesProvider } from "@/context/flagged-episodes-context";
 import {
@@ -205,10 +207,12 @@ export default function EpisodeViewer({
   return (
     <TimeProvider duration={data!.duration}>
       <FlaggedEpisodesProvider>
-        <AnnotationsProvider>
-          <EpisodeBootstrap data={data!} />
-          <EpisodeViewerInner data={data!} org={org} dataset={dataset} />
-        </AnnotationsProvider>
+        <ClipDraftsProvider repoId={data!.datasetInfo.repoId}>
+          <AnnotationsProvider>
+            <EpisodeBootstrap data={data!} />
+            <EpisodeViewerInner data={data!} org={org} dataset={dataset} />
+          </AnnotationsProvider>
+        </ClipDraftsProvider>
       </FlaggedEpisodesProvider>
     </TimeProvider>
   );
@@ -744,6 +748,13 @@ function EpisodeViewerInner({
               </div>
 
               <PlaybackBar />
+              <ClipControls
+                episodeId={episodeId}
+                fps={datasetInfo.fps}
+                enabled={
+                  isLocalDataset && datasetInfo.codebase_version === "v3.0"
+                }
+              />
             </>
           )}
 

@@ -12,6 +12,7 @@ import {
 
 import { inspectExportableDataset } from "./inspect";
 import { writeFilteredDataset } from "./write";
+import type { EpisodeClipMap } from "./clips";
 
 export async function exportFilteredDataset(input: {
   repoId: string;
@@ -20,6 +21,7 @@ export async function exportFilteredDataset(input: {
   mode: ExportMode;
   outputPath: string;
   alias?: string;
+  removedFrameIntervals?: EpisodeClipMap;
 }) {
   if (!input.repoId.startsWith("local/")) {
     throw new Error("只能导出本地数据集。");
@@ -46,6 +48,12 @@ export async function exportFilteredDataset(input: {
   }
 
   const inspection = await inspectExportableDataset(datasetPath);
+  const hasClips = Object.values(input.removedFrameIntervals ?? {}).some(
+    (intervals) => intervals.length > 0,
+  );
+  if (hasClips && inspection.info.codebase_version !== "v3.0") {
+    throw new Error("帧剪辑仅支持本地 LeRobot v3.0 数据集。");
+  }
   const selection = buildEpisodeSelectionPlan({
     totalEpisodes: Number(inspection.info.total_episodes),
     flaggedEpisodeIds: input.flaggedEpisodeIds,
@@ -56,6 +64,7 @@ export async function exportFilteredDataset(input: {
     inspection,
     selection,
     outputPath: input.outputPath,
+    removedFrameIntervals: input.removedFrameIntervals,
   });
 
   let entry;

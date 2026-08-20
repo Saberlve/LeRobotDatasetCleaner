@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
+import { useClipDrafts } from "@/context/clip-drafts-context";
 import type {
   CrossEpisodeVarianceData,
   LowMovementEpisode,
@@ -301,6 +302,7 @@ function FlaggedExportCard({
   totalEpisodes: number | null;
 }) {
   const { flagged, count } = useFlaggedEpisodes();
+  const { drafts, clippedEpisodes, removedFrames } = useClipDrafts();
   const flaggedIds = useMemo(
     () => [...flagged].sort((a, b) => a - b),
     [flagged],
@@ -385,6 +387,7 @@ function FlaggedExportCard({
           mode,
           outputPath: joinExportPath(outputParentDirectory, datasetName),
           alias: datasetName.trim(),
+          removedFrameIntervals: drafts,
         }),
       });
       const payload = (await response.json()) as {
@@ -433,6 +436,12 @@ function FlaggedExportCard({
           Export the flagged or unflagged episode subset into a new local
           dataset directory, preserving the source dataset.
         </p>
+        {clippedEpisodes > 0 && (
+          <p className="text-xs text-cyan-300">
+            将应用 {clippedEpisodes} 个 episode 的剪辑草稿，删除 {removedFrames}{" "}
+            帧。
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -514,8 +523,8 @@ function FlaggedExportCard({
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-200 space-y-2">
           <div>
             Exported <span className="font-semibold">{result.repoId}</span> with{" "}
-            {result.totalEpisodes} episode{result.totalEpisodes !== 1 ? "s" : ""}
-            .
+            {result.totalEpisodes} episode
+            {result.totalEpisodes !== 1 ? "s" : ""}.
           </div>
           <div className="text-emerald-100/80">{result.path}</div>
           <Link

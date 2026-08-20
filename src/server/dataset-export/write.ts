@@ -8,6 +8,11 @@ import { PADDING } from "@/utils/constants";
 import { formatStringWithVars } from "@/utils/parquetUtils";
 
 import type { DatasetExportInspection } from "./inspect";
+import {
+  normalizeFrameIntervals,
+  type EpisodeClipMap,
+  type FrameInterval,
+} from "./clips";
 
 const execFileAsync = promisify(execFile);
 const PARQUET_REWRITE_SCRIPT = path.join(
@@ -32,6 +37,16 @@ type OutputFile =
       sourcePath: string;
       nextEpisodeIndex: number;
       globalIndexStart: number;
+      removedFrameIntervals?: FrameInterval[];
+      fps?: number;
+    }
+  | {
+      outputPath: string;
+      kind: "rewrite-video";
+      sourcePath: string;
+      removedFrameIntervals: FrameInterval[];
+      expectedFrames: number;
+      fps: number;
     };
 
 async function assertOutputPathDoesNotExist(outputPath: string): Promise<void> {
@@ -80,14 +95,84 @@ async function rewriteParquetEpisodeData(input: {
   outputPath: string;
   nextEpisodeIndex: number;
   globalIndexStart: number;
+  removedFrameIntervals?: FrameInterval[];
+  fps?: number;
 }): Promise<void> {
-  await execFileAsync("python3", [
+  const args = [
     PARQUET_REWRITE_SCRIPT,
     input.sourcePath,
     input.outputPath,
     String(input.nextEpisodeIndex),
     String(input.globalIndexStart),
+  ];
+  if (input.removedFrameIntervals)
+    args.push(JSON.stringify(input.removedFrameIntervals), String(input.fps));
+  await execFileAsync("python3", args);
+}
+
+async function probeVideoFrames(sourcePath: string): Promise<number> {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v",
+    "error",
+    "-count_frames",
+    "-select_streams",
+    "v:0",
+    "-show_entries",
+    "stream=nb_read_frames",
+    "-of",
+    "default=nokey=1:noprint_wrappers=1",
+    sourcePath,
   ]);
+  const count = Number.parseInt(stdout.trim(), 10);
+  if (!Number.isInteger(count) || count < 1)
+    throw new Error(`ffprobe could not count video frames: ${sourcePath}`);
+  return count;
+}
+
+async function rewriteVideo(input: {
+  sourcePath: string;
+  outputPath: string;
+  removedFrameIntervals: FrameInterval[];
+  expectedFrames: number;
+  fps: number;
+}): Promise<void> {
+  const sourceFrames = await probeVideoFrames(input.sourcePath);
+  const originalFrames =
+    input.expectedFrames +
+    input.removedFrameIntervals.reduce(
+      (sum, value) => sum + value.end - value.start + 1,
+      0,
+    );
+  if (sourceFrames !== originalFrames)
+    throw new Error(
+      `Video/parquet frame mismatch for ${input.sourcePath}: ${sourceFrames} video frames, ${originalFrames} parquet rows`,
+    );
+  const removed = input.removedFrameIntervals
+    .map(({ start, end }) => `between(n\\,${start}\\,${end})`)
+    .join("+");
+  const filter = `select='not(${removed})',setpts=N/FRAME_RATE/TB`;
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-v",
+    "error",
+    "-i",
+    input.sourcePath,
+    "-vf",
+    filter,
+    "-an",
+    "-r",
+    String(input.fps),
+    "-c:v",
+    "libx264",
+    "-pix_fmt",
+    "yuv420p",
+    input.outputPath,
+  ]);
+  const outputFrames = await probeVideoFrames(input.outputPath);
+  if (outputFrames !== input.expectedFrames)
+    throw new Error(
+      `Rewritten video frame mismatch: expected ${input.expectedFrames}, got ${outputFrames}`,
+    );
 }
 
 function buildTempOutputPath(outputPath: string): string {
@@ -355,6 +440,7 @@ export async function writeFilteredDataset(input: {
   inspection: DatasetExportInspection;
   selection: EpisodeSelectionPlan;
   outputPath: string;
+  removedFrameIntervals?: EpisodeClipMap;
 }): Promise<void> {
   await assertOutputPathDoesNotExist(input.outputPath);
 
@@ -389,6 +475,18 @@ export async function writeFilteredDataset(input: {
       extension.toLowerCase() === ".parquet" &&
       (await isParquetFile(sourceDataPath));
     const episodeLength = getEpisodeLength(episode.raw);
+    const requestedClips = input.removedFrameIntervals?.[sourceEpisodeId];
+    const clips = requestedClips
+      ? normalizeFrameIntervals(requestedClips, episodeLength ?? 0)
+      : [];
+    const retainedLength =
+      (episodeLength ?? 0) -
+      clips.reduce((sum, value) => sum + value.end - value.start + 1, 0);
+    if (clips.length && !isParquetData)
+      throw new Error("Frame clipping requires parquet episode data");
+    const fps = Number(input.inspection.info.fps);
+    if (clips.length && (!Number.isFinite(fps) || fps <= 0))
+      throw new Error("Dataset info must contain a positive fps for clipping");
     const outputFiles: OutputFile[] = [];
 
     if (isJsonData) {
@@ -413,6 +511,7 @@ export async function writeFilteredDataset(input: {
         sourcePath: sourceDataPath,
         nextEpisodeIndex,
         globalIndexStart: globalFrameStart,
+        ...(clips.length ? { removedFrameIntervals: clips, fps } : {}),
       });
     } else {
       outputFiles.push({
@@ -431,11 +530,22 @@ export async function writeFilteredDataset(input: {
         input.inspection.datasetPath,
         sourceFile,
       );
-      outputFiles.push({
-        outputPath: path.join(input.outputPath, nextFile),
-        kind: "copy",
-        sourcePath: sourceVideoPath,
-      });
+      outputFiles.push(
+        clips.length
+          ? {
+              outputPath: path.join(input.outputPath, nextFile),
+              kind: "rewrite-video",
+              sourcePath: sourceVideoPath,
+              removedFrameIntervals: clips,
+              expectedFrames: retainedLength,
+              fps,
+            }
+          : {
+              outputPath: path.join(input.outputPath, nextFile),
+              kind: "copy",
+              sourcePath: sourceVideoPath,
+            },
+      );
     }
 
     preparedEpisodes.push({
@@ -444,11 +554,12 @@ export async function writeFilteredDataset(input: {
         ...episode.raw,
         episode_index: nextEpisodeIndex,
         ...(episode.raw.data_file ? { data_file: nextDataFile } : {}),
+        ...(episodeLength != null ? { length: retainedLength } : {}),
         source_episode_index: sourceEpisodeId,
       },
     });
 
-    globalFrameStart += episodeLength ?? 0;
+    globalFrameStart += retainedLength;
   }
 
   const tempOutputPath = buildTempOutputPath(input.outputPath);
@@ -481,7 +592,14 @@ export async function writeFilteredDataset(input: {
               outputPath: tempDataPath,
               nextEpisodeIndex: outputFile.nextEpisodeIndex,
               globalIndexStart: outputFile.globalIndexStart,
+              removedFrameIntervals: outputFile.removedFrameIntervals,
+              fps: outputFile.fps,
             });
+            return;
+          }
+
+          if (outputFile.kind === "rewrite-video") {
+            await rewriteVideo({ ...outputFile, outputPath: tempDataPath });
             return;
           }
 
