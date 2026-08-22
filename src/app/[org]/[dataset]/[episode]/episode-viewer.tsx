@@ -514,8 +514,15 @@ function EpisodeViewerInner({
     };
   }, [org, dataset, episodeId]);
 
-  // Initialize based on URL time parameter
+  // Initialize based on URL time parameter — run ONCE on mount. This effect
+  // must not re-run on later searchParams changes: UrlTimeSync writes ?t=
+  // via window.history.replaceState on every pause, Next.js reflects that
+  // into useSearchParams, and re-seeking here would snap the videos back to
+  // the floored second instead of pausing in place.
+  const didInitSeekRef = useRef(false);
   useEffect(() => {
+    if (didInitSeekRef.current) return;
+    didInitSeekRef.current = true;
     const timeParam = searchParams.get("t");
     if (timeParam) {
       const timeValue = parseFloat(timeParam);
