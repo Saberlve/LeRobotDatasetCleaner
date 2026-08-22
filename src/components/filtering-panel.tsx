@@ -139,6 +139,13 @@ function joinExportPath(parentDirectory: string, datasetName: string): string {
   return `${parent}/${datasetName.trim()}`;
 }
 
+// Default export parent directory. The directory picker needs a GUI, so on
+// headless servers this default (or NEXT_PUBLIC_EXPORT_PARENT_DIRECTORY) is
+// used instead of an interactive selection.
+const DEFAULT_EXPORT_PARENT_DIRECTORY =
+  process.env.NEXT_PUBLIC_EXPORT_PARENT_DIRECTORY ??
+  "/home/wangshuxun/VLA/VLArmory/datasets";
+
 // ─── Lowest-Movement Episodes ────────────────────────────────────
 
 function LowMovementSection({ episodes }: { episodes: LowMovementEpisode[] }) {
@@ -308,7 +315,9 @@ function FlaggedExportCard({
     [flagged],
   );
   const [mode, setMode] = useState<ExportMode>("flagged");
-  const [outputParentDirectory, setOutputParentDirectory] = useState("");
+  const [outputParentDirectory, setOutputParentDirectory] = useState(
+    DEFAULT_EXPORT_PARENT_DIRECTORY,
+  );
   const [datasetName, setDatasetName] = useState("");
   const [pickingDirectory, setPickingDirectory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -476,8 +485,8 @@ function FlaggedExportCard({
           <input
             aria-label="Output parent directory"
             value={outputParentDirectory}
-            readOnly
-            placeholder="/tmp"
+            onChange={(event) => setOutputParentDirectory(event.target.value)}
+            placeholder={DEFAULT_EXPORT_PARENT_DIRECTORY}
             className="w-full rounded-md border border-white/10 bg-[var(--surface-0)] px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500"
           />
           <button
