@@ -169,7 +169,9 @@ function HomeInner() {
       setQuery(payload.path);
     } catch (error) {
       setLocalMessage(
-        error instanceof Error ? error.message : "Could not pick a local folder",
+        error instanceof Error
+          ? error.message
+          : "Could not pick a local folder",
       );
     } finally {
       setIsPickingLocal(false);
@@ -200,7 +202,9 @@ function HomeInner() {
       router.push(payload.entryRoute);
     } catch (error) {
       setLocalMessage(
-        error instanceof Error ? error.message : "Failed to import local dataset",
+        error instanceof Error
+          ? error.message
+          : "Failed to import local dataset",
       );
     } finally {
       setIsOpeningLocal(false);

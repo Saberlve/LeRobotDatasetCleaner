@@ -28,7 +28,9 @@ async function parseRegisterPayload(
   }
 
   return {
-    path: payload.path,
+    // Users often paste paths with stray whitespace (e.g. copied from a
+    // wrapped terminal line); leading/trailing spaces are never meaningful.
+    path: payload.path.trim(),
     alias: payload.alias ?? "",
   };
 }
