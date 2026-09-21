@@ -148,3 +148,90 @@ body {
   animation: menuPop 0.14s ease-out forwards;
   transform-origin: top right;
 }
+
+/* Review surface: video and decisions stay in one viewport. */
+.idle-review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+.idle-review-media {
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid #ffffff18;
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+}
+.idle-camera-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.idle-camera-video {
+  height: clamp(85px, 13vh, 165px);
+  background: #000;
+}
+.idle-review-transport {
+  padding: 0.6rem 0 0.25rem;
+}
+.idle-review-evidence {
+  border-top: 1px solid #ffffff18;
+  padding-top: 0.4rem;
+}
+.idle-review-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.idle-review-panel button[aria-pressed="true"],
+.idle-review-media button[aria-pressed="true"] {
+  border-color: #38bdf8;
+  color: #7dd3fc;
+  background: #38bdf81a;
+}
+.idle-review-panel input:focus-visible,
+.idle-review-layout button:focus-visible,
+.idle-review-layout select:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+@media (min-width: 1100px) {
+  .idle-review-layout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(370px, 0.85fr);
+  }
+  .idle-review-media {
+    position: sticky;
+    top: 0;
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
+  }
+  .idle-review-panel {
+    max-height: calc(100dvh - 180px);
+    min-height: 300px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+}
+@media (max-width: 1099px) {
+  .idle-review-layout {
+    height: calc(100dvh - 155px);
+    min-height: 460px;
+    grid-template-rows: minmax(0, 1.2fr) minmax(180px, 1fr);
+  }
+  .idle-review-media {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .idle-review-panel {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+  .idle-camera-video {
+    height: 9vh;
+    min-height: 60px;
+  }
+}

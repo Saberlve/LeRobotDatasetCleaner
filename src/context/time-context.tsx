@@ -30,6 +30,8 @@ type TimeContextType = {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   duration: number;
   setDuration: React.Dispatch<React.SetStateAction<number>>;
+  playbackRate: number;
+  setPlaybackRate: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const TimeContext = createContext<TimeContextType | undefined>(undefined);
@@ -49,6 +51,7 @@ export const TimeProvider: React.FC<{
   const [currentTime, setCurrentTimeState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [externalSeekVersion, setExternalSeekVersion] = useState(0);
   const listeners = useRef<Set<(t: number) => void>>(new Set());
 
@@ -62,6 +65,9 @@ export const TimeProvider: React.FC<{
     (t: number, source: TimeUpdateSource = "external") => {
       timeRef.current = t;
       listeners.current.forEach((fn) => fn(t));
+      // A review subscriber may skip a removed interval synchronously.
+      // Do not overwrite that new seek with the original video report.
+      if (timeRef.current !== t) return;
 
       if (source === "external") {
         lastRenderTime.current = performance.now();
@@ -117,6 +123,8 @@ export const TimeProvider: React.FC<{
         setIsPlaying,
         duration,
         setDuration,
+        playbackRate,
+        setPlaybackRate,
       }}
     >
       {children}

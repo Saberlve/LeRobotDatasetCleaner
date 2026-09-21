@@ -6,6 +6,7 @@ import { postParentMessageWithParams } from "@/utils/postParentMessage";
 import { SimpleVideosPlayer } from "@/components/simple-videos-player";
 import PlaybackBar from "@/components/playback-bar";
 import { ClipControls } from "@/components/clip-controls";
+import { IdleBoundaryControls } from "@/components/initial-idle-controls";
 import { ClipDraftsProvider } from "@/context/clip-drafts-context";
 import { TimeProvider, useTime } from "@/context/time-context";
 import { FlaggedEpisodesProvider } from "@/context/flagged-episodes-context";
@@ -720,48 +721,50 @@ function EpisodeViewerInner({
                 </div>
               </div>
 
-              {/* Videos */}
-              {videosInfo.length > 0 && (
-                <SimpleVideosPlayer
-                  videosInfo={videosInfo}
-                  onVideosReady={() => setVideosReady(true)}
-                />
-              )}
-
-              {/* Language Instruction */}
-              {task && (
-                <div className="mb-6 panel p-4">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                    Language Instruction
-                  </p>
-                  <div className="mt-1.5 space-y-0.5 text-sm text-slate-200">
-                    {task
-                      .split("\n")
-                      .map((instruction: string, index: number) => (
-                        <p key={index}>{instruction}</p>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Graph */}
-              <div className="mb-4">
+              <IdleBoundaryControls
+                key={`${datasetInfo.repoId}:${episodeId}`}
+                episodes={episodes}
+                repoId={datasetInfo.repoId}
+                videos={videosInfo}
+                episodeId={episodeId}
+                enabled={
+                  isLocalDataset && datasetInfo.codebase_version === "v3.0"
+                }
+                media={
+                  videosInfo.length > 0 ? (
+                    <SimpleVideosPlayer
+                      compact
+                      videosInfo={videosInfo}
+                      onVideosReady={() => setVideosReady(true)}
+                    />
+                  ) : (
+                    <p>此 episode 没有视频，请结合曲线复核。</p>
+                  )
+                }
+                manualControls={
+                  <ClipControls
+                    key={`${datasetInfo.repoId}:${episodeId}`}
+                    episodeId={episodeId}
+                    fps={datasetInfo.fps}
+                    frameTimestamps={data.frameTimestamps}
+                    enabled={
+                      isLocalDataset && datasetInfo.codebase_version === "v3.0"
+                    }
+                  />
+                }
+              />
+              {task && <p className="text-sm text-slate-400">任务：{task}</p>}
+              <details className="panel p-3">
+                <summary className="cursor-pointer text-sm">
+                  展开完整轨迹曲线
+                </summary>
                 <Suspense fallback={null}>
                   <DataRecharts
                     data={chartDataGroups}
                     onChartsReady={() => setChartsReady(true)}
                   />
                 </Suspense>
-              </div>
-
-              <PlaybackBar />
-              <ClipControls
-                episodeId={episodeId}
-                fps={datasetInfo.fps}
-                enabled={
-                  isLocalDataset && datasetInfo.codebase_version === "v3.0"
-                }
-              />
+              </details>
             </>
           )}
 
