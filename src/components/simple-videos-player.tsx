@@ -18,6 +18,7 @@ const VIDEO_READY_TIMEOUT_MS = 10_000;
 type VideoPlayerProps = {
   videosInfo: VideoInfo[];
   onVideosReady?: () => void;
+  compact?: boolean;
 };
 
 const videoEventCleanup = new WeakMap<HTMLVideoElement, () => void>();
@@ -25,9 +26,16 @@ const videoEventCleanup = new WeakMap<HTMLVideoElement, () => void>();
 export const SimpleVideosPlayer = ({
   videosInfo,
   onVideosReady,
+  compact = false,
 }: VideoPlayerProps) => {
-  const { currentTime, seek, externalSeekVersion, isPlaying, setIsPlaying } =
-    useTime();
+  const {
+    currentTime,
+    seek,
+    externalSeekVersion,
+    isPlaying,
+    setIsPlaying,
+    playbackRate,
+  } = useTime();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   // Mirror videoRefs into state so the absolutely-positioned VQA overlay can
   // re-render with the actual <video> element once it mounts. Using a ref
@@ -58,6 +66,11 @@ export const SimpleVideosPlayer = ({
   const [enlargedVideo, setEnlargedVideo] = React.useState<string | null>(null);
   const [showHiddenMenu, setShowHiddenMenu] = React.useState(false);
   const [videosReady, setVideosReady] = React.useState(false);
+  useEffect(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) video.playbackRate = playbackRate;
+    });
+  }, [playbackRate, videoEls]);
 
   const hiddenSet = React.useMemo(() => new Set(hiddenVideos), [hiddenVideos]);
 
@@ -110,7 +123,9 @@ export const SimpleVideosPlayer = ({
       resolved = true;
       setVideosReady(true);
       onVideosReadyRef.current?.();
-      setIsPlaying(true);
+      // Review starts paused so a short leading candidate is not missed while
+      // the operator opens settings or waits for the last camera to load.
+      setIsPlaying(!compact);
     };
 
     const checkReady = () => {
@@ -157,7 +172,12 @@ export const SimpleVideosPlayer = ({
             // Primary drives the coordinated loop. Non-primary cameras
             // that race ahead just snap to segmentStart and wait — the
             // primary's next loop will re-align everyone.
-            if (index === firstVisibleIdxRef.current) {
+            if (compact) {
+              if (index === firstVisibleIdxRef.current) {
+                video.pause();
+                setIsPlaying(false);
+              }
+            } else if (index === firstVisibleIdxRef.current) {
               loopAllVideos();
             } else {
               video.currentTime = segmentStart;
@@ -202,7 +222,12 @@ export const SimpleVideosPlayer = ({
             // Same coordinated loop strategy for non-segmented videos at
             // their natural end — primary drives, others wait for primary
             // to align them.
-            if (index === firstVisibleIdxRef.current) {
+            if (compact) {
+              if (index === firstVisibleIdxRef.current) {
+                video.pause();
+                setIsPlaying(false);
+              }
+            } else if (index === firstVisibleIdxRef.current) {
               loopAllVideos();
             } else {
               video.currentTime = 0;
@@ -210,6 +235,13 @@ export const SimpleVideosPlayer = ({
           };
 
       video.addEventListener("timeupdate", handleTimeUpdate);
+      let frameCallback: number | undefined;
+      const reportFrame = () => {
+        if (!video.paused && !video.seeking) handleTimeUpdate();
+        frameCallback = video.requestVideoFrameCallback(reportFrame);
+      };
+      if (compact && video.requestVideoFrameCallback)
+        frameCallback = video.requestVideoFrameCallback(reportFrame);
       if (handlePlay) video.addEventListener("play", handlePlay);
       if (handleEnded) video.addEventListener("ended", handleEnded);
 
@@ -233,6 +265,8 @@ export const SimpleVideosPlayer = ({
       }
 
       videoEventCleanup.set(video, () => {
+        if (frameCallback !== undefined)
+          video.cancelVideoFrameCallback(frameCallback);
         video.removeEventListener("timeupdate", handleTimeUpdate);
         if (handlePlay) video.removeEventListener("play", handlePlay);
         if (handleLoadedData)
@@ -258,7 +292,7 @@ export const SimpleVideosPlayer = ({
     // firstVisibleIdxRef above).
     // onVideosReady intentionally omitted — read via onVideosReadyRef so
     // an inline parent prop doesn't tear this effect down on every render.
-  }, [videosInfo, setIsPlaying, seek]);
+  }, [videosInfo, setIsPlaying, seek, compact]);
 
   // Handle play/pause — skip hidden videos
   useEffect(() => {
@@ -298,10 +332,7 @@ export const SimpleVideosPlayer = ({
         targetTime = (info.segmentStart ?? 0) + currentTime;
       }
 
-      if (
-        Math.abs(video.currentTime - targetTime) >
-        THRESHOLDS.VIDEO_SYNC_TOLERANCE
-      ) {
+      if (Math.abs(video.currentTime - targetTime) > 0.001) {
         video.currentTime = targetTime;
       }
     });
@@ -342,7 +373,11 @@ export const SimpleVideosPlayer = ({
       )}
 
       {/* Videos */}
-      <div className="flex flex-wrap gap-x-2 gap-y-6">
+      <div
+        className={
+          compact ? "idle-camera-grid" : "flex flex-wrap gap-x-2 gap-y-6"
+        }
+      >
         {videosInfo.map((info, idx) => {
           if (hiddenVideos.includes(info.filename)) return null;
 
@@ -354,7 +389,9 @@ export const SimpleVideosPlayer = ({
               className={`${
                 isEnlarged
                   ? "z-40 fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center"
-                  : "max-w-96"
+                  : compact
+                    ? "min-w-0"
+                    : "max-w-96"
               }`}
             >
               <p className="truncate w-full rounded-t-md bg-[var(--surface-1)] border border-b-0 border-white/5 px-2.5 py-1 text-[11px] text-slate-400 flex items-center justify-between gap-2">
@@ -400,7 +437,11 @@ export const SimpleVideosPlayer = ({
                 <video
                   ref={videoRefCallbacksRef.current[idx]}
                   className={`w-full object-contain ${
-                    isEnlarged ? "max-h-[90vh] max-w-[90vw]" : ""
+                    isEnlarged
+                      ? "max-h-[90vh] max-w-[90vw]"
+                      : compact
+                        ? "idle-camera-video"
+                        : ""
                   } ${info.isGrayscale ? "opacity-0" : ""}`}
                   muted
                   preload="auto"

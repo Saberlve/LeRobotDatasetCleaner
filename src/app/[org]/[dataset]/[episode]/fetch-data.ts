@@ -403,6 +403,62 @@ export async function getEpisodeData(
   }
 }
 
+/** Resolve one episode's camera segments without loading chart data. */
+export async function getEpisodeVideosInfo(
+  repoId: string,
+  episodeId: number,
+): Promise<VideoInfo[]> {
+  const { version, info: rawInfo } = await getDatasetVersionAndInfo(repoId);
+  const info = rawInfo as unknown as DatasetMetadata;
+  if (
+    !Number.isSafeInteger(episodeId) ||
+    episodeId < 0 ||
+    episodeId >= info.total_episodes
+  )
+    throw new Error("Invalid episode id");
+  let videosInfo: VideoInfo[] = [];
+
+  if (version === "v3.0") {
+    const episodeMetadata = await loadEpisodeMetadataV3Simple(
+      repoId,
+      version,
+      episodeId,
+    );
+    videosInfo = extractVideoInfoV3WithSegmentation(
+      repoId,
+      version,
+      info,
+      episodeMetadata,
+    );
+  } else {
+    // For v2.x, use simpler video info extraction
+    if (info.video_path) {
+      const chunkSize = Math.max(1, info.chunks_size || 1000);
+      const episode_chunk = Math.floor(episodeId / chunkSize);
+      videosInfo = Object.entries(info.features)
+        .filter(([, value]) => value.dtype === "video")
+        .map(([key, value]) => {
+          const videoPath = formatStringWithVars(info.video_path!, {
+            video_key: key,
+            episode_chunk: episode_chunk
+              .toString()
+              .padStart(PADDING.CHUNK_INDEX, "0"),
+            episode_index: episodeId
+              .toString()
+              .padStart(PADDING.EPISODE_INDEX, "0"),
+          });
+          return {
+            filename: key,
+            url: buildVersionedUrl(repoId, version, videoPath),
+            isGrayscale: isGrayscaleShape(value.shape),
+          };
+        });
+    }
+  }
+
+  return videosInfo;
+}
+
 export async function getAdjacentEpisodesVideoInfo(
   org: string,
   dataset: string,
@@ -411,7 +467,7 @@ export async function getAdjacentEpisodesVideoInfo(
 ): Promise<AdjacentEpisodeVideos[]> {
   const repoId = `${org}/${dataset}`;
   try {
-    const { version, info: rawInfo } = await getDatasetVersionAndInfo(repoId);
+    const { info: rawInfo } = await getDatasetVersionAndInfo(repoId);
     const info = rawInfo as unknown as DatasetMetadata;
 
     const totalEpisodes = info.total_episodes;
@@ -424,46 +480,7 @@ export async function getAdjacentEpisodesVideoInfo(
       const episodeId = currentEpisodeId + offset;
       if (episodeId >= 0 && episodeId < totalEpisodes) {
         try {
-          let videosInfo: VideoInfo[] = [];
-
-          if (version === "v3.0") {
-            const episodeMetadata = await loadEpisodeMetadataV3Simple(
-              repoId,
-              version,
-              episodeId,
-            );
-            videosInfo = extractVideoInfoV3WithSegmentation(
-              repoId,
-              version,
-              info,
-              episodeMetadata,
-            );
-          } else {
-            // For v2.x, use simpler video info extraction
-            if (info.video_path) {
-              const chunkSize = Math.max(1, info.chunks_size || 1000);
-              const episode_chunk = Math.floor(episodeId / chunkSize);
-              videosInfo = Object.entries(info.features)
-                .filter(([, value]) => value.dtype === "video")
-                .map(([key, value]) => {
-                  const videoPath = formatStringWithVars(info.video_path!, {
-                    video_key: key,
-                    episode_chunk: episode_chunk
-                      .toString()
-                      .padStart(PADDING.CHUNK_INDEX, "0"),
-                    episode_index: episodeId
-                      .toString()
-                      .padStart(PADDING.EPISODE_INDEX, "0"),
-                  });
-                  return {
-                    filename: key,
-                    url: buildVersionedUrl(repoId, version, videoPath),
-                    isGrayscale: isGrayscaleShape(value.shape),
-                  };
-                });
-            }
-          }
-
+          const videosInfo = await getEpisodeVideosInfo(repoId, episodeId);
           adjacentVideos.push({ episodeId, videosInfo });
         } catch {
           // Skip failed episodes silently
@@ -1373,7 +1390,7 @@ function extractVideoInfoV3WithSegmentation(
 // begins when the current chunk's files run out (404 or empty); iteration ends
 // when file-000 of the next chunk 404s. `chunks_size` caps files per chunk, so
 // large datasets can spill past chunk-000.
-async function* iterateEpisodeMetadataFilesV3(
+export async function* iterateEpisodeMetadataFilesV3(
   repoId: string,
   version: string,
 ): AsyncGenerator<Record<string, unknown>[], void, unknown> {

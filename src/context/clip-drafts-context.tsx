@@ -18,6 +18,7 @@ type ClipDraftContextValue = {
   drafts: ClipDrafts;
   setInterval: (episodeId: number, interval: FrameInterval) => void;
   removeInterval: (episodeId: number, index: number) => void;
+  replaceEpisode: (episodeId: number, intervals: FrameInterval[]) => void;
   removedFrames: number;
   clippedEpisodes: number;
 };
@@ -34,6 +35,7 @@ export function ClipDraftsProvider({
 }) {
   const storageKey = `lerobot-clip-drafts:${repoId}`;
   const [drafts, setDrafts] = useState<ClipDrafts>({});
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   useEffect(() => {
     try {
       setDrafts(
@@ -42,10 +44,32 @@ export function ClipDraftsProvider({
     } catch {
       setDrafts({});
     }
+    setLoadedKey(storageKey);
   }, [storageKey]);
   useEffect(() => {
-    sessionStorage.setItem(storageKey, JSON.stringify(drafts));
-  }, [drafts, storageKey]);
+    if (loadedKey === storageKey) {
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(drafts));
+      } catch {
+        /* The in-memory draft remains usable if browser storage is full. */
+      }
+    }
+  }, [drafts, storageKey, loadedKey]);
+  const replaceEpisode = useCallback(
+    (episodeId: number, intervals: FrameInterval[]) => {
+      const normalized = normalizeFrameIntervals(
+        intervals,
+        Number.MAX_SAFE_INTEGER,
+      );
+      setDrafts((old) => {
+        const next = { ...old };
+        if (normalized.length) next[episodeId] = normalized;
+        else delete next[episodeId];
+        return next;
+      });
+    },
+    [],
+  );
   const setInterval = useCallback(
     (episodeId: number, interval: FrameInterval) => {
       setDrafts((old) => {
@@ -76,12 +100,13 @@ export function ClipDraftsProvider({
       drafts,
       setInterval,
       removeInterval,
+      replaceEpisode,
       clippedEpisodes: Object.keys(drafts).length,
       removedFrames: Object.values(drafts)
         .flat()
         .reduce((sum, item) => sum + item.end - item.start + 1, 0),
     }),
-    [drafts, setInterval, removeInterval],
+    [drafts, setInterval, removeInterval, replaceEpisode],
   );
   return (
     <ClipDraftContext.Provider value={value}>
