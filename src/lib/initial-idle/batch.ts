@@ -18,11 +18,51 @@ export type BatchEntry = {
   profile: InitialIdleProfile;
   result?: InitialIdleResult;
   error?: string;
+  reviewed?: boolean;
+  retained?: boolean;
+  acceptedFrames?: { start: number; end: number };
 };
+export function candidateInterval(entry: BatchEntry) {
+  const suggested = entry.result?.candidate?.removedFrames;
+  const accepted = entry.acceptedFrames;
+  if (!suggested) return undefined;
+  if (
+    accepted &&
+    Number.isSafeInteger(accepted.start) &&
+    Number.isSafeInteger(accepted.end) &&
+    accepted.start >= suggested.start &&
+    accepted.end <= suggested.end &&
+    accepted.start <= accepted.end
+  )
+    return accepted;
+  return suggested;
+}
 export const batchStorageKey = (repoId: string) =>
   `lerobot-idle-batch:1:${repoId}`;
 export const batchSelectionKey = (repoId: string) =>
   `lerobot-idle-selection:${repoId}`;
+
+export function mergeBatchResults(
+  previous: BatchEntry[],
+  incoming: BatchEntry[],
+) {
+  const entries = new Map(
+    previous.map((entry) => [`${entry.episodeId}:${entry.edge}`, entry]),
+  );
+  for (const entry of incoming) {
+    const key = `${entry.episodeId}:${entry.edge}`;
+    const old = entries.get(key);
+    const signature = (value: BatchEntry) =>
+      JSON.stringify([value.profile, value.result, value.error]);
+    entries.set(
+      key,
+      old && signature(old) === signature(entry)
+        ? old
+        : { ...entry, reviewed: false },
+    );
+  }
+  return [...entries.values()];
+}
 
 export function selectBatchEpisodes(
   episodes: number[],

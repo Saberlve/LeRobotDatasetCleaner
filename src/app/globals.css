@@ -150,6 +150,19 @@ body {
 }
 
 /* Review surface: video and decisions stay in one viewport. */
+.episode-sidebar {
+  position: static;
+  z-index: auto;
+}
+@media (max-width: 767px) {
+  .episode-sidebar {
+    position: fixed;
+    top: 3.5rem;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+  }
+}
 .idle-review-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -630,7 +630,7 @@ function EpisodeViewerInner({
     <div className="flex flex-col h-screen max-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
       <UrlTimeSync />
       {/* Top tab bar */}
-      <div className="flex items-center border-b border-white/5 bg-[var(--surface-0)] shrink-0">
+      <div className="flex items-center overflow-x-auto border-b border-white/5 bg-[var(--surface-0)] shrink-0 [&>button]:shrink-0">
         {renderTab("episodes", "Episodes")}
         {renderTab(
           "annotations",
@@ -685,7 +685,7 @@ function EpisodeViewerInner({
 
         {/* Main content */}
         <div
-          className={`flex flex-col gap-4 p-4 flex-1 relative ${isLoading ? "overflow-hidden" : "overflow-y-auto"}`}
+          className={`flex flex-col min-w-0 gap-4 p-4 flex-1 relative ${isLoading ? "overflow-hidden" : "overflow-y-auto"}`}
         >
           {isLoading && <Loading />}
 

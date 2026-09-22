@@ -27,6 +27,9 @@ vi.mock("@/utils/versionUtils", () => ({
   getDatasetVersionAndInfo: mocks.info,
 }));
 vi.mock("../load", () => ({ loadEpisodeSignalFrames: mocks.load }));
+vi.mock("@/app/[org]/[dataset]/[episode]/fetch-data", () => ({
+  getEpisodeVideosInfo: async () => [],
+}));
 vi.mock("../tail-video", () => ({
   createTailVideoSampler: () => ({
     sample: mocks.sample,
@@ -45,7 +48,13 @@ vi.mock("@/context/time-context", () => ({
     setPlaybackRate: mocks.rate,
   }),
 }));
-import { InitialIdleControls } from "@/components/initial-idle-controls";
+import {
+  InitialIdleControls,
+  IdleBoundaryControls,
+} from "@/components/initial-idle-controls";
+import { batchStorageKey } from "../batch";
+import { publishBatchResults } from "../use-batch-results";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 import {
   ClipDraftsProvider,
   useClipDrafts,
@@ -101,6 +110,133 @@ beforeEach(() => {
   ]);
 });
 afterEach(cleanup);
+
+test("a full batch runs with the review controls mounted without nested update errors", async () => {
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const episodes = Array.from({ length: 42 }, (_, id) => id);
+    render(
+      <React.StrictMode>
+        <ClipDraftsProvider repoId="local/test">
+          <IdleBoundaryControls
+            repoId="local/test"
+            episodeId={0}
+            episodes={episodes}
+            enabled
+          />
+        </ClipDraftsProvider>
+      </React.StrictMode>,
+    );
+    await screen.findByText("检测当前 episode");
+    fireEvent.change(screen.getByLabelText("批量检测数量"), {
+      target: { value: "42" },
+    });
+    fireEvent.change(screen.getByLabelText("批量检测范围"), {
+      target: { value: "both" },
+    });
+    fireEvent.click(screen.getByText("开始批量检测"));
+    await screen.findByText(
+      "检测完成：42 个 episode，84 项结果。",
+      {},
+      { timeout: 15000 },
+    );
+    expect(
+      errors.mock.calls.filter((call) =>
+        String(call[0]).includes("Maximum update depth"),
+      ),
+    ).toEqual([]);
+    expect(
+      JSON.parse(sessionStorage.getItem(batchStorageKey("local/test"))!),
+    ).toHaveLength(84);
+  } finally {
+    errors.mockRestore();
+  }
+}, 20000);
+
+test("ordinary episode navigation restores both batch edges without a review selection", async () => {
+  const result = detectInitialIdle(frames(), profile());
+  const entries = [0, 1].flatMap((episodeId) =>
+    (["start", "end"] as const).map((edge) => ({
+      episodeId,
+      edge,
+      profile: profile(),
+      result,
+    })),
+  );
+  sessionStorage.setItem(
+    batchStorageKey("local/test"),
+    JSON.stringify(entries),
+  );
+  const page = (episodeId: number) => (
+    <ClipDraftsProvider repoId="local/test">
+      <IdleBoundaryControls
+        key={episodeId}
+        repoId="local/test"
+        episodeId={episodeId}
+        enabled
+      />
+      <Drafts />
+    </ClipDraftsProvider>
+  );
+  const view = render(page(0));
+  await screen.findByText("已载入批量检测结果及该批次参数。");
+  fireEvent.click(screen.getByText("结尾等待"));
+  await screen.findByText("已载入批量检测结果及该批次参数。");
+  view.rerender(page(1));
+  await screen.findByText("已载入批量检测结果及该批次参数。");
+  expect(mocks.load).toHaveBeenCalledWith("local/test", 1, profile());
+  expect(screen.getByTestId("drafts").textContent).toBe("{}");
+});
+
+test("new batch results automatically appear on the current episode", async () => {
+  render(
+    <ClipDraftsProvider repoId="local/test">
+      <IdleBoundaryControls repoId="local/test" episodeId={0} enabled />
+    </ClipDraftsProvider>,
+  );
+  await screen.findByText("检测当前 episode");
+  act(() =>
+    publishBatchResults("local/test", [
+      {
+        episodeId: 0,
+        edge: "start",
+        profile: profile(),
+        result: detectInitialIdle(frames(), profile()),
+      },
+    ]),
+  );
+  await screen.findByText("已载入批量检测结果及该批次参数。");
+});
+
+test("marking a batch result reviewed does not reload the review player or change drafts", async () => {
+  const result = {
+    ...detectInitialIdle(frames(), profile()),
+    candidate: null,
+    status: "needs_review",
+  };
+  sessionStorage.setItem(
+    batchStorageKey("local/test"),
+    JSON.stringify([
+      { episodeId: 0, edge: "start", profile: profile(), result },
+    ]),
+  );
+  render(
+    <ClipDraftsProvider repoId="local/test">
+      <IdleBoundaryControls repoId="local/test" episodeId={0} enabled />
+      <Drafts />
+    </ClipDraftsProvider>,
+  );
+  await screen.findByText("已载入批量检测结果及该批次参数。");
+  const checkbox = await screen.findByLabelText("Episode 0 开头是否复核");
+  const loads = mocks.load.mock.calls.length;
+  fireEvent.click(checkbox);
+  expect(
+    (screen.getByLabelText("Episode 0 开头是否复核") as HTMLInputElement)
+      .checked,
+  ).toBe(true);
+  expect(mocks.load.mock.calls.length).toBe(loads);
+  expect(screen.getByTestId("drafts").textContent).toBe("{}");
+});
 
 async function detectTail() {
   mocks.load.mockResolvedValue(
@@ -303,8 +439,26 @@ describe("human review of initial waiting", () => {
     expect(mocks.play).toHaveBeenLastCalledWith(true);
     fireEvent.click(screen.getByText("保留此段"));
     expect(screen.getByTestId("drafts").textContent).toBe("{}");
-    expect(screen.queryByText("确认加入裁剪列表")).toBeNull();
+    expect(
+      (screen.getByText("确认加入裁剪列表") as HTMLButtonElement).disabled,
+    ).toBe(true);
     expect(mocks.play).toHaveBeenLastCalledWith(false);
+    let saved = JSON.parse(
+      sessionStorage.getItem("lerobot-idle-batch:1:local/test")!,
+    );
+    expect(saved[0].retained).toBe(true);
+    expect(saved[0].reviewed).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(
+      (screen.getByText("确认加入裁剪列表") as HTMLButtonElement).disabled,
+    ).toBe(false);
+    fireEvent.click(screen.getByText("确认加入裁剪列表"));
+    saved = JSON.parse(
+      sessionStorage.getItem("lerobot-idle-batch:1:local/test")!,
+    );
+    expect(saved[0].retained).toBe(false);
+    expect(saved[0].reviewed).toBe(true);
+    expect(screen.getByText(/所选区间已在裁剪列表中/)).toBeTruthy();
   });
   test("changing parameters invalidates the earlier candidate", async () => {
     render(<Page />);
@@ -343,6 +497,63 @@ describe("human review of initial waiting", () => {
     fireEvent.click(screen.getByText("检测当前 episode"));
     await screen.findByText(/2.40 秒 → 1.90 秒/);
     expect(mocks.load).toHaveBeenCalledTimes(1);
+  });
+  test("single episode redetection replaces persisted batch evidence and survives reopening", async () => {
+    const page = () => (
+      <ClipDraftsProvider repoId="local/test">
+        <IdleBoundaryControls repoId="local/test" episodeId={0} enabled />
+      </ClipDraftsProvider>
+    );
+    const view = render(page());
+    await detect();
+    fireEvent.change(screen.getByLabelText("保留动作前上下文（秒）"), {
+      target: { value: "1" },
+    });
+    fireEvent.click(screen.getByText("检测当前 episode"));
+    await screen.findByText(/2.40 秒 → 1.90 秒/);
+    const entries = JSON.parse(
+      sessionStorage.getItem(batchStorageKey("local/test"))!,
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0].profile.contextSeconds).toBe(1);
+    view.unmount();
+    render(page());
+    await screen.findByText("已载入批量检测结果及该批次参数。");
+    expect(
+      (screen.getByLabelText("候选结束帧") as HTMLInputElement).value,
+    ).toBe("18");
+  });
+  test("shortened acceptance persists its boundary and undo leaves results reusable", async () => {
+    const page = () => (
+      <ClipDraftsProvider repoId="local/test">
+        <IdleBoundaryControls repoId="local/test" episodeId={0} enabled />
+        <Drafts />
+      </ClipDraftsProvider>
+    );
+    const view = render(page());
+    await detect();
+    fireEvent.change(screen.getByLabelText("候选结束帧"), {
+      target: { value: "10" },
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByText("确认加入裁剪列表"));
+    expect(
+      JSON.parse(sessionStorage.getItem(batchStorageKey("local/test"))!)[0]
+        .acceptedFrames,
+    ).toEqual({ start: 0, end: 10 });
+    expect(screen.getByText("恢复建议边界")).toBeTruthy();
+    fireEvent.click(screen.getByText("撤销本次加入"));
+    expect(screen.getByTestId("drafts").textContent).toBe("{}");
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(
+      (screen.getByText("确认加入裁剪列表") as HTMLButtonElement).disabled,
+    ).toBe(false);
+    view.unmount();
+    render(page());
+    await screen.findByText("已载入批量检测结果及该批次参数。");
+    expect(
+      (screen.getByLabelText("候选结束帧") as HTMLInputElement).value,
+    ).toBe("10");
   });
   test("retained decision and reason survive reopening without fabricating a draft", async () => {
     const view = render(<Page />);

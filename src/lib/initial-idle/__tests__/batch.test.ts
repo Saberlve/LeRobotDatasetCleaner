@@ -18,6 +18,7 @@ vi.mock("../tail-video", () => ({
 }));
 import {
   runIdleBatch,
+  mergeBatchResults,
   selectBatchEpisodes,
   type BatchEntry,
   type BatchMode,
@@ -49,6 +50,35 @@ function options(mode: BatchMode = "both") {
   };
 }
 describe("batch detection", () => {
+  test("merges episodes and edges, keeping reviewed results only while their evidence is unchanged", () => {
+    const first: BatchEntry = {
+      episodeId: 0,
+      edge: "start",
+      profile: profile(),
+      error: "needs check",
+      reviewed: true,
+    };
+    const second: BatchEntry = { ...first, episodeId: 1 };
+    const merged = mergeBatchResults([first], [second]);
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toBe(first);
+    expect(
+      mergeBatchResults(merged, [{ ...first, reviewed: undefined }])[0]
+        .reviewed,
+    ).toBe(true);
+    expect(
+      mergeBatchResults(merged, [{ ...first, error: "new failure" }])[0]
+        .reviewed,
+    ).toBe(false);
+    expect(
+      mergeBatchResults(merged, [
+        { ...first, profile: { ...first.profile, contextSeconds: 4 } },
+      ])[0].reviewed,
+    ).toBe(false);
+    expect(mergeBatchResults(merged, [{ ...first, edge: "end" }])).toHaveLength(
+      3,
+    );
+  });
   test("count selects real episode IDs and clips at dataset end", () => {
     expect(selectBatchEpisodes([5, 0, 2], 2, 10)).toEqual([2, 5]);
     expect(() => selectBatchEpisodes([0, 1], 0, 1.5)).toThrow();
