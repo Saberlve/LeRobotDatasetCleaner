@@ -27,6 +27,13 @@ import {
   depthEncodingFromFeature,
 } from "@/utils/colormaps";
 import type { VideoInfo, AdjacentEpisodeVideos } from "@/types";
+import type { TrajectorySample } from "@/lib/trajectory-smoothness";
+import {
+  computePhaseSmoothness,
+  rankPhaseSmoothness,
+  type TrajectorySmoothnessEpisode,
+} from "@/lib/trajectory-phase-sparc";
+export type { TrajectorySmoothnessEpisode } from "@/lib/trajectory-phase-sparc";
 
 const SERIES_NAME_DELIMITER = CHART_CONFIG.SERIES_NAME_DELIMITER;
 
@@ -1866,6 +1873,7 @@ export type CrossEpisodeVarianceData = {
   aggAutocorrelation: AggAutocorrelation | null;
   speedDistribution: SpeedDistEntry[];
   jerkyEpisodes: JerkyEpisode[];
+  trajectorySmoothness: TrajectorySmoothnessEpisode[];
   aggAlignment: AggAlignment | null;
 };
 
@@ -1911,6 +1919,41 @@ export async function loadCrossEpisodeActionVariance(
   );
   const stateKey = stateEntry?.[0] ?? null;
   const stateDim = stateEntry?.[1].shape[0] ?? 0;
+
+  // Smoothness reads full-rate, row-aligned measurements independently of
+  // the downsampled action diagnostics. Invalid rows stay as segment breaks.
+  let poseNames: unknown = stateEntry?.[1].names;
+  while (
+    poseNames &&
+    typeof poseNames === "object" &&
+    !Array.isArray(poseNames)
+  )
+    poseNames = Object.values(poseNames)[0];
+  const namesForPose = Array.isArray(poseNames) ? (poseNames as string[]) : [];
+  const poseIndex = (name: string) =>
+    namesForPose.findIndex((n) => n === name || n.endsWith(`.${name}`));
+  const xyzIndices = [
+    poseIndex("pose.x"),
+    poseIndex("pose.y"),
+    poseIndex("pose.z"),
+  ];
+  const gripperIndex = poseIndex("gripper.pos");
+  const trajectoryRows = new Map<number, TrajectorySample[]>();
+  const numeric = (value: unknown) =>
+    value === null || value === undefined ? NaN : Number(value);
+  const trajectoryRow = (row: Record<string, unknown>): TrajectorySample => {
+    const raw = stateKey ? row[stateKey] : undefined;
+    const state = Array.isArray(raw) ? raw : [];
+    return {
+      timestamp: numeric(row.timestamp),
+      position: xyzIndices.map((i) => numeric(state[i])) as [
+        number,
+        number,
+        number,
+      ],
+      ...(gripperIndex >= 0 ? { gripper: numeric(state[gripperIndex]) } : {}),
+    };
+  };
 
   // Collect episode metadata
   type EpMeta = {
@@ -1966,6 +2009,7 @@ export async function loadCrossEpisodeActionVariance(
   // Load action (and state) data per episode
   const episodeActions: { index: number; actions: number[][] }[] = [];
   const episodeStates: (number[][] | null)[] = [];
+  const episodeTimestamps: (number[] | null)[] = [];
 
   if (version === "v3.0") {
     const byFile = new Map<string, EpMeta[]>();
@@ -1981,14 +2025,27 @@ export async function loadCrossEpisodeActionVariance(
         const dataPath = `data/chunk-${ep0.chunkIdx.toString().padStart(3, "0")}/file-${ep0.fileIdx.toString().padStart(3, "0")}.parquet`;
         const fileEpActions: { index: number; actions: number[][] }[] = [];
         const fileEpStates: (number[][] | null)[] = [];
+        const fileEpTimestamps: (number[] | null)[] = [];
         try {
           const buf = await fetchParquetFile(
             buildVersionedUrl(repoId, version, dataPath),
           );
-          const rows = await readParquetAsObjects(
-            buf,
-            stateKey ? ["index", actionKey, stateKey] : ["index", actionKey],
-          );
+          let rows: Awaited<ReturnType<typeof readParquetAsObjects>>;
+          try {
+            rows = await readParquetAsObjects(
+              buf,
+              stateKey
+                ? ["index", "timestamp", actionKey, stateKey]
+                : ["index", "timestamp", actionKey],
+            );
+          } catch {
+            // Keep the existing action/state diagnostics usable when an older
+            // dataset has no timestamp column; smoothness is then unavailable.
+            rows = await readParquetAsObjects(
+              buf,
+              stateKey ? ["index", actionKey, stateKey] : ["index", actionKey],
+            );
+          }
           const fileStart =
             rows.length > 0 && rows[0].index !== undefined
               ? Number(rows[0].index)
@@ -1997,11 +2054,18 @@ export async function loadCrossEpisodeActionVariance(
           for (const ep of eps) {
             const localFrom = Math.max(0, ep.from - fileStart);
             const localTo = Math.min(rows.length, ep.to - fileStart);
+            trajectoryRows.set(
+              ep.index,
+              rows.slice(localFrom, localTo).map(trajectoryRow),
+            );
             const actions: number[][] = [];
             const states: number[][] = [];
+            const timestamps: number[] = [];
             for (let r = localFrom; r < localTo; r++) {
               const raw = rows[r]?.[actionKey];
               if (Array.isArray(raw)) actions.push(raw.map(Number));
+              const timestamp = Number(rows[r]?.timestamp);
+              if (Number.isFinite(timestamp)) timestamps.push(timestamp);
               if (stateKey) {
                 const sRaw = rows[r]?.[stateKey];
                 if (Array.isArray(sRaw)) states.push(sRaw.map(Number));
@@ -2017,19 +2081,29 @@ export async function loadCrossEpisodeActionVariance(
                 stateKey && states.length === actions.length
                   ? sampledIndices.map((i) => states[i])
                   : null;
+              const sampledTimestamps =
+                timestamps.length === actions.length
+                  ? sampledIndices.map((i) => timestamps[i])
+                  : null;
               fileEpActions.push({ index: ep.index, actions: sampledActions });
               fileEpStates.push(stateKey ? sampledStates : null);
+              fileEpTimestamps.push(sampledTimestamps);
             }
           }
         } catch {
           /* skip file */
         }
-        return { fileEpActions, fileEpStates };
+        return { fileEpActions, fileEpStates, fileEpTimestamps };
       }),
     );
-    for (const { fileEpActions, fileEpStates } of fileResults) {
+    for (const {
+      fileEpActions,
+      fileEpStates,
+      fileEpTimestamps,
+    } of fileResults) {
       episodeActions.push(...fileEpActions);
       episodeStates.push(...fileEpStates);
+      episodeTimestamps.push(...fileEpTimestamps);
     }
   } else {
     const chunkSize = info.chunks_size || 1000;
@@ -2044,12 +2118,24 @@ export async function loadCrossEpisodeActionVariance(
           const buf = await fetchParquetFile(
             buildVersionedUrl(repoId, version, dataPath),
           );
-          const rows = await readParquetAsObjects(
-            buf,
-            stateKey ? [actionKey, stateKey] : [actionKey],
-          );
+          let rows: Awaited<ReturnType<typeof readParquetAsObjects>>;
+          try {
+            rows = await readParquetAsObjects(
+              buf,
+              stateKey
+                ? ["timestamp", actionKey, stateKey]
+                : ["timestamp", actionKey],
+            );
+          } catch {
+            rows = await readParquetAsObjects(
+              buf,
+              stateKey ? [actionKey, stateKey] : [actionKey],
+            );
+          }
           const actions: number[][] = [];
           const states: number[][] = [];
+          const timestamps: number[] = [];
+          trajectoryRows.set(ep.index, rows.map(trajectoryRow));
           for (const row of rows) {
             const raw = row[actionKey];
             if (Array.isArray(raw)) {
@@ -2062,6 +2148,8 @@ export async function loadCrossEpisodeActionVariance(
               }
               actions.push(vec);
             }
+            const timestamp = Number(row.timestamp);
+            if (Number.isFinite(timestamp)) timestamps.push(timestamp);
             if (stateKey) {
               const sRaw = row[stateKey];
               if (Array.isArray(sRaw)) states.push(sRaw.map(Number));
@@ -2077,10 +2165,15 @@ export async function loadCrossEpisodeActionVariance(
               stateKey && states.length === actions.length
                 ? sampledIndices.map((i) => states[i])
                 : null;
+            const sampledTimestamps =
+              timestamps.length === actions.length
+                ? sampledIndices.map((i) => timestamps[i])
+                : null;
             return {
               index: ep.index,
               actions: sampledActions,
               states: sampledStates,
+              timestamps: sampledTimestamps,
             };
           }
         } catch {
@@ -2093,6 +2186,7 @@ export async function loadCrossEpisodeActionVariance(
       if (result !== null) {
         episodeActions.push({ index: result.index, actions: result.actions });
         episodeStates.push(stateKey ? result.states : null);
+        episodeTimestamps.push(result.timestamps);
       }
     }
   }
@@ -2396,6 +2490,14 @@ export async function loadCrossEpisodeActionVariance(
     speed: s.totalMovement,
   }));
 
+  // One implementation for live scores and offline signal-only checks.
+  // Raw samples remain pre-crop; manual reviews never enter this computation.
+  const trajectorySmoothness = rankPhaseSmoothness(
+    episodeActions.map(({ index }) =>
+      computePhaseSmoothness(index, trajectoryRows.get(index) ?? []),
+    ),
+  );
+
   // Aggregated state-action alignment across episodes
   const aggAlignment: AggAlignment | null = (() => {
     if (!stateKey || stateDim === 0) return null;
@@ -2547,6 +2649,7 @@ export async function loadCrossEpisodeActionVariance(
     aggAutocorrelation,
     speedDistribution,
     jerkyEpisodes,
+    trajectorySmoothness,
     aggAlignment,
   };
 }

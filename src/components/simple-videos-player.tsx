@@ -7,6 +7,7 @@ import type { VideoInfo } from "@/types";
 import { proxyHfUrl } from "@/utils/auth";
 import { VideoOverlayCanvas } from "./video-overlay-canvas";
 import { ColormappedVideo } from "./colormapped-video";
+import { isVideoTextEntry } from "@/utils/video-shortcuts";
 
 const THRESHOLDS = {
   VIDEO_SYNC_TOLERANCE: 0.2,
@@ -64,6 +65,25 @@ export const SimpleVideosPlayer = ({
   }
   const [hiddenVideos, setHiddenVideos] = React.useState<string[]>([]);
   const [enlargedVideo, setEnlargedVideo] = React.useState<string | null>(null);
+  useEffect(() => {
+    if (!enlargedVideo) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setEnlargedVideo(null);
+      } else if (
+        (event.code === "Space" || event.key === " ") &&
+        !isVideoTextEntry(event.target)
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!event.repeat) setIsPlaying((value) => !value);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [enlargedVideo, setIsPlaying]);
   const [showHiddenMenu, setShowHiddenMenu] = React.useState(false);
   const [videosReady, setVideosReady] = React.useState(false);
   useEffect(() => {
@@ -396,6 +416,11 @@ export const SimpleVideosPlayer = ({
             >
               <p className="truncate w-full rounded-t-md bg-[var(--surface-1)] border border-b-0 border-white/5 px-2.5 py-1 text-[11px] text-slate-400 flex items-center justify-between gap-2">
                 <span className="truncate">{info.filename}</span>
+                {isEnlarged && (
+                  <span className="shrink-0 text-slate-300">
+                    按空格键播放/暂停 · Esc 退出放大
+                  </span>
+                )}
                 <span className="flex gap-0.5 shrink-0">
                   <button
                     title={isEnlarged ? "Minimize" : "Enlarge"}
