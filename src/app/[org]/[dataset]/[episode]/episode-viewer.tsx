@@ -21,6 +21,7 @@ import StatsPanel from "@/components/stats-panel";
 import OverviewPanel from "@/components/overview-panel";
 import Loading from "@/components/loading-component";
 import LocalDoctorPanel from "@/components/local-doctor-panel";
+import TrajectoryDiversityPanel from "@/components/trajectory-diversity-panel";
 import HfAuthButton from "@/components/hf-auth-button";
 import { hasURDFSupport } from "@/lib/so101-robot";
 import {
@@ -73,6 +74,7 @@ type ActiveTab =
   | "frames"
   | "insights"
   | "filtering"
+  | "diversity"
   | "doctor"
   | "urdf";
 
@@ -281,6 +283,7 @@ function EpisodeViewerInner({
           "frames",
           "insights",
           "filtering",
+          "diversity",
           "urdf",
         ].includes(stored)
       ) {
@@ -439,6 +442,7 @@ function EpisodeViewerInner({
     if (activeTab === "statistics") loadStats();
     if (activeTab === "frames") loadFrames();
     if (activeTab === "insights") loadInsights();
+    if (activeTab === "diversity") loadInsights();
     if (activeTab === "filtering") {
       loadStats();
       loadInsights();
@@ -458,6 +462,7 @@ function EpisodeViewerInner({
     if (tab === "statistics") loadStats();
     if (tab === "frames") loadFrames();
     if (tab === "insights") loadInsights();
+    if (tab === "diversity") loadInsights();
     if (tab === "filtering") {
       loadStats();
       loadInsights();
@@ -642,6 +647,7 @@ function EpisodeViewerInner({
           renderTab("urdf", "3D Replay")}
         {renderTab("statistics", "Statistics")}
         {renderTab("filtering", "Filtering")}
+        {renderTab("diversity", "Trajectory Diversity")}
         {renderTab("frames", "Frames")}
         {renderTab("insights", "Action Insights")}
         {renderTab(
@@ -833,6 +839,14 @@ function EpisodeViewerInner({
                 crossEpisodeLoading={insightsLoading}
               />
             </Suspense>
+          )}
+
+          {activeTab === "diversity" && (
+            <TrajectoryDiversityPanel
+              data={crossEpData}
+              loading={insightsLoading}
+              repoId={datasetInfo.repoId}
+            />
           )}
 
           {activeTab === "filtering" && (

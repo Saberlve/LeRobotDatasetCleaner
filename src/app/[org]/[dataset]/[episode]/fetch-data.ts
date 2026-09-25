@@ -33,6 +33,10 @@ import {
   rankPhaseSmoothness,
   type TrajectorySmoothnessEpisode,
 } from "@/lib/trajectory-phase-sparc";
+import {
+  computeTrajectoryDiversity,
+  type TrajectoryDiversityData,
+} from "@/lib/trajectory-diversity";
 export type { TrajectorySmoothnessEpisode } from "@/lib/trajectory-phase-sparc";
 
 const SERIES_NAME_DELIMITER = CHART_CONFIG.SERIES_NAME_DELIMITER;
@@ -1875,6 +1879,7 @@ export type CrossEpisodeVarianceData = {
   jerkyEpisodes: JerkyEpisode[];
   trajectorySmoothness: TrajectorySmoothnessEpisode[];
   aggAlignment: AggAlignment | null;
+  diversity: TrajectoryDiversityData;
 };
 
 export async function loadCrossEpisodeActionVariance(
@@ -1932,6 +1937,24 @@ export async function loadCrossEpisodeActionVariance(
   const namesForPose = Array.isArray(poseNames) ? (poseNames as string[]) : [];
   const poseIndex = (name: string) =>
     namesForPose.findIndex((n) => n === name || n.endsWith(`.${name}`));
+  const jointAngleIndices = namesForPose
+    .map((name, index) => ({
+      name: typeof name === "string" ? name.toLowerCase() : "",
+      index,
+    }))
+    .filter(({ name }) => {
+      if (
+        /(pose|gripper|finger|eef|end.?effector|translation|rotation|orientation)/.test(
+          name,
+        )
+      ) {
+        return false;
+      }
+      return /(joint|angle|motor|shoulder|elbow|wrist|hip|knee|ankle|waist|(?:^|[._-])j\d+(?:$|[._-])|(?:^|[._-])q\d*(?:$|[._-]))/.test(
+        name,
+      );
+    })
+    .map(({ index }) => index);
   const xyzIndices = [
     poseIndex("pose.x"),
     poseIndex("pose.y"),
@@ -2498,6 +2521,24 @@ export async function loadCrossEpisodeActionVariance(
     ),
   );
 
+  const diversity = computeTrajectoryDiversity(
+    episodeActions.map(({ index, actions }, episodePosition) => ({
+      episodeIndex: index,
+      actions,
+      states: episodeStates[episodePosition],
+      jointAngles:
+        episodeStates[episodePosition]?.map((row) =>
+          jointAngleIndices.length > 0
+            ? jointAngleIndices.map((index) => row[index])
+            : row,
+        ) ?? null,
+      endEffector: (trajectoryRows.get(index) ?? []).map((sample) => ({
+        position: sample.position,
+        ...(sample.gripper !== undefined ? { gripper: sample.gripper } : {}),
+      })),
+    })),
+  );
+
   // Aggregated state-action alignment across episodes
   const aggAlignment: AggAlignment | null = (() => {
     if (!stateKey || stateDim === 0) return null;
@@ -2651,6 +2692,7 @@ export async function loadCrossEpisodeActionVariance(
     jerkyEpisodes,
     trajectorySmoothness,
     aggAlignment,
+    diversity,
   };
 }
 
