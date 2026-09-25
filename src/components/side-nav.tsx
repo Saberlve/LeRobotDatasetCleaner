@@ -3,6 +3,10 @@
 import Link from "next/link";
 import React, { useMemo, useState } from "react";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
+import { useClipDrafts } from "@/context/clip-drafts-context";
+import { FiScissors, FiHelpCircle } from "react-icons/fi";
+import { useBatchResults } from "@/lib/initial-idle/use-batch-results";
+import { candidateInterval } from "@/lib/initial-idle/batch";
 
 import type { DatasetDisplayInfo } from "@/app/[org]/[dataset]/[episode]/fetch-data";
 
@@ -33,6 +37,46 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [mobileVisible, setMobileVisible] = useState(false);
   const { flagged, count, toggle } = useFlaggedEpisodes();
+  const { drafts } = useClipDrafts();
+  const batchResults = useBatchResults(datasetInfo.repoId);
+  const markers = useMemo(() => {
+    const statuses = new Map<
+      number,
+      {
+        candidate: string[];
+        review: string[];
+        candidatesDone: boolean;
+        reviewsDone: boolean;
+      }
+    >();
+    for (const entry of batchResults) {
+      const status = statuses.get(entry.episodeId) ?? {
+        candidate: [],
+        review: [],
+        candidatesDone: true,
+        reviewsDone: true,
+      };
+      const edge = entry.edge === "start" ? "开头" : "结尾";
+      if (!entry.error && entry.result?.candidate) {
+        status.candidate.push(edge);
+        const interval = candidateInterval(entry)!;
+        status.candidatesDone &&=
+          entry.retained === true ||
+          (drafts[entry.episodeId] ?? []).some(
+            (draft) =>
+              draft.start <= interval.start && draft.end >= interval.end,
+          );
+      }
+      if (entry.error || entry.result?.status === "needs_review") {
+        status.review.push(
+          entry.error ? `${edge}检测失败：${entry.error}` : edge,
+        );
+        status.reviewsDone &&= entry.reviewed === true;
+      }
+      statuses.set(entry.episodeId, status);
+    }
+    return statuses;
+  }, [batchResults, drafts]);
 
   const displayEpisodes = useMemo(() => {
     if (!showFlaggedOnly || count === 0) return paginatedEpisodes;
@@ -41,12 +85,29 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="flex z-10 shrink-0">
+      {mobileVisible && (
+        <button
+          type="button"
+          aria-label="关闭导航遮罩"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setMobileVisible(false)}
+        />
+      )}
       <nav
-        className={`shrink-0 overflow-y-auto bg-[var(--surface-0)] border-r border-white/5 p-4 break-words w-60 ${
+        id="episode-sidebar"
+        className={`episode-sidebar shrink-0 overflow-y-auto bg-[var(--surface-0)] border-r border-white/5 p-4 break-words w-60 ${
           mobileVisible ? "block" : "hidden"
         } md:block`}
         aria-label="Sidebar navigation"
       >
+        <button
+          type="button"
+          aria-label="关闭 episode 导航"
+          className="mb-3 text-sm text-slate-300 md:hidden"
+          onClick={() => setMobileVisible(false)}
+        >
+          关闭 ×
+        </button>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-slate-400 tabular">
           <dt className="uppercase tracking-wide text-[10px] text-slate-500">
             Frames
@@ -87,6 +148,41 @@ const Sidebar: React.FC<SidebarProps> = ({
         <ul className="mt-2 space-y-px">
           {displayEpisodes.map((episode) => {
             const active = episode === episodeId;
+            const status = markers.get(episode);
+            const badges = (
+              <span className="flex shrink-0 items-center gap-1.5">
+                {!!status?.candidate.length && (
+                  <span
+                    title={`候选：${status.candidate.join("、")}${status.candidatesDone ? "（已处理：已加入裁剪或保留）" : "（待加入）"}`}
+                    aria-label={`候选：${status.candidate.join("、")}`}
+                    className={
+                      status.candidatesDone
+                        ? "text-cyan-300 opacity-30"
+                        : "text-cyan-300"
+                    }
+                    style={{ opacity: status.candidatesDone ? 0.3 : 1 }}
+                    data-complete={status.candidatesDone}
+                  >
+                    <FiScissors size={14} aria-hidden="true" />
+                  </span>
+                )}
+                {!!status?.review.length && (
+                  <span
+                    title={`需要复核：${status.review.join("、")}${status.reviewsDone ? "（已复核）" : "（待复核）"}`}
+                    aria-label={`需要复核：${status.review.join("、")}`}
+                    className={
+                      status.reviewsDone
+                        ? "text-amber-300 opacity-30"
+                        : "text-amber-300"
+                    }
+                    style={{ opacity: status.reviewsDone ? 0.3 : 1 }}
+                    data-complete={status.reviewsDone}
+                  >
+                    <FiHelpCircle size={14} aria-hidden="true" />
+                  </span>
+                )}
+              </span>
+            );
             const itemClass = `group flex items-center justify-between gap-2 px-2 py-1 rounded-md text-xs tabular transition-colors ${
               active
                 ? "bg-cyan-400/10 text-cyan-300"
@@ -97,11 +193,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {onEpisodeSelect ? (
                   <div className={itemClass}>
                     <button
-                      onClick={() => onEpisodeSelect(episode)}
+                      onClick={() => {
+                        onEpisodeSelect(episode);
+                        setMobileVisible(false);
+                      }}
                       className="flex-1 text-left"
                     >
                       Episode {episode}
                     </button>
+                    {badges}
                     <button
                       onClick={() => toggle(episode)}
                       className={`text-xs leading-none transition-colors ${
@@ -118,10 +218,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div className={itemClass}>
                     <Link
                       href={`./episode_${episode}`}
+                      onClick={() => setMobileVisible(false)}
                       className="flex-1 text-left"
                     >
                       Episode {episode}
                     </Link>
+                    {badges}
                     <button
                       onClick={() => toggle(episode)}
                       className={`text-xs leading-none transition-colors ${
@@ -173,6 +275,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         className="mx-1 flex items-center opacity-50 hover:opacity-100 focus:outline-none focus:ring-0 md:hidden"
         onClick={() => setMobileVisible((prev) => !prev)}
         title="Toggle sidebar"
+        aria-expanded={mobileVisible}
+        aria-controls="episode-sidebar"
       >
         <div className="h-10 w-1 rounded-full bg-white/20" />
       </button>

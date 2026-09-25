@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import React from "react";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
-  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { BatchIdleControls } from "@/components/batch-idle-controls";
@@ -13,10 +13,14 @@ import {
   ClipDraftsProvider,
   useClipDrafts,
 } from "@/context/clip-drafts-context";
+import { saveBatchResults, getBatchResults } from "../use-batch-results";
 import { batchStorageKey } from "../batch";
-import { frames, profile } from "./fixtures";
+import { frames, profile, schema } from "./fixtures";
 import { detectInitialIdle } from "../detect";
-const mocks = vi.hoisted(() => ({ load: vi.fn() }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), info: vi.fn() }));
+vi.mock("@/utils/versionUtils", () => ({
+  getDatasetVersionAndInfo: mocks.info,
+}));
 vi.mock("../load", () => ({ loadEpisodeSignalFrames: mocks.load }));
 const episodes = [0, 1, 2];
 function State() {
@@ -30,16 +34,15 @@ function State() {
     </>
   );
 }
-function Page() {
+function Page({ episodeId = 0 }: { episodeId?: number }) {
   return (
     <ClipDraftsProvider repoId="local/test">
       <BatchIdleControls
-        enabled
         repoId="local/test"
         episodes={episodes}
-        episodeId={0}
-        profiles={{}}
-        onReview={() => {}}
+        key={episodeId}
+        episodeId={episodeId}
+        profiles={{ start: profile(), end: profile() }}
       />
       <State />
     </ClipDraftsProvider>
@@ -49,6 +52,7 @@ beforeEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
   mocks.load.mockResolvedValue(frames());
+  mocks.info.mockResolvedValue({ info: schema(), version: "v3.0" });
   const result = detectInitialIdle(frames(), profile());
   sessionStorage.setItem(
     batchStorageKey("local/test"),
@@ -86,76 +90,113 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 const state = () => JSON.parse(screen.getByTestId("drafts").textContent!);
-test("one click merges candidate edges, excludes review entries, deduplicates and undoes exactly", async () => {
-  render(<Page />);
-  fireEvent.click(await screen.findByText("一键加入全部候选（3）"));
-  await screen.findByText(/已将 3 项候选加入 2 个 episode/);
-  expect(state()).toEqual({
-    0: [
-      { start: 0, end: 23 },
-      { start: 50, end: 59 },
-    ],
-    1: [{ start: 0, end: 23 }],
-    2: [{ start: 40, end: 42 }],
-  });
-  expect(
-    (screen.getByText("一键加入全部候选（0）") as HTMLButtonElement).disabled,
-  ).toBe(true);
-  fireEvent.click(screen.getByText("撤销本次批量加入"));
-  expect(state()).toEqual({
-    0: [{ start: 0, end: 5 }],
-    2: [{ start: 40, end: 42 }],
-  });
-});
-test("undo refuses to overwrite subsequent edits", async () => {
-  render(<Page />);
-  fireEvent.click(await screen.findByText("一键加入全部候选（3）"));
-  await screen.findByText(/已将 3 项候选/);
-  fireEvent.click(screen.getByText("later edit"));
-  const before = state();
-  fireEvent.click(screen.getByText("撤销本次批量加入"));
-  expect(screen.getByRole("alert").textContent).toContain("已有后续修改");
-  expect(state()).toEqual(before);
-});
-test("a read failure leaves the entire batch unapplied", async () => {
-  mocks.load
-    .mockResolvedValueOnce(frames())
-    .mockRejectedValueOnce(Error("missing data"));
-  render(<Page />);
-  fireEvent.click(await screen.findByText("一键加入全部候选（3）"));
-  await screen.findByText("本次未加入任何候选。");
-  expect(state()).toEqual({
-    0: [{ start: 0, end: 5 }],
-    2: [{ start: 40, end: 42 }],
-  });
-});
-test("combined drafts cannot remove all frames", async () => {
-  sessionStorage.setItem(
-    "lerobot-clip-drafts:local/test",
-    JSON.stringify({ 0: [{ start: 24, end: 59 }] }),
+
+test("another batch retains earlier candidates and their reviewed state", async () => {
+  const view = render(<Page />);
+  act(() =>
+    saveBatchResults(
+      "local/test",
+      getBatchResults("local/test").map((entry) =>
+        entry.episodeId === 2 ? { ...entry, reviewed: true } : entry,
+      ),
+    ),
   );
-  render(<Page />);
-  fireEvent.click(await screen.findByText("一键加入全部候选（2）"));
-  await screen.findByText("本次未加入任何候选。");
-  expect(state()).toEqual({ 0: [{ start: 24, end: 59 }] });
+  fireEvent.change(screen.getByLabelText("批量起始 episode"), {
+    target: { value: "1" },
+  });
+  fireEvent.change(screen.getByLabelText("批量检测数量"), {
+    target: { value: "1" },
+  });
+  fireEvent.change(screen.getByLabelText("批量检测范围"), {
+    target: { value: "start" },
+  });
+  fireEvent.click(screen.getByText("开始批量检测"));
+  await screen.findByText("检测完成：1 个 episode，1 项结果。");
+  const saved = JSON.parse(
+    sessionStorage.getItem(batchStorageKey("local/test"))!,
+  );
+  expect(saved).toHaveLength(4);
+  expect(
+    saved.find((entry: { episodeId: number }) => entry.episodeId === 2)
+      .reviewed,
+  ).toBe(true);
+  expect(
+    saved.filter((entry: { episodeId: number }) => entry.episodeId === 0),
+  ).toHaveLength(2);
+  view.unmount();
+  render(<Page episodeId={1} />);
+  expect(
+    getBatchResults("local/test").find((entry) => entry.episodeId === 2)
+      ?.reviewed,
+  ).toBe(true);
+  expect(screen.queryByText("结果明细")).toBeNull();
+  expect(screen.queryByLabelText("Episode 2 开头是否复核")).toBeNull();
 });
-test("an edit made during validation is preserved in the merge", async () => {
-  let resolve!: (r: ReturnType<typeof frames>) => void;
+
+test("batch start survives episode navigation and remounts", () => {
+  const view = render(<Page />);
+  const start = () =>
+    screen.getByLabelText("批量起始 episode") as HTMLSelectElement;
+  fireEvent.change(start(), { target: { value: "1" } });
+  fireEvent.change(screen.getByLabelText("批量检测数量"), {
+    target: { value: "2" },
+  });
+  fireEvent.change(screen.getByLabelText("批量检测范围"), {
+    target: { value: "start" },
+  });
+  view.rerender(<Page episodeId={2} />);
+  expect(start().value).toBe("1");
+  view.unmount();
+  render(<Page episodeId={0} />);
+  expect(start().value).toBe("1");
+  expect(
+    (screen.getByLabelText("批量检测数量") as HTMLInputElement).value,
+  ).toBe("2");
+  expect(
+    (screen.getByLabelText("批量检测范围") as HTMLSelectElement).value,
+  ).toBe("start");
+});
+
+test("stopping a pending batch preserves old results and drafts", async () => {
+  let resolve!: (rows: ReturnType<typeof frames>) => void;
   mocks.load.mockImplementationOnce(
     () =>
-      new Promise((r) => {
-        resolve = r;
+      new Promise((done) => {
+        resolve = done;
       }),
   );
   render(<Page />);
-  fireEvent.click(await screen.findByText("一键加入全部候选（3）"));
-  fireEvent.click(screen.getByText("later edit"));
-  resolve(frames());
-  await waitFor(() =>
-    expect(state()[0]).toEqual([
-      { start: 0, end: 23 },
-      { start: 40, end: 41 },
-      { start: 50, end: 59 },
-    ]),
-  );
+  const before = state();
+  const results = sessionStorage.getItem(batchStorageKey("local/test"));
+  fireEvent.change(screen.getByLabelText("批量检测范围"), {
+    target: { value: "start" },
+  });
+  fireEvent.click(screen.getByText("开始批量检测"));
+  await act(async () => {});
+  fireEvent.click(screen.getByText("停止批量检测"));
+  await act(async () => {
+    resolve(frames());
+  });
+  await screen.findByText("已停止，保留 0 项已完成结果。");
+  expect(state()).toEqual(before);
+  expect(sessionStorage.getItem(batchStorageKey("local/test"))).toBe(results);
+});
+
+test("older batch results restore their starting episode", () => {
+  render(<Page episodeId={2} />);
+  expect(
+    (screen.getByLabelText("批量起始 episode") as HTMLSelectElement).value,
+  ).toBe("0");
+});
+test("batch detection offers no bulk clipping and leaves existing drafts unchanged", async () => {
+  render(<Page />);
+  const before = state();
+  expect(screen.queryByText(/一键加入全部候选/)).toBeNull();
+  expect(screen.queryByText("撤销本次批量加入")).toBeNull();
+  fireEvent.change(screen.getByLabelText("批量检测范围"), {
+    target: { value: "start" },
+  });
+  fireEvent.click(screen.getByText("开始批量检测"));
+  await screen.findByText("检测完成：3 个 episode，3 项结果。");
+  expect(state()).toEqual(before);
 });

@@ -1,14 +1,26 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { BatchIdleControls } from "./batch-idle-controls";
+import { BatchReviewCheckbox } from "./batch-review-checkbox";
 import {
   batchSelectionKey,
-  batchStorageKey,
+  candidateInterval,
+  mergeBatchResults,
   type BatchEntry,
   type IdleEdge,
 } from "@/lib/initial-idle/batch";
+import {
+  getBatchResults,
+  saveBatchResults,
+  useBatchResults,
+} from "@/lib/initial-idle/use-batch-results";
 import type { VideoInfo } from "@/types";
 import {
   detectTrailingIdle,
@@ -108,6 +120,7 @@ export function InitialIdleControls({
     after: FrameInterval[];
   } | null>(null);
   const request = useRef(0);
+  const localResult = useRef<InitialIdleResult | null>(null);
   const hasDrafts = (drafts[episodeId]?.length ?? 0) > 0;
   useEffect(() => {
     if (!hasDrafts || frames.length || !profile || batchReview) return;
@@ -160,6 +173,14 @@ export function InitialIdleControls({
       updatedAt: new Date().toISOString(),
     };
     setDecision(next);
+    saveBatchResults(
+      repoId,
+      getBatchResults(repoId).map((entry) =>
+        entry.episodeId === episodeId && entry.edge === edge
+          ? { ...entry, reviewed: true, retained: status === "retained" }
+          : entry,
+      ),
+    );
     try {
       localStorage.setItem(decisionKey, JSON.stringify(next));
     } catch {
@@ -174,6 +195,9 @@ export function InitialIdleControls({
   }
 
   const initialize = useCallback(async () => {
+    // Publishing our own detection must not reload the player or reset its state.
+    if (batchReview?.result && batchReview.result === localResult.current)
+      return;
     const id = ++request.current;
     setBusy(true);
     setError("");
@@ -221,11 +245,14 @@ export function InitialIdleControls({
             throw new Error("轨迹与批量结果不一致，请重新检测当前 episode。");
           setFrames(rows);
           setResult(batchReview.result);
-          if (c)
-            setEndFrame(tail ? c.removedFrames.start : c.removedFrames.end);
-          setMessage(
-            "已载入批量检测结果及该批次参数；请预览后逐条确认。尚未加入裁剪列表。",
-          );
+          if (c) {
+            const saved = getBatchResults(repoId).find(
+              (entry) => entry.episodeId === episodeId && entry.edge === edge,
+            );
+            const interval = saved ? candidateInterval(saved) : c.removedFrames;
+            setEndFrame(tail ? interval!.start : interval!.end);
+          }
+          setMessage("已载入批量检测结果及该批次参数。");
         }
       }
     } catch (e) {
@@ -234,7 +261,7 @@ export function InitialIdleControls({
     } finally {
       if (id === request.current) setBusy(false);
     }
-  }, [repoId, profileRepo, batchReview, episodeId, tail]);
+  }, [repoId, profileRepo, batchReview, episodeId, tail, edge]);
 
   useEffect(() => {
     try {
@@ -331,6 +358,7 @@ export function InitialIdleControls({
       } else analysis = detectInitialIdle(rows, profile);
       if (id !== request.current) return;
       setFrames(rows);
+      localResult.current = analysis;
       setResult(analysis);
       player.current?.locate(
         tail
@@ -354,6 +382,11 @@ export function InitialIdleControls({
       } catch {
         setMessage("检测完成；浏览器未能保存参数，下次打开需要重新设置。");
       }
+      const entries = mergeBatchResults(getBatchResults(repoId), [
+        { episodeId, edge, profile, result: analysis },
+      ]);
+      if (!saveBatchResults(repoId, entries))
+        setMessage("检测完成；浏览器未能保存结果，离开后需重新检测。");
     } catch (e) {
       if (id === request.current)
         setError(
@@ -380,6 +413,11 @@ export function InitialIdleControls({
     start: tail ? endFrame : 0,
     end: tail ? frames.length - 1 : endFrame,
   };
+  const alreadyQueued =
+    validEnd &&
+    (drafts[episodeId] ?? []).some(
+      (cut) => cut.start <= interval.start && cut.end >= interval.end,
+    );
   const contextLength =
     validEnd && candidate
       ? tail
@@ -400,7 +438,8 @@ export function InitialIdleControls({
     );
   }
   function accept() {
-    if (!reviewed || !validEnd || !candidate || dirty || busy) return;
+    if (!reviewed || !validEnd || !candidate || dirty || busy || alreadyQueued)
+      return;
     try {
       const before = (drafts[episodeId] ?? []).map((item) => ({ ...item }));
       const after = normalizeFrameIntervals(
@@ -410,7 +449,12 @@ export function InitialIdleControls({
       replaceEpisode(episodeId, after);
       setUndo({ before, after });
       recordDecision("queued", interval);
-      setResult(null);
+      const entries = getBatchResults(repoId).map((entry) =>
+        entry.episodeId === episodeId && entry.edge === edge
+          ? { ...entry, acceptedFrames: interval }
+          : entry,
+      );
+      saveBatchResults(repoId, entries);
       setReviewed(false);
       player.current?.stop();
       setIsPlaying(false);
@@ -770,6 +814,16 @@ export function InitialIdleControls({
                 {idleReasonLabels[result.reason] ?? result.reason}
               </p>
             )}
+            {batchReview &&
+              !dirty &&
+              (result?.status === "needs_review" || batchReview.error) && (
+                <BatchReviewCheckbox
+                  repoId={repoId}
+                  episodeId={episodeId}
+                  edge={edge}
+                  disabled={busy}
+                />
+              )}
             {!tail && result?.diagnostics && (
               <details
                 className="rounded border border-white/15 p-2 text-xs space-y-2"
@@ -988,12 +1042,25 @@ export function InitialIdleControls({
                     ? "已确认任务结束，并检查物体稳定、夹爪与接触保持过程；所选尾部没有需要保留的任务内容。"
                     : "已检查视频与曲线，确认所选片段仅为等待，没有需要保留的夹爪、接触或任务过程。"}
                 </label>
+                {alreadyQueued && (
+                  <p role="status">
+                    所选区间已在裁剪列表中，无需重复加入；可在下方撤销或调整区间。
+                  </p>
+                )}
+                {!enabled && (
+                  <p role="status">仅支持本地 v3.0 数据集加入裁剪列表。</p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     className={`${button} border-red-400/40 text-red-200`}
                     disabled={
-                      !enabled || !reviewed || !validEnd || dirty || busy
+                      !enabled ||
+                      !reviewed ||
+                      !validEnd ||
+                      dirty ||
+                      busy ||
+                      alreadyQueued
                     }
                     onClick={accept}
                   >
@@ -1003,12 +1070,13 @@ export function InitialIdleControls({
                     type="button"
                     className={button}
                     onClick={() => {
-                      setResult(null);
                       setReviewed(false);
                       player.current?.stop();
                       recordDecision("retained");
                       setIsPlaying(false);
-                      setMessage("已保留此段，没有新增裁剪。");
+                      setMessage(
+                        "已保留此段，没有新增裁剪。已有裁剪区间请在下方单独撤销。",
+                      );
                     }}
                   >
                     保留此段
@@ -1069,6 +1137,14 @@ export function InitialIdleControls({
                   replaceEpisode(episodeId, undo.before);
                   setUndo(null);
                   setDecision(null);
+                  saveBatchResults(
+                    repoId,
+                    getBatchResults(repoId).map((entry) =>
+                      entry.episodeId === episodeId && entry.edge === edge
+                        ? { ...entry, reviewed: false, retained: false }
+                        : entry,
+                    ),
+                  );
                   try {
                     localStorage.removeItem(decisionKey);
                   } catch {
@@ -1095,7 +1171,6 @@ export function IdleBoundaryControls(
     "edge" | "batchReview" | "onProfileChange"
   > & { episodes?: number[] },
 ) {
-  const router = useRouter();
   const [initialSelection] = useState(() => {
     try {
       const value = JSON.parse(
@@ -1109,20 +1184,40 @@ export function IdleBoundaryControls(
     }
   });
   const [edge, setEdge] = useState<IdleEdge>(initialSelection?.edge ?? "start");
-  const [batchReview, setBatchReview] = useState<BatchEntry | undefined>(() => {
-    if (initialSelection?.episodeId !== props.episodeId) return undefined;
-    try {
-      const entries = JSON.parse(
-        sessionStorage.getItem(batchStorageKey(props.repoId)) ?? "[]",
-      ) as BatchEntry[];
-      return entries.find(
-        (r) =>
-          r.episodeId === props.episodeId && r.edge === initialSelection?.edge,
+  const entries = useBatchResults(props.repoId);
+  const matchingEntry = entries.find(
+    (entry) => entry.episodeId === props.episodeId && entry.edge === edge,
+  );
+  const {
+    profile: batchProfile,
+    result: batchResult,
+    error: batchError,
+  } = matchingEntry ?? {};
+  // A review checkbox must not reset video, parameters or the current boundary.
+  const batchReview = useMemo<BatchEntry | undefined>(
+    () =>
+      batchProfile
+        ? {
+            episodeId: props.episodeId,
+            edge,
+            profile: batchProfile,
+            result: batchResult,
+            error: batchError,
+          }
+        : undefined,
+    [props.episodeId, edge, batchProfile, batchResult, batchError],
+  );
+  useEffect(() => {
+    const available = entries.filter(
+      (entry) => entry.episodeId === props.episodeId,
+    );
+    if (available.length)
+      setEdge((current) =>
+        available.some((entry) => entry.edge === current)
+          ? current
+          : available[0].edge,
       );
-    } catch {
-      return undefined;
-    }
-  });
+  }, [entries, props.episodeId]);
   const [profiles, setProfiles] = useState<
     Partial<Record<IdleEdge, InitialIdleProfile>>
   >({});
@@ -1132,32 +1227,14 @@ export function IdleBoundaryControls(
     },
     [],
   );
-  function review(entry: BatchEntry) {
-    try {
-      sessionStorage.setItem(
-        batchSelectionKey(props.repoId),
-        JSON.stringify({ episodeId: entry.episodeId, edge: entry.edge }),
-      );
-    } catch {
-      /* Current episode still works. */
-    }
-    if (entry.episodeId !== props.episodeId)
-      router.push(`/${props.repoId}/episode_${entry.episodeId}`);
-    else {
-      setEdge(entry.edge);
-      setBatchReview(entry);
-    }
-  }
   return (
     <>
       {props.episodes && (
         <BatchIdleControls
-          enabled={props.enabled}
           repoId={props.repoId}
           episodes={props.episodes}
           episodeId={props.episodeId}
           profiles={profiles}
-          onReview={review}
         />
       )}
       <div className="flex gap-2 mb-3" role="group" aria-label="等待检测位置">
@@ -1173,7 +1250,6 @@ export function IdleBoundaryControls(
             aria-pressed={edge === value}
             onClick={() => {
               setEdge(value);
-              setBatchReview(undefined);
               try {
                 sessionStorage.setItem(
                   batchSelectionKey(props.repoId),

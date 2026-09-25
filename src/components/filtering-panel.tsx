@@ -14,6 +14,7 @@ import {
   ActionVelocitySection,
   FullscreenWrapper,
 } from "@/components/action-insights-panel";
+import { TrajectorySmoothnessSection } from "@/components/trajectory-smoothness-panel";
 
 // ─── Shared small components ─────────────────────────────────────
 
@@ -750,6 +751,15 @@ function FilteringPanel({
           jerkyEpisodes={crossEpisodeData?.jerkyEpisodes}
         />
       </FullscreenWrapper>
+
+      {crossEpisodeData?.trajectorySmoothness && (
+        <FullscreenWrapper>
+          <TrajectorySmoothnessSection
+            repoId={repoId}
+            episodes={crossEpisodeData.trajectorySmoothness}
+          />
+        </FullscreenWrapper>
+      )}
     </div>
   );
 }
