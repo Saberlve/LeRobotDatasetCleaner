@@ -330,7 +330,7 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
                 value={playbackRate}
                 onChange={(e) => setPlaybackRate?.(Number(e.target.value))}
               >
-                {[0.25, 0.5, 1].map((v) => (
+                {[0.25, 0.5, 1, 1.5, 2].map((v) => (
                   <option key={v} value={v}>
                     {v}×
                   </option>

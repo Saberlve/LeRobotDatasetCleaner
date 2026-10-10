@@ -27,15 +27,17 @@ async function exportV3Subset(input: {
   datasetPath: string;
   outputPath: string;
   keptEpisodeIds: number[];
+  sourceTotalEpisodes: number;
   removedFrameIntervals?: EpisodeClipMap;
 }): Promise<void> {
   const job = {
     kept_episode_ids: input.keptEpisodeIds,
+    source_total_episodes: input.sourceTotalEpisodes,
     removed_frame_intervals: input.removedFrameIntervals ?? {},
   };
 
   try {
-    await execFileAsync("python3", [
+    await execFileAsync(process.env.LEROBOT_EXPORT_PYTHON || "python3", [
       EXPORT_V3_SUBSET_SCRIPT,
       input.datasetPath,
       input.outputPath,
@@ -106,6 +108,7 @@ export async function exportFilteredDataset(input: {
       datasetPath,
       outputPath: input.outputPath,
       keptEpisodeIds: selection.keptEpisodeIds,
+      sourceTotalEpisodes: Number(info.total_episodes),
       removedFrameIntervals: input.removedFrameIntervals,
     });
   } else {

@@ -35,7 +35,7 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 - **Overview Panel:** At-a-glance summary of dataset metadata, camera info, and episode details.
 - **Statistics Panel:** Dataset-level statistics including episode count, total recording time, frames-per-second, and an episode-length histogram.
 - **Action Insights Panel:** Data-driven analysis tools to guide training configuration — includes autocorrelation, state-action alignment, speed distribution, and cross-episode variance heatmap.
-- **Filtering Panel:** Identify and flag problematic episodes (low movement, jerky motion, outlier length) for removal. Exports flagged episode IDs as a ready-to-run LeRobot CLI command.
+- **Filtering Panel:** Flag problematic episodes and export either flagged or unflagged episodes to an independent local dataset. Supports native-rate tactile videos and lossless Mesh3DFlow range references.
 - **3D URDF Viewer:** Visualize robot joint poses frame-by-frame in an interactive 3D scene, with end-effector trail rendering. Supports SO-100, SO-101, OpenArm bimanual, Unitree G1, and xArm7 robots.
 - **Annotations Panel:** Hand-edit the v3.1 language schema (`language_persistent` + `language_events`) — subtask, plan, memory, interjection + paired speech, and VQA atoms with bounding-box / keypoint / count / attribute / spatial answers. VQA bboxes and keypoints render as overlays on the video player; drag or click on a camera to draw new ones. Backed by an optional FastAPI service (in `backend/`) for parquet rewrites and HF Hub push.
 - **Efficient Data Loading:** Uses parquet and JSON loading for large dataset support, with pagination, chunking, and lazy-loaded panels for fast initial load.
@@ -52,6 +52,9 @@ This tool is designed to help robotics researchers and practitioners quickly ins
 - **Tailwind CSS** (styling)
 
 ## Getting Started
+
+For whole-episode deletion that preserves original xArm timestamps, tactile
+streams and shared video bytes, see [删除 episode 操作指南](docs/delete-episodes.md).
 
 ### Prerequisites
 

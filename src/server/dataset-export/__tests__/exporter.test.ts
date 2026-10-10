@@ -80,6 +80,33 @@ describe("exportFilteredDataset", () => {
     await fs.rm(tempRoot, { recursive: true, force: true });
   });
 
+  test.each([
+    { dropped: [1], expected: { train: "0:1", test: "1:2" } },
+    { dropped: [0, 1], expected: { test: "0:1" } },
+    { dropped: [2], expected: { train: "0:2" } },
+  ])("remaps splits after deleting $dropped", async ({ dropped, expected }) => {
+    const infoPath = path.join(datasetRoot, "meta", "info.json");
+    const info = JSON.parse(await fs.readFile(infoPath, "utf8"));
+    info.splits = { train: "0:2", test: "2:3", validation: "1:2" };
+    await fs.writeFile(infoPath, JSON.stringify(info));
+    const outputPath = path.join(tempRoot, "split_export");
+    await exportFilteredDataset({
+      repoId: "local/demo_v21",
+      datasetPath: datasetRoot,
+      flaggedEpisodeIds: dropped,
+      mode: "unflagged",
+      outputPath,
+      alias: "split_export",
+    });
+    const exported = JSON.parse(
+      await fs.readFile(path.join(outputPath, "meta/info.json"), "utf8"),
+    );
+    expect(exported.splits).toEqual({
+      ...expected,
+      ...(!dropped.includes(1) ? { validation: "1:2" } : {}),
+    });
+  });
+
   test("exports unflagged episodes into a new local dataset directory", async () => {
     const outputPath = path.join(tempRoot, "demo_v21_unflagged");
 

@@ -357,10 +357,26 @@ function rewriteInfoJson(input: {
     typeof input.info.splits === "object" &&
     !Array.isArray(input.info.splits)
   ) {
-    nextInfo.splits = {
-      ...(input.info.splits as Record<string, unknown>),
-      train: `0:${input.rewrittenEpisodes.length}`,
-    };
+    const splits: Record<string, string> = {};
+    for (const [name, interval] of Object.entries(input.info.splits)) {
+      if (typeof interval !== "string" || !/^\d+:\d+$/.test(interval)) {
+        throw new Error(`Invalid episode interval for split ${name}`);
+      }
+      const [start, end] = interval.split(":").map(Number);
+      if (start > end)
+        throw new Error(`Invalid episode interval for split ${name}`);
+      const indices = input.rewrittenEpisodes.flatMap((episode, index) => {
+        const source = Number(episode.source_episode_index);
+        return source >= start && source < end ? [index] : [];
+      });
+      if (indices.length > 0) {
+        if (indices.at(-1)! - indices[0] + 1 !== indices.length) {
+          throw new Error(`Selection makes split ${name} non-contiguous`);
+        }
+        splits[name] = `${indices[0]}:${indices.at(-1)! + 1}`;
+      }
+    }
+    nextInfo.splits = splits;
   }
 
   return nextInfo;

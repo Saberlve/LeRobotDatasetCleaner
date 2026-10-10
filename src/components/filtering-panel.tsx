@@ -314,7 +314,8 @@ function FlaggedExportCard({
     () => [...flagged].sort((a, b) => a - b),
     [flagged],
   );
-  const [mode, setMode] = useState<ExportMode>("flagged");
+  const [mode, setMode] = useState<ExportMode>("unflagged");
+  const [applyClips, setApplyClips] = useState(false);
   const [outputParentDirectory, setOutputParentDirectory] = useState(
     DEFAULT_EXPORT_PARENT_DIRECTORY,
   );
@@ -396,7 +397,7 @@ function FlaggedExportCard({
           mode,
           outputPath: joinExportPath(outputParentDirectory, datasetName),
           alias: datasetName.trim(),
-          removedFrameIntervals: drafts,
+          removedFrameIntervals: applyClips ? drafts : {},
         }),
       });
       const payload = (await response.json()) as {
@@ -427,7 +428,9 @@ function FlaggedExportCard({
       setSubmitting(false);
     }
   }, [
+    applyClips,
     datasetName,
+    drafts,
     exportState.disabled,
     flaggedIds,
     mode,
@@ -442,14 +445,25 @@ function FlaggedExportCard({
           Export dataset subset
         </h3>
         <p className="text-xs text-slate-400">
-          Export the flagged or unflagged episode subset into a new local
-          dataset directory, preserving the source dataset.
+          选择 unflagged 可删除标记的 episode，结果写入新目录，原始数据集保留。
+          v3.0
+          整段导出会保留原始视频、时间戳和触觉记录。共享视频中可能保留被删除
+          episode 的闲置片段，新数据集不会索引这些片段。
         </p>
         {clippedEpisodes > 0 && (
-          <p className="text-xs text-cyan-300">
-            将应用 {clippedEpisodes} 个 episode 的剪辑草稿，删除 {removedFrames}{" "}
-            帧。
-          </p>
+          <label className="flex items-start gap-2 text-xs text-cyan-300">
+            <input
+              type="checkbox"
+              checked={applyClips}
+              onChange={(event) => setApplyClips(event.target.checked)}
+              disabled={submitting}
+            />
+            <span>
+              同时应用 {clippedEpisodes} 个 episode 的剪辑草稿（删除{" "}
+              {removedFrames} 帧）。
+              带时间戳/触觉原始记录的数据集仅支持整段删除，请保持不勾选。
+            </span>
+          </label>
         )}
       </div>
 
@@ -462,8 +476,8 @@ function FlaggedExportCard({
             onChange={(event) => setMode(event.target.value as ExportMode)}
             className="w-full rounded-md border border-white/10 bg-[var(--surface-0)] px-3 py-2 text-sm text-slate-200"
           >
-            <option value="flagged">flagged</option>
-            <option value="unflagged">unflagged</option>
+            <option value="flagged">flagged（仅保留标记的 episode）</option>
+            <option value="unflagged">unflagged（删除标记的 episode）</option>
           </select>
         </label>
 
@@ -657,21 +671,28 @@ function FlaggedIdsCopyBar({
           View flagged episodes
         </button>
       )}
-      <div className="bg-[var(--surface-0)]/60 rounded-md px-3 py-2 border border-white/10/60 space-y-2.5">
+      {repoId.startsWith("local/") ? (
         <p className="text-xs text-slate-400">
-          <a
-            href="https://github.com/huggingface/lerobot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-cyan-300 underline"
-          >
-            LeRobot CLI
-          </a>{" "}
-          — delete flagged episodes:
+          在下方 Export dataset subset 选择导出已标记或未标记的
+          episode；导出到新目录，原数据集保持不变。
         </p>
-        <pre className="text-xs text-slate-300 bg-[var(--bg)]/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# Delete episodes (modifies original dataset)\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
-        <pre className="text-xs text-slate-300 bg-[var(--bg)]/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# Delete episodes and save to a new dataset (preserves original)\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --new_repo_id ${repoId}_filtered \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
-      </div>
+      ) : (
+        <div className="bg-[var(--surface-0)]/60 rounded-md px-3 py-2 border border-white/10/60 space-y-2.5">
+          <p className="text-xs text-slate-400">
+            <a
+              href="https://github.com/huggingface/lerobot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cyan-300 underline"
+            >
+              LeRobot CLI
+            </a>{" "}
+            — delete flagged episodes:
+          </p>
+          <pre className="text-xs text-slate-300 bg-[var(--bg)]/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# Delete episodes (modifies original dataset)\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
+          <pre className="text-xs text-slate-300 bg-[var(--bg)]/50 rounded px-2 py-1.5 overflow-x-auto select-all">{`# Delete episodes and save to a new dataset (preserves original)\nlerobot-edit-dataset \\\n    --repo_id ${repoId} \\\n    --new_repo_id ${repoId}_filtered \\\n    --operation.type delete_episodes \\\n    --operation.episode_indices "[${ids.join(", ")}]"`}</pre>
+        </div>
+      )}
     </div>
   );
 }
