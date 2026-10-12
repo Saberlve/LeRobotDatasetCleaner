@@ -13,6 +13,7 @@ from native_tactile import validate_native_episode
 from export_v3_subset import get_video_feature_keys, load_episode_metadata
 from preserve_episode_assets import (
     EPISODE_COMPONENT,
+    EXPORTED_SIDECAR_DIRS,
     SIDECAR_DIRS,
     aggregate_episode_stats,
     contained_path,
@@ -49,6 +50,7 @@ def digest(path):
 def verify_subset(source_dir, output_dir):
     source_dir = Path(source_dir).resolve()
     output_dir = Path(output_dir).resolve()
+    require(not (output_dir / "raw_episodes").exists(), "raw episode checkpoints must not be exported")
     mapping = json.loads((output_dir / "meta/episode_id_map.json").read_text())
     episode_map = {int(k): v for k, v in mapping["old_to_new"].items()}
     require(Path(mapping["source_path"]).resolve() == source_dir, "wrong source dataset")
@@ -159,7 +161,7 @@ def verify_subset(source_dir, output_dir):
         print(f"Verified episode {old_id} -> {new_id}", flush=True)
     require(output_info["total_frames"] == global_start, "wrong total_frames")
 
-    for name in (*SIDECAR_DIRS, "images", "runtime"):
+    for name in (*EXPORTED_SIDECAR_DIRS, "images", "runtime"):
         root = source_dir / name
         for path in sorted(root.rglob("*")):
             if not path.is_file():
@@ -174,7 +176,7 @@ def verify_subset(source_dir, output_dir):
             target = contained_path(output_dir, target_rel)
             contained_path(source_dir, relative)
             require(target.is_file(), f"missing asset: {target_rel}")
-            if name in ("raw_episodes", "tactile_streams") and path.suffix == ".parquet":
+            if name == "tactile_streams" and path.suffix == ".parquet":
                 original = pq.read_table(path)
                 expected = remap_reference_table(original, episode_map)
                 actual = pq.read_table(target)

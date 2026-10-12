@@ -2,6 +2,7 @@
 
 Only episode identities and relative file references change. Clock values,
 action/tactile indices, calibration files, PNGs and motion arrays do not.
+Raw episode checkpoints are recording recovery inputs and are not exported.
 """
 
 import json
@@ -13,7 +14,9 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-SIDECAR_DIRS = ("timestamps", "tactile_streams", "raw_episodes")
+EXPORTED_SIDECAR_DIRS = ("timestamps", "tactile_streams")
+# Source-side clipping guards still account for raw recording checkpoints.
+SIDECAR_DIRS = (*EXPORTED_SIDECAR_DIRS, "raw_episodes")
 EPISODE_COMPONENT = re.compile(r"^episode([_-])(\d{6})(.*)$")
 
 
@@ -75,7 +78,7 @@ def remap_reference_table(table, episode_map):
 
 
 def copy_episode_assets(source_dir, target_dir, episode_map):
-    for name in (*SIDECAR_DIRS, "images"):
+    for name in (*EXPORTED_SIDECAR_DIRS, "images"):
         root = source_dir / name
         if not root.exists():
             continue
@@ -92,7 +95,7 @@ def copy_episode_assets(source_dir, target_dir, episode_map):
                 continue
             contained_path(source_dir, relative)
             target = contained_path(target_dir, remap_path(relative.as_posix(), episode_map))
-            if name in ("raw_episodes", "tactile_streams") and path.suffix == ".parquet":
+            if name == "tactile_streams" and path.suffix == ".parquet":
                 before = file_stamp(path)
                 table = pq.read_table(path)
                 if name == "tactile_streams":

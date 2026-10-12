@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import { usePlaybackRate } from "@/lib/playback-rate";
 
 // `external` (default) — user-initiated seek (slider drag, chart click,
 //                        loop boundary reset). Bumps `externalSeekVersion`
@@ -19,7 +20,8 @@ type TimeUpdateSource = "external" | "video";
 
 type TimeContextType = {
   currentTime: number;
-  seek: (t: number, source?: TimeUpdateSource) => void;
+  // Returns the resulting time, including any synchronous review redirect.
+  seek: (t: number, source?: TimeUpdateSource) => number;
   // Monotonically increasing counter that bumps on every `external` seek.
   // Sync effects compare the current value against a stored ref to detect
   // user-initiated seeks without relying on heuristics like "did the time
@@ -51,7 +53,7 @@ export const TimeProvider: React.FC<{
   const [currentTime, setCurrentTimeState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  const [playbackRate, setPlaybackRate] = usePlaybackRate();
   const [externalSeekVersion, setExternalSeekVersion] = useState(0);
   const listeners = useRef<Set<(t: number) => void>>(new Set());
 
@@ -67,13 +69,13 @@ export const TimeProvider: React.FC<{
       listeners.current.forEach((fn) => fn(t));
       // A review subscriber may skip a removed interval synchronously.
       // Do not overwrite that new seek with the original video report.
-      if (timeRef.current !== t) return;
+      if (timeRef.current !== t) return timeRef.current;
 
       if (source === "external") {
         lastRenderTime.current = performance.now();
         setCurrentTimeState(t);
         setExternalSeekVersion((v) => v + 1);
-        return;
+        return timeRef.current;
       }
 
       // Throttle React state updates — during playback, timeupdate fires ~4×/sec
@@ -89,6 +91,7 @@ export const TimeProvider: React.FC<{
           }
         });
       }
+      return timeRef.current;
     },
     [],
   );

@@ -165,13 +165,30 @@ body {
   padding: 0.65rem;
 }
 .idle-camera-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.4rem;
 }
+.idle-camera-card {
+  flex: 0 1 auto;
+  width: calc(
+    (100% - 0.4rem) * var(--camera-aspect) / var(--camera-row-aspect)
+  );
+  max-width: 100%;
+  min-width: 0;
+}
 .idle-camera-video {
-  height: clamp(85px, 13vh, 165px);
+  display: block;
+  height: auto;
+  aspect-ratio: var(--camera-aspect);
   background: #000;
+}
+@container (max-width: 480px) {
+  .idle-camera-card {
+    width: calc(100% * var(--camera-aspect) / var(--camera-max-aspect));
+  }
 }
 .idle-review-transport {
   padding: 0.6rem 0 0.25rem;
@@ -229,9 +246,5 @@ body {
     min-height: 0;
     overflow-y: auto;
     scrollbar-gutter: stable;
-  }
-  .idle-camera-video {
-    height: 9vh;
-    min-height: 60px;
   }
 }

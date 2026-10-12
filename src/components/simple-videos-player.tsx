@@ -66,6 +66,10 @@ export const SimpleVideosPlayer = ({
   const [enlargedVideo, setEnlargedVideo] = React.useState<string | null>(null);
   const [showHiddenMenu, setShowHiddenMenu] = React.useState(false);
   const [videosReady, setVideosReady] = React.useState(false);
+  const [loadingSlow, setLoadingSlow] = React.useState(false);
+  const [videoAspects, setVideoAspects] = React.useState<
+    Record<string, number>
+  >({});
   useEffect(() => {
     videoRefs.current.forEach((video) => {
       if (video) video.playbackRate = playbackRate;
@@ -76,6 +80,12 @@ export const SimpleVideosPlayer = ({
 
   const firstVisibleIdx = videosInfo.findIndex(
     (video) => !hiddenSet.has(video.filename),
+  );
+  const visibleVideos = videosInfo.filter(
+    (video) => !hiddenSet.has(video.filename),
+  );
+  const maxVideoAspect = Math.max(
+    ...visibleVideos.map((video) => videoAspects[video.url] ?? 4 / 3),
   );
 
   // Last externalSeekVersion we observed in the sync effect. When the
@@ -112,15 +122,19 @@ export const SimpleVideosPlayer = ({
     videoRefs.current = videoRefs.current.slice(0, videosInfo.length);
   }, [videosInfo.length]);
 
-  // Handle videos ready — with a timeout fallback so the UI never hangs
-  // if a video fails to reach canplaythrough (e.g. network stall).
+  // A timeout reports slow loading; it must never authorize playback.
   useEffect(() => {
-    let readyCount = 0;
+    const readyVideos = new Set<number>();
     let resolved = false;
+    let disposed = false;
+    setVideosReady(false);
+    setLoadingSlow(false);
 
     const markReady = () => {
-      if (resolved) return;
+      if (resolved || disposed) return;
       resolved = true;
+      clearTimeout(timeout);
+      setLoadingSlow(false);
       setVideosReady(true);
       onVideosReadyRef.current?.();
       // Review starts paused so a short leading candidate is not missed while
@@ -128,39 +142,60 @@ export const SimpleVideosPlayer = ({
       setIsPlaying(!compact);
     };
 
-    const checkReady = () => {
-      readyCount++;
-      if (readyCount >= videosInfo.length) markReady();
+    const checkReady = (index: number) => {
+      if (disposed) return;
+      readyVideos.add(index);
+      if (readyVideos.size >= videosInfo.length) markReady();
     };
 
-    const timeout = setTimeout(markReady, VIDEO_READY_TIMEOUT_MS);
+    const timeout = setTimeout(() => {
+      if (!disposed && !resolved) setLoadingSlow(true);
+    }, VIDEO_READY_TIMEOUT_MS);
 
-    // Coordinated loop reset — when the primary video hits its segment end
-    // (or natural end), seek every camera to its own segmentStart in a
-    // single synchronous burst. The previous design seeked the primary,
-    // then bumped externalSeekVersion which scheduled the other seeks via
-    // a React render — leaving an 80ms (throttled) gap where the primary
-    // played fresh frames while the others still showed the segment-end
-    // frame. Now the gap is microseconds.
-    const loopAllVideos = () => {
+    // Stop every camera together and keep the last episode frame visible.
+    // Segment ends are exclusive: seeking to the exact end can show the
+    // first frame of the next episode in the same video file.
+    const stopAllVideos = (globalTime: number) => {
+      // Explicit review loops and trimmed previews may redirect this report.
+      // Let their requested seek take precedence over the default end stop.
+      if (Math.abs(seek(globalTime, "video") - globalTime) > 0.001) return;
       videoRefs.current.forEach((other, otherIdx) => {
         if (!other) return;
         const otherInfo = videosInfo[otherIdx];
         if (!otherInfo) return;
-        other.currentTime = otherInfo.segmentStart ?? 0;
+        other.pause();
+        const start = otherInfo.isSegmented ? (otherInfo.segmentStart ?? 0) : 0;
+        const end = otherInfo.isSegmented
+          ? (otherInfo.segmentEnd ?? other.duration) - 0.001
+          : other.duration;
+        const target = Math.max(start, Math.min(start + globalTime, end));
+        if (
+          Number.isFinite(target) &&
+          Math.abs(other.currentTime - target) > 0.001
+        ) {
+          other.currentTime = target;
+        }
       });
-      // Update the slider as a status report — don't bump externalSeekVersion
-      // since we already drove every video to its target.
-      seek(0, "video");
+      setIsPlaying(false);
     };
 
     videoRefs.current.forEach((video, index) => {
       if (!video) return;
       const info = videosInfo[index];
+      const checkVideoReady = () => checkReady(index);
+      let initialSeekStarted = false;
+      const handleSeeked = () => {
+        if (
+          initialSeekStarted &&
+          !video.seeking &&
+          video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+          Math.abs(video.currentTime - (info.segmentStart ?? 0)) < 0.001
+        ) {
+          checkVideoReady();
+        }
+      };
 
-      // One timeupdate handler per video covers both jobs:
-      // (a) loop-reset on segmented videos at segment-end
-      // (b) reporting the primary video's currentTime back to the context
+      // The primary camera reports time and stops playback at the episode end.
       const handleTimeUpdate = () => {
         if (info.isSegmented) {
           const segmentEnd = info.segmentEnd ?? video.duration;
@@ -169,18 +204,14 @@ export const SimpleVideosPlayer = ({
             video.currentTime >=
             segmentEnd - THRESHOLDS.VIDEO_SEGMENT_BOUNDARY
           ) {
-            // Primary drives the coordinated loop. Non-primary cameras
-            // that race ahead just snap to segmentStart and wait — the
-            // primary's next loop will re-align everyone.
-            if (compact) {
-              if (index === firstVisibleIdxRef.current) {
-                video.pause();
-                setIsPlaying(false);
-              }
-            } else if (index === firstVisibleIdxRef.current) {
-              loopAllVideos();
+            if (index === firstVisibleIdxRef.current) {
+              stopAllVideos(Math.max(0, segmentEnd - segmentStart - 0.001));
             } else {
-              video.currentTime = segmentStart;
+              video.pause();
+              const lastTime = Math.max(segmentStart, segmentEnd - 0.001);
+              if (Math.abs(video.currentTime - lastTime) > 0.001) {
+                video.currentTime = lastTime;
+              }
             }
             return;
           }
@@ -211,26 +242,29 @@ export const SimpleVideosPlayer = ({
 
       const handleLoadedData = info.isSegmented
         ? () => {
-            video.currentTime = info.segmentStart ?? 0;
-            checkReady();
+            if (disposed) return;
+            if (initialSeekStarted) {
+              handleSeeked();
+              return;
+            }
+            initialSeekStarted = true;
+            const target = info.segmentStart ?? 0;
+            // An already-positioned video may never emit another seeked.
+            if (Math.abs(video.currentTime - target) < 0.001) {
+              handleSeeked();
+            } else {
+              video.currentTime = target;
+            }
           }
         : null;
 
       const handleEnded = info.isSegmented
         ? null
         : () => {
-            // Same coordinated loop strategy for non-segmented videos at
-            // their natural end — primary drives, others wait for primary
-            // to align them.
-            if (compact) {
-              if (index === firstVisibleIdxRef.current) {
-                video.pause();
-                setIsPlaying(false);
-              }
-            } else if (index === firstVisibleIdxRef.current) {
-              loopAllVideos();
+            if (index === firstVisibleIdxRef.current) {
+              stopAllVideos(video.currentTime);
             } else {
-              video.currentTime = 0;
+              video.pause();
             }
           };
 
@@ -245,22 +279,23 @@ export const SimpleVideosPlayer = ({
       if (handlePlay) video.addEventListener("play", handlePlay);
       if (handleEnded) video.addEventListener("ended", handleEnded);
 
-      // Already-loaded videos (cached or fast network) will never re-fire
-      // canplaythrough / loadeddata after we attach the listener — so check
-      // readyState synchronously and mark ready in a microtask. Without this,
-      // checkReady wouldn't be called and only the 10s fallback timeout would
-      // eventually unfreeze the UI.
+      // Cached videos may not emit another load event. Check their state too.
+      // If seeking finishes before a decoded frame arrives, canplay/loadeddata
+      // rechecks readiness without seeking back to the start a second time.
       if (info.isSegmented && handleLoadedData) {
+        video.addEventListener("seeked", handleSeeked);
+        video.addEventListener("canplay", handleSeeked);
+        video.addEventListener("loadeddata", handleLoadedData);
         if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
           queueMicrotask(handleLoadedData);
-        } else {
-          video.addEventListener("loadeddata", handleLoadedData);
         }
       } else if (!info.isSegmented) {
         if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
-          queueMicrotask(checkReady);
+          queueMicrotask(checkVideoReady);
         } else {
-          video.addEventListener("canplaythrough", checkReady, { once: true });
+          video.addEventListener("canplaythrough", checkVideoReady, {
+            once: true,
+          });
         }
       }
 
@@ -272,11 +307,14 @@ export const SimpleVideosPlayer = ({
         if (handleLoadedData)
           video.removeEventListener("loadeddata", handleLoadedData);
         if (handleEnded) video.removeEventListener("ended", handleEnded);
-        video.removeEventListener("canplaythrough", checkReady);
+        video.removeEventListener("seeked", handleSeeked);
+        video.removeEventListener("canplay", handleSeeked);
+        video.removeEventListener("canplaythrough", checkVideoReady);
       });
     });
 
     return () => {
+      disposed = true;
       clearTimeout(timeout);
       videoRefs.current.forEach((video) => {
         if (!video) return;
@@ -340,6 +378,14 @@ export const SimpleVideosPlayer = ({
 
   return (
     <>
+      {loadingSlow && (
+        <div
+          role="status"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] rounded-md bg-slate-900 px-4 py-3 text-sm text-amber-200"
+        >
+          视频仍在加载或定位片段，请稍候。
+        </div>
+      )}
       {/* Hidden videos menu */}
       {hiddenVideos.length > 0 && (
         <div className="relative mb-4">
@@ -377,6 +423,15 @@ export const SimpleVideosPlayer = ({
         className={
           compact ? "idle-camera-grid" : "flex flex-wrap gap-x-2 gap-y-6"
         }
+        style={
+          compact
+            ? ({
+                "--camera-max-aspect": maxVideoAspect,
+                "--camera-row-aspect":
+                  maxVideoAspect * Math.min(2, visibleVideos.length),
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         {videosInfo.map((info, idx) => {
           if (hiddenVideos.includes(info.filename)) return null;
@@ -390,12 +445,21 @@ export const SimpleVideosPlayer = ({
                 isEnlarged
                   ? "z-40 fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center"
                   : compact
-                    ? "min-w-0"
+                    ? "idle-camera-card"
                     : "max-w-96"
               }`}
+              style={
+                compact && !isEnlarged
+                  ? ({
+                      "--camera-aspect": videoAspects[info.url] ?? 4 / 3,
+                    } as React.CSSProperties)
+                  : undefined
+              }
             >
               <p className="truncate w-full rounded-t-md bg-[var(--surface-1)] border border-b-0 border-white/5 px-2.5 py-1 text-[11px] text-slate-400 flex items-center justify-between gap-2">
-                <span className="truncate">{info.filename}</span>
+                <span className="truncate" title={info.filename}>
+                  {info.filename}
+                </span>
                 <span className="flex gap-0.5 shrink-0">
                   <button
                     title={isEnlarged ? "Minimize" : "Enlarge"}
@@ -436,6 +500,16 @@ export const SimpleVideosPlayer = ({
               <div className="relative w-full">
                 <video
                   ref={videoRefCallbacksRef.current[idx]}
+                  onLoadedMetadata={(event) => {
+                    const video = event.currentTarget;
+                    if (!video.videoWidth || !video.videoHeight) return;
+                    const aspect = video.videoWidth / video.videoHeight;
+                    setVideoAspects((prev) =>
+                      prev[info.url] === aspect
+                        ? prev
+                        : { ...prev, [info.url]: aspect },
+                    );
+                  }}
                   className={`w-full object-contain ${
                     isEnlarged
                       ? "max-h-[90vh] max-w-[90vw]"

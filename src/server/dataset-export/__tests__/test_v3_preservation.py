@@ -198,6 +198,9 @@ class PreservationTest(unittest.TestCase):
                     }
                 ],
             )
+            raw_image = self.source / f"raw_episodes/{base}/images/observation.images.photon_left/frame-000000.png"
+            raw_image.parent.mkdir(parents=True, exist_ok=True)
+            raw_image.write_bytes(b"raw-checkpoint-camera-image")
             write_json(
                 self.source / f"raw_episodes/{base}/manifest.json",
                 {
@@ -254,8 +257,14 @@ class PreservationTest(unittest.TestCase):
         self.assertEqual(stats["action"]["mean"], [11.0])
         self.assertAlmostEqual(stats["action"]["std"][0], 101.0**0.5)
         self.assertEqual(stats["index"]["max"], [3.0])
-        raw = pq.read_table(self.output / "raw_episodes/episode_000001/frames.parquet")
+        self.assertFalse((self.output / "raw_episodes").exists())
+        raw = pq.read_table(self.source / "raw_episodes/episode_000002/frames.parquet")
         self.assertEqual(raw["task"].to_pylist(), ["episode_000002"])
+        self.assertEqual(
+            (self.source / "raw_episodes/episode_000002/images/"
+             "observation.images.photon_left/frame-000000.png").read_bytes(),
+            b"raw-checkpoint-camera-image",
+        )
         samples = pq.read_table(
             self.output / "tactile_streams/photon_left/episode_000001/samples.parquet"
         )
@@ -267,6 +276,29 @@ class PreservationTest(unittest.TestCase):
             json.loads((self.output / "meta/info.json").read_text())["splits"],
             {"train": "0:1", "test": "1:2"},
         )
+
+    def test_export_excludes_raw_checkpoints_without_changing_source(self):
+        original = {
+            p.relative_to(self.source): p.read_bytes()
+            for p in (self.source / "raw_episodes").rglob("*")
+            if p.is_file()
+        }
+        for kept in ((0, 2), (1,)):
+            output = self.parent / f"subset-{len(kept)}"
+            result = self.export(kept=kept, output=output)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((output / "raw_episodes").exists())
+            self.assertTrue(verify_subset(self.source, output)["verified"])
+        self.assertEqual(
+            original,
+            {relative: (self.source / relative).read_bytes() for relative in original},
+        )
+
+    def test_verifier_rejects_exported_raw_directory(self):
+        self.assertEqual(self.export().returncode, 0)
+        (self.output / "raw_episodes").mkdir()
+        with self.assertRaisesRegex(ValueError, "raw episode checkpoints must not be exported"):
+            verify_subset(self.source, self.output)
 
     def test_refuses_clipping_with_clock_sidecars_and_leaves_no_partial_output(self):
         result = self.export(clips={"2": [{"start": 0, "end": 0}]})

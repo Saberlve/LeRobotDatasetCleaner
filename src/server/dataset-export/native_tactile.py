@@ -27,6 +27,23 @@ def native_tactile_fields(info):
     return fields
 
 
+def initial_range_start(ranges, mappings, samples, camera):
+    """Allow one causal pre-start representative outside the action ranges."""
+    if not ranges or len(ranges[0]) != 2 or ranges[0][0] not in (0, 1):
+        raise ValueError(f"invalid initial native range: {camera}")
+    previous = ranges[0][0]
+    if previous == 1:
+        interval = mappings[0][camera]
+        if (
+            not samples
+            or interval.get("start_index") != 1
+            or "window_start_ns" not in interval
+            or samples[0]["capture_monotonic_ns"] > interval["window_start_ns"]
+        ):
+            raise ValueError(f"invalid pre-start native representative: {camera}")
+    return previous
+
+
 def validate_native_episode(root, info, metadata, table, video_cache=None):
     fields = native_tactile_fields(info)
     if not fields:
@@ -105,7 +122,7 @@ def validate_native_episode(root, info, metadata, table, video_cache=None):
             or abs(video_info["from_timestamp"] - offset) > 1e-6
         ):
             raise ValueError(f"native video manifest mismatch: {camera}")
-        previous = 0
+        previous = initial_range_start(ranges, mappings, samples, camera)
         for pair, mapping in zip(ranges, mappings, strict=True):
             interval = mapping[camera]
             expected = [interval["start_index"], interval["end_index"]]
