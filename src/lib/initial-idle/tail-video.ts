@@ -1,6 +1,7 @@
 import type { VideoInfo } from "@/types";
 import { proxyHfUrl } from "@/utils/auth";
 import type { VisualSampler } from "./trailing";
+import { episodeToVideoTime } from "@/lib/video-time";
 
 /** Separate decoders: analysis must never seek the visible review videos. */
 export function createTailVideoSampler(
@@ -66,7 +67,7 @@ export function createTailVideoSampler(
         r.video.duration,
         r.info.segmentEnd ?? r.video.duration,
       );
-      const time = start + frame.timestamp;
+      const time = episodeToVideoTime(r.info, frame.timestamp);
       if (
         !Number.isFinite(end) ||
         time < start ||

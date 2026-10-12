@@ -39,6 +39,7 @@ vi.mock("@/context/time-context", () => ({
     setIsPlaying: mocks.play,
     subscribe: mocks.subscribe,
     currentTime: 2.4,
+    getCurrentTime: () => 2.4,
     duration: 6,
     isPlaying: false,
     playbackRate: 1,

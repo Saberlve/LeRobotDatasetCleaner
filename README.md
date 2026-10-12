@@ -73,6 +73,22 @@ Install dependencies:
 bun install
 ```
 
+Local dataset exports also require a Python environment with `pyarrow` and
+`numpy`. Set its absolute interpreter path in `.env.local`:
+
+```dotenv
+LEROBOT_EXPORT_PYTHON=/absolute/path/to/venv/bin/python
+```
+
+If these packages are missing, install them with that interpreter:
+
+```bash
+/absolute/path/to/venv/bin/python -m pip install pyarrow numpy
+```
+
+Restart the Next.js server after changing the export interpreter. Frame clipping
+also requires `ffmpeg` and `ffprobe` on `PATH`.
+
 ### Development
 
 Run the development server:

@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { useTime } from "../context/time-context";
 import { FaExpand, FaCompress, FaTimes, FaEye } from "react-icons/fa";
 import type { VideoInfo } from "@/types";
 import { proxyHfUrl } from "@/utils/auth";
 import { VideoOverlayCanvas } from "./video-overlay-canvas";
 import { ColormappedVideo } from "./colormapped-video";
-
-const THRESHOLDS = {
-  VIDEO_SYNC_TOLERANCE: 0.2,
-  VIDEO_SEGMENT_BOUNDARY: 0.05,
-};
+import {
+  episodeToVideoTime,
+  videoToEpisodeTime,
+  videoRateAt,
+} from "@/lib/video-time";
 
 const VIDEO_READY_TIMEOUT_MS = 10_000;
 
@@ -19,6 +19,8 @@ type VideoPlayerProps = {
   videosInfo: VideoInfo[];
   onVideosReady?: () => void;
   compact?: boolean;
+  frameTimestamps?: number[];
+  fps?: number;
 };
 
 const videoEventCleanup = new WeakMap<HTMLVideoElement, () => void>();
@@ -27,6 +29,8 @@ export const SimpleVideosPlayer = ({
   videosInfo,
   onVideosReady,
   compact = false,
+  frameTimestamps,
+  fps = 30,
 }: VideoPlayerProps) => {
   const {
     currentTime,
@@ -35,8 +39,107 @@ export const SimpleVideosPlayer = ({
     isPlaying,
     setIsPlaying,
     playbackRate,
+    subscribe,
   } = useTime();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const videosInfoRef = useRef(videosInfo);
+  videosInfoRef.current = videosInfo;
+  const currentTimeRef = useRef(currentTime);
+  const endFrameRef = useRef({ timestamp: frameTimestamps?.at(-1), fps });
+  endFrameRef.current = { timestamp: frameTimestamps?.at(-1), fps };
+  const stoppedAtEndRef = useRef<number | null>(null);
+  const playbackRef = useRef({ isPlaying, playbackRate });
+  playbackRef.current = { isPlaying, playbackRate };
+
+  const lastEpisodeTime = useCallback(
+    (info: VideoInfo, video: HTMLVideoElement) => {
+      const start = info.isSegmented ? (info.segmentStart ?? 0) : 0;
+      const mediaEnd = info.isSegmented
+        ? (info.segmentEnd ?? video.duration)
+        : video.duration;
+      const end = info.timeMapping
+        ? videoToEpisodeTime(info, info.timeMapping.videoTimestamps.at(-1)!)
+        : mediaEnd - start;
+      const { timestamp, fps: frameRate } = endFrameRef.current;
+      return Math.max(
+        0,
+        timestamp === undefined
+          ? end -
+              1 / (Number.isFinite(frameRate) && frameRate > 0 ? frameRate : 30)
+          : info.timeMapping
+            ? timestamp
+            : Math.min(timestamp, end - 0.001),
+      );
+    },
+    [],
+  );
+  const targetVideoTime = useCallback(
+    (info: VideoInfo, video: HTMLVideoElement, time: number) => {
+      const start = info.isSegmented ? (info.segmentStart ?? 0) : 0;
+      const end = info.isSegmented
+        ? (info.segmentEnd ?? video.duration)
+        : video.duration;
+      return Math.max(
+        start,
+        Math.min(
+          episodeToVideoTime(
+            info,
+            Math.min(time, lastEpisodeTime(info, video)),
+          ),
+          end - 0.001,
+        ),
+      );
+    },
+    [lastEpisodeTime],
+  );
+
+  // Follow the episode clock, compensating for the native presentation clock
+  // and independent decoders. Small drift changes the speed; a stall seeks once
+  // after decoding catches up, instead of issuing a seek on every time update.
+  const synchronize = (time: number, exact = false) => {
+    videoRefs.current.forEach((video, index) => {
+      const info = videosInfo[index];
+      if (
+        !video ||
+        !info ||
+        video.seeking ||
+        hiddenSetRef.current.has(info.filename)
+      )
+        return;
+      const target = targetVideoTime(info, video, time);
+      if (!Number.isFinite(target)) return;
+      let drift = target - video.currentTime;
+      const primary = index === firstVisibleIdxRef.current;
+      if (
+        (exact && Math.abs(drift) > 0.001) ||
+        (!primary && Math.abs(drift) > 0.08)
+      ) {
+        video.currentTime = target;
+        drift = 0;
+      }
+      const correction =
+        !exact && !primary ? Math.max(-0.08, Math.min(0.08, drift * 0.5)) : 0;
+      const rate = Math.max(
+        0.0625,
+        Math.min(
+          16,
+          playbackRef.current.playbackRate *
+            videoRateAt(info, time) *
+            (1 + correction),
+        ),
+      );
+      if (Math.abs(video.playbackRate - rate) > 0.01) video.playbackRate = rate;
+    });
+  };
+  const synchronizeRef = useRef(synchronize);
+  synchronizeRef.current = synchronize;
+  useEffect(
+    () =>
+      subscribe((time) => {
+        currentTimeRef.current = time;
+      }),
+    [subscribe],
+  );
   // Mirror videoRefs into state so the absolutely-positioned VQA overlay can
   // re-render with the actual <video> element once it mounts. Using a ref
   // alone means the overlay's first render still sees `null`.
@@ -71,16 +174,24 @@ export const SimpleVideosPlayer = ({
     Record<string, number>
   >({});
   useEffect(() => {
-    videoRefs.current.forEach((video) => {
-      if (video) video.playbackRate = playbackRate;
+    videoRefs.current.forEach((video, index) => {
+      if (video && videosInfo[index])
+        video.playbackRate =
+          playbackRate * videoRateAt(videosInfo[index], currentTimeRef.current);
     });
-  }, [playbackRate, videoEls]);
+  }, [playbackRate, videoEls, videosInfo]);
 
   const hiddenSet = React.useMemo(() => new Set(hiddenVideos), [hiddenVideos]);
+  const hiddenSetRef = useRef(hiddenSet);
+  hiddenSetRef.current = hiddenSet;
 
-  const firstVisibleIdx = videosInfo.findIndex(
-    (video) => !hiddenSet.has(video.filename),
+  const ordinaryPrimary = videosInfo.findIndex(
+    (video) => !video.timeMapping && !hiddenSet.has(video.filename),
   );
+  const firstVisibleIdx =
+    ordinaryPrimary >= 0
+      ? ordinaryPrimary
+      : videosInfo.findIndex((video) => !hiddenSet.has(video.filename));
   const visibleVideos = videosInfo.filter(
     (video) => !hiddenSet.has(video.filename),
   );
@@ -92,6 +203,8 @@ export const SimpleVideosPlayer = ({
   // context's version moves past this, an external seek happened and we
   // need to drive every video to the new position.
   const lastSeekVersionRef = useRef(externalSeekVersion);
+  const externalSeekVersionRef = useRef(externalSeekVersion);
+  externalSeekVersionRef.current = externalSeekVersion;
 
   // Mirror firstVisibleIdx into a ref so the videos-ready effect doesn't have
   // to depend on it. If it did, hiding the first camera would tear the whole
@@ -129,6 +242,8 @@ export const SimpleVideosPlayer = ({
     let disposed = false;
     setVideosReady(false);
     setLoadingSlow(false);
+    stoppedAtEndRef.current = null;
+    videoRefs.current.forEach((video) => video?.pause());
 
     const markReady = () => {
       if (resolved || disposed) return;
@@ -143,9 +258,15 @@ export const SimpleVideosPlayer = ({
     };
 
     const checkReady = (index: number) => {
-      if (disposed) return;
+      if (disposed || videosInfoRef.current !== videosInfo) return;
       readyVideos.add(index);
-      if (readyVideos.size >= videosInfo.length) markReady();
+      if (
+        videosInfo.every(
+          (info, i) =>
+            hiddenSetRef.current.has(info.filename) || readyVideos.has(i),
+        )
+      )
+        markReady();
     };
 
     const timeout = setTimeout(() => {
@@ -159,16 +280,13 @@ export const SimpleVideosPlayer = ({
       // Explicit review loops and trimmed previews may redirect this report.
       // Let their requested seek take precedence over the default end stop.
       if (Math.abs(seek(globalTime, "video") - globalTime) > 0.001) return;
+      stoppedAtEndRef.current = globalTime;
       videoRefs.current.forEach((other, otherIdx) => {
         if (!other) return;
         const otherInfo = videosInfo[otherIdx];
         if (!otherInfo) return;
         other.pause();
-        const start = otherInfo.isSegmented ? (otherInfo.segmentStart ?? 0) : 0;
-        const end = otherInfo.isSegmented
-          ? (otherInfo.segmentEnd ?? other.duration) - 0.001
-          : other.duration;
-        const target = Math.max(start, Math.min(start + globalTime, end));
+        const target = targetVideoTime(otherInfo, other, globalTime);
         if (
           Number.isFinite(target) &&
           Math.abs(other.currentTime - target) > 0.001
@@ -184,31 +302,49 @@ export const SimpleVideosPlayer = ({
       const info = videosInfo[index];
       const checkVideoReady = () => checkReady(index);
       let initialSeekStarted = false;
+      let initialTarget = targetVideoTime(info, video, currentTimeRef.current);
       const handleSeeked = () => {
+        if (disposed || videosInfoRef.current !== videosInfo) return;
         if (
           initialSeekStarted &&
           !video.seeking &&
           video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
-          Math.abs(video.currentTime - (info.segmentStart ?? 0)) < 0.001
+          Math.abs(video.currentTime - initialTarget) < 0.001
         ) {
           checkVideoReady();
         }
       };
 
       // The primary camera reports time and stops playback at the episode end.
-      const handleTimeUpdate = () => {
-        if (info.isSegmented) {
-          const segmentEnd = info.segmentEnd ?? video.duration;
-          const segmentStart = info.segmentStart ?? 0;
-          if (
-            video.currentTime >=
-            segmentEnd - THRESHOLDS.VIDEO_SEGMENT_BOUNDARY
-          ) {
+      const reportTime = (mediaTime: number) => {
+        // React updates refs before passive listener cleanup. A reused element
+        // can emit a seek event in that gap; the old episode must not clamp it
+        // back into its previous segment using the new episode's end frame.
+        if (disposed || videosInfoRef.current !== videosInfo) return;
+        if (
+          video.seeking ||
+          (index === firstVisibleIdxRef.current &&
+            (!resolved ||
+              externalSeekVersionRef.current !== lastSeekVersionRef.current))
+        )
+          return;
+        const lastTime = targetVideoTime(
+          info,
+          video,
+          lastEpisodeTime(info, video),
+        );
+        if (stoppedAtEndRef.current !== null) {
+          video.pause();
+          return;
+        }
+        if (Number.isFinite(lastTime)) {
+          // Adding a segment offset can put the boundary a few ulps beyond
+          // the decoded timestamp; still stop on that same final frame.
+          if (mediaTime >= lastTime - 0.000001) {
             if (index === firstVisibleIdxRef.current) {
-              stopAllVideos(Math.max(0, segmentEnd - segmentStart - 0.001));
+              stopAllVideos(lastEpisodeTime(info, video));
             } else {
               video.pause();
-              const lastTime = Math.max(segmentStart, segmentEnd - 0.001);
               if (Math.abs(video.currentTime - lastTime) > 0.001) {
                 video.currentTime = lastTime;
               }
@@ -217,38 +353,38 @@ export const SimpleVideosPlayer = ({
           }
         }
         if (index === firstVisibleIdxRef.current) {
-          let globalTime = video.currentTime;
-          if (info.isSegmented) {
-            globalTime = video.currentTime - (info.segmentStart ?? 0);
+          const globalTime = Math.max(0, videoToEpisodeTime(info, mediaTime));
+          if (Math.abs(seek(globalTime, "video") - globalTime) < 0.001) {
+            synchronizeRef.current(globalTime, !playbackRef.current.isPlaying);
           }
-          seek(globalTime, "video");
         }
       };
+      const handleTimeUpdate = () => reportTime(video.currentTime);
 
-      // For segmented videos, snap into the segment when play() is called
-      // — covers the case where the user paused outside the segment range.
+      // Keep out-of-range playback inside this episode, including at its end.
       const handlePlay = info.isSegmented
         ? () => {
+            if (disposed || videosInfoRef.current !== videosInfo) return;
             const segmentStart = info.segmentStart ?? 0;
             const segmentEnd = info.segmentEnd ?? video.duration;
-            if (
-              video.currentTime < segmentStart ||
-              video.currentTime >= segmentEnd
-            ) {
+            if (video.currentTime < segmentStart) {
               video.currentTime = segmentStart;
+            } else if (video.currentTime >= segmentEnd) {
+              stopAllVideos(lastEpisodeTime(info, video));
             }
           }
         : null;
 
       const handleLoadedData = info.isSegmented
         ? () => {
-            if (disposed) return;
+            if (disposed || videosInfoRef.current !== videosInfo) return;
             if (initialSeekStarted) {
               handleSeeked();
               return;
             }
             initialSeekStarted = true;
-            const target = info.segmentStart ?? 0;
+            const target = targetVideoTime(info, video, currentTimeRef.current);
+            initialTarget = target;
             // An already-positioned video may never emit another seeked.
             if (Math.abs(video.currentTime - target) < 0.001) {
               handleSeeked();
@@ -258,26 +394,28 @@ export const SimpleVideosPlayer = ({
           }
         : null;
 
-      const handleEnded = info.isSegmented
-        ? null
-        : () => {
-            if (index === firstVisibleIdxRef.current) {
-              stopAllVideos(video.currentTime);
-            } else {
-              video.pause();
-            }
-          };
+      const handleEnded = () => {
+        if (disposed || videosInfoRef.current !== videosInfo) return;
+        if (index === firstVisibleIdxRef.current) {
+          stopAllVideos(lastEpisodeTime(info, video));
+        } else {
+          video.pause();
+        }
+      };
 
       video.addEventListener("timeupdate", handleTimeUpdate);
       let frameCallback: number | undefined;
-      const reportFrame = () => {
-        if (!video.paused && !video.seeking) handleTimeUpdate();
+      const reportFrame = (
+        _now: number,
+        metadata: VideoFrameCallbackMetadata,
+      ) => {
+        if (!video.paused && !video.seeking) reportTime(metadata.mediaTime);
         frameCallback = video.requestVideoFrameCallback(reportFrame);
       };
-      if (compact && video.requestVideoFrameCallback)
+      if (video.requestVideoFrameCallback)
         frameCallback = video.requestVideoFrameCallback(reportFrame);
       if (handlePlay) video.addEventListener("play", handlePlay);
-      if (handleEnded) video.addEventListener("ended", handleEnded);
+      video.addEventListener("ended", handleEnded);
 
       // Cached videos may not emit another load event. Check their state too.
       // If seeking finishes before a decoded frame arrives, canplay/loadeddata
@@ -286,7 +424,8 @@ export const SimpleVideosPlayer = ({
         video.addEventListener("seeked", handleSeeked);
         video.addEventListener("canplay", handleSeeked);
         video.addEventListener("loadeddata", handleLoadedData);
-        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        video.addEventListener("loadedmetadata", handleLoadedData);
+        if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
           queueMicrotask(handleLoadedData);
         }
       } else if (!info.isSegmented) {
@@ -306,7 +445,9 @@ export const SimpleVideosPlayer = ({
         if (handlePlay) video.removeEventListener("play", handlePlay);
         if (handleLoadedData)
           video.removeEventListener("loadeddata", handleLoadedData);
-        if (handleEnded) video.removeEventListener("ended", handleEnded);
+        if (handleLoadedData)
+          video.removeEventListener("loadedmetadata", handleLoadedData);
+        video.removeEventListener("ended", handleEnded);
         video.removeEventListener("seeked", handleSeeked);
         video.removeEventListener("canplay", handleSeeked);
         video.removeEventListener("canplaythrough", checkVideoReady);
@@ -330,25 +471,14 @@ export const SimpleVideosPlayer = ({
     // firstVisibleIdxRef above).
     // onVideosReady intentionally omitted — read via onVideosReadyRef so
     // an inline parent prop doesn't tear this effect down on every render.
-  }, [videosInfo, setIsPlaying, seek, compact]);
-
-  // Handle play/pause — skip hidden videos
-  useEffect(() => {
-    if (!videosReady) return;
-
-    videoRefs.current.forEach((video, idx) => {
-      if (!video || hiddenSet.has(videosInfo[idx].filename)) return;
-      if (isPlaying) {
-        video.play().catch((e) => {
-          if (e.name !== "AbortError") {
-            console.error("Error playing video");
-          }
-        });
-      } else {
-        video.pause();
-      }
-    });
-  }, [isPlaying, videosReady, hiddenSet, videosInfo]);
+  }, [
+    videosInfo,
+    setIsPlaying,
+    seek,
+    compact,
+    lastEpisodeTime,
+    targetVideoTime,
+  ]);
 
   // Drive every video to currentTime on external seeks (slider drag, chart
   // click, loop reset). The version-based check replaces a 0.3s heuristic
@@ -359,22 +489,71 @@ export const SimpleVideosPlayer = ({
     if (!videosReady) return;
     if (externalSeekVersion === lastSeekVersionRef.current) return;
     lastSeekVersionRef.current = externalSeekVersion;
+    stoppedAtEndRef.current = null;
 
     videoRefs.current.forEach((video, index) => {
       if (!video) return;
       if (hiddenSet.has(videosInfo[index].filename)) return;
 
       const info = videosInfo[index];
-      let targetTime = currentTime;
-      if (info.isSegmented) {
-        targetTime = (info.segmentStart ?? 0) + currentTime;
-      }
+      const targetTime = targetVideoTime(info, video, currentTime);
 
       if (Math.abs(video.currentTime - targetTime) > 0.001) {
         video.currentTime = targetTime;
       }
     });
-  }, [externalSeekVersion, currentTime, videosInfo, videosReady, hiddenSet]);
+    synchronizeRef.current(currentTime, true);
+  }, [
+    externalSeekVersion,
+    currentTime,
+    videosInfo,
+    videosReady,
+    hiddenSet,
+    targetVideoTime,
+  ]);
+
+  // Handle play/pause — skip hidden videos
+  useEffect(() => {
+    if (!videosReady) return;
+
+    const primaryIndex = firstVisibleIdxRef.current;
+    const primary = videoRefs.current[primaryIndex];
+    const primaryInfo = videosInfo[primaryIndex];
+    if (isPlaying && primary && primaryInfo) {
+      const end = lastEpisodeTime(primaryInfo, primary);
+      // HTMLMediaElement.play() restarts an ended video automatically.
+      // Only a deliberate seek back into the episode should allow playback.
+      if (Number.isFinite(end) && currentTimeRef.current >= end) {
+        setIsPlaying(false);
+        return;
+      }
+    }
+
+    videoRefs.current.forEach((video, idx) => {
+      if (!video) return;
+      if (hiddenSet.has(videosInfo[idx].filename)) {
+        video.pause();
+        return;
+      }
+      if (isPlaying) {
+        video.play().catch((e) => {
+          if (e.name !== "AbortError") {
+            console.error("Error playing video");
+          }
+        });
+      } else {
+        video.pause();
+      }
+    });
+    synchronizeRef.current(currentTimeRef.current, !isPlaying);
+  }, [
+    isPlaying,
+    videosReady,
+    hiddenSet,
+    videosInfo,
+    setIsPlaying,
+    lastEpisodeTime,
+  ]);
 
   return (
     <>
@@ -434,13 +613,12 @@ export const SimpleVideosPlayer = ({
         }
       >
         {videosInfo.map((info, idx) => {
-          if (hiddenVideos.includes(info.filename)) return null;
-
           const isEnlarged = enlargedVideo === info.filename;
 
           return (
             <div
               key={info.filename}
+              hidden={hiddenSet.has(info.filename)}
               className={`${
                 isEnlarged
                   ? "z-40 fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center"
@@ -499,6 +677,7 @@ export const SimpleVideosPlayer = ({
               </p>
               <div className="relative w-full">
                 <video
+                  key={info.url}
                   ref={videoRefCallbacksRef.current[idx]}
                   onLoadedMetadata={(event) => {
                     const video = event.currentTarget;

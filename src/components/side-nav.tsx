@@ -65,6 +65,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           </dt>
           <dd className="text-slate-200">{datasetInfo.fps}</dd>
         </dl>
+        <p className="mt-3 text-[10px] text-slate-500">
+          ↑ / PageUp 上一个 · ↓ / PageDown 下一个 episode
+        </p>
 
         <div className="mt-5 flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-wide text-slate-500">

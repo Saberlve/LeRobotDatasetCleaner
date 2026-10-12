@@ -60,6 +60,8 @@ export function InitialIdleControls({
   manualControls,
   edge = "start",
   videos = [],
+  frameTimestamps,
+  fps,
   batchReview,
   onProfileChange,
 }: {
@@ -70,6 +72,8 @@ export function InitialIdleControls({
   manualControls?: React.ReactNode;
   edge?: "start" | "end";
   videos?: VideoInfo[];
+  frameTimestamps?: number[];
+  fps?: number;
   batchReview?: BatchEntry;
   onProfileChange?: (edge: IdleEdge, profile: InitialIdleProfile) => void;
 }) {
@@ -429,6 +433,8 @@ export function InitialIdleControls({
         edge={edge}
         media={media}
         frames={frames}
+        frameTimestamps={frameTimestamps}
+        fps={fps}
         profile={profile}
         candidate={candidate ?? null}
         endFrame={endFrame}
@@ -1093,7 +1099,7 @@ export function IdleBoundaryControls(
   props: Omit<
     React.ComponentProps<typeof InitialIdleControls>,
     "edge" | "batchReview" | "onProfileChange"
-  > & { episodes?: number[] },
+  > & { episodes?: number[]; onEpisodeSelect?: (episodeId: number) => void },
 ) {
   const router = useRouter();
   const [initialSelection] = useState(() => {
@@ -1141,9 +1147,10 @@ export function IdleBoundaryControls(
     } catch {
       /* Current episode still works. */
     }
-    if (entry.episodeId !== props.episodeId)
-      router.push(`/${props.repoId}/episode_${entry.episodeId}`);
-    else {
+    if (entry.episodeId !== props.episodeId) {
+      if (props.onEpisodeSelect) props.onEpisodeSelect(entry.episodeId);
+      else router.push(`/${props.repoId}/episode_${entry.episodeId}`);
+    } else {
       setEdge(entry.edge);
       setBatchReview(entry);
     }

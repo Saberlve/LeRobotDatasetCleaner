@@ -3,9 +3,12 @@ import {
   cachedAsyncBuffer,
   parquetRead,
   parquetReadObjects,
+  parquetMetadataAsync,
+  parquetSchema,
   type AsyncBuffer,
 } from "hyparquet";
 import { authHeaders } from "./auth";
+import { createAsyncCache } from "@/lib/async-cache";
 
 export interface DatasetMetadata {
   codebase_version: string;
@@ -54,19 +57,42 @@ export function formatStringWithVars(
 // Fetch and parse the Parquet file
 type ParquetFile = ArrayBuffer | AsyncBuffer;
 
-const parquetFileCache = new Map<string, AsyncBuffer>();
+const cachedParquetFile = createAsyncCache<AsyncBuffer>(64, 5 * 60_000);
+const metadataCache = new WeakMap<
+  ParquetFile,
+  ReturnType<typeof parquetMetadataAsync>
+>();
+
+function getParquetMetadata(file: ParquetFile) {
+  let metadata = metadataCache.get(file);
+  if (!metadata) {
+    metadata = parquetMetadataAsync(file);
+    metadataCache.set(file, metadata);
+    void metadata.catch(() => metadataCache.delete(file));
+  }
+  return metadata;
+}
+
+export async function getParquetColumnNames(
+  file: ParquetFile,
+): Promise<string[]> {
+  return parquetSchema(await getParquetMetadata(file)).children.map(
+    (c) => c.element.name!,
+  );
+}
 
 export async function fetchParquetFile(url: string): Promise<ParquetFile> {
-  const cached = parquetFileCache.get(url);
-  if (cached) return cached;
-
-  const file = await asyncBufferFromUrl({
-    url,
-    requestInit: { cache: "no-store", headers: authHeaders() },
+  return cachedParquetFile(url, async () => {
+    const file = await asyncBufferFromUrl({
+      url,
+      requestInit: { cache: "no-store", headers: authHeaders() },
+    });
+    // Metadata often sits just above hyparquet's 512 KiB threshold. Fetching
+    // these small files once avoids hundreds of tiny per-column range calls.
+    const wrapped = cachedAsyncBuffer(file, { minSize: 1024 * 1024 });
+    await getParquetMetadata(wrapped);
+    return wrapped;
   });
-  const wrapped = cachedAsyncBuffer(file);
-  parquetFileCache.set(url, wrapped);
-  return wrapped;
 }
 
 // Read specific columns from the Parquet file
@@ -75,17 +101,19 @@ export async function readParquetColumn(
   columns: string[],
   options?: { rowStart?: number; rowEnd?: number },
 ): Promise<unknown[][]> {
+  const metadata = await getParquetMetadata(fileBuffer);
   return new Promise((resolve, reject) => {
     try {
-      parquetRead({
+      void parquetRead({
         file: fileBuffer,
+        metadata,
         columns: columns.length > 0 ? columns : undefined,
         rowStart: options?.rowStart,
         rowEnd: options?.rowEnd,
         onComplete: (data: unknown[][]) => {
           resolve(data);
         },
-      });
+      }).catch(reject);
     } catch (error) {
       reject(error);
     }
@@ -99,6 +127,7 @@ export async function readParquetAsObjects(
 ): Promise<Record<string, unknown>[]> {
   return parquetReadObjects({
     file: fileBuffer,
+    metadata: await getParquetMetadata(fileBuffer),
     columns: columns.length > 0 ? columns : undefined,
     rowStart: options?.rowStart,
     rowEnd: options?.rowEnd,

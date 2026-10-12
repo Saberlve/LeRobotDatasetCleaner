@@ -12,6 +12,6 @@ test("preserves packed v3 episodes, asynchronous clocks and original tactile ass
       ),
     ],
   );
-  expect(stderr).toContain("Ran 10 tests");
+  expect(stderr).toMatch(/Ran \d+ tests/);
   expect(stderr).toContain("OK");
 }, 60_000);

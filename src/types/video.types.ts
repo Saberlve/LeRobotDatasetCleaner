@@ -10,6 +10,12 @@ export interface VideoInfo {
   segmentStart?: number;
   segmentEnd?: number;
   segmentDuration?: number;
+  // Native streams use a packed presentation clock. These ordered pairs map
+  // the recorded capture clock onto the episode timeline (absolute MP4 times).
+  timeMapping?: {
+    episodeTimestamps: number[];
+    videoTimestamps: number[];
+  };
   // Single-channel feed (info.json feature shape [h, w, 1]) — rendered with
   // the viridis colormap instead of raw grayscale.
   isGrayscale?: boolean;

@@ -691,12 +691,14 @@ function PlaybackDriver({
   totalFrames,
   frameRef,
   setFrame,
+  setPlaying,
 }: {
   playing: boolean;
   fps: number;
   totalFrames: number;
   frameRef: React.MutableRefObject<number>;
   setFrame: React.Dispatch<React.SetStateAction<number>>;
+  setPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const elapsed = useRef(0);
   const last = useRef(0);
@@ -713,8 +715,15 @@ function PlaybackDriver({
         const fd = Math.floor(elapsed.current * fps);
         if (fd > 0) {
           elapsed.current -= fd / fps;
-          frameRef.current = (frameRef.current + fd) % totalFrames;
+          frameRef.current = Math.min(
+            frameRef.current + fd,
+            Math.max(0, totalFrames - 1),
+          );
           setFrame(frameRef.current);
+          if (frameRef.current >= totalFrames - 1) {
+            cancelAnimationFrame(raf);
+            setPlaying(false);
+          }
         }
       }
     };
@@ -722,7 +731,7 @@ function PlaybackDriver({
     elapsed.current = 0;
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, fps, totalFrames, frameRef, setFrame]);
+  }, [playing, fps, totalFrames, frameRef, setFrame, setPlaying]);
   return null;
 }
 
@@ -884,10 +893,14 @@ export default function URDFViewer({
   const handlePlayPause = useCallback(() => {
     if (urdfLoading) return;
     setPlaying((prev) => {
-      if (!prev) frameRef.current = frame;
+      if (!prev) {
+        const next = frame >= totalFrames - 1 ? 0 : frame;
+        frameRef.current = next;
+        setFrame(next);
+      }
       return !prev;
     });
-  }, [frame, urdfLoading]);
+  }, [frame, totalFrames, urdfLoading]);
 
   useEffect(() => {
     if (playToggleRef) playToggleRef.current = handlePlayPause;
@@ -1091,6 +1104,7 @@ export default function URDFViewer({
             totalFrames={totalFrames}
             frameRef={frameRef}
             setFrame={setFrame}
+            setPlaying={setPlaying}
           />
         </Canvas>
       </div>

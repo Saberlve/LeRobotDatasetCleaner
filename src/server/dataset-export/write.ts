@@ -107,7 +107,7 @@ async function rewriteParquetEpisodeData(input: {
   ];
   if (input.removedFrameIntervals)
     args.push(JSON.stringify(input.removedFrameIntervals), String(input.fps));
-  await execFileAsync("python3", args);
+  await execFileAsync(process.env.LEROBOT_EXPORT_PYTHON || "python3", args);
 }
 
 async function probeVideoFrames(sourcePath: string): Promise<number> {

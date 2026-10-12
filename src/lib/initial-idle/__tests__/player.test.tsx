@@ -20,9 +20,11 @@ const viewed = vi.fn();
 function Review({
   unloaded = false,
   edge = "start",
+  savedCuts = cuts,
 }: {
   unloaded?: boolean;
   edge?: "start" | "end";
+  savedCuts?: typeof cuts;
 }) {
   const ref = useRef<IdlePlayerHandle>(null);
   const time = useTime();
@@ -39,7 +41,7 @@ function Review({
         onBoundary={() => {}}
         selected={0}
         onSelected={() => {}}
-        cuts={cuts}
+        cuts={savedCuts}
         onBoundaryViewed={viewed}
       />
       <button onClick={() => ref.current?.preview(1, 2, "裁剪交界")}>
@@ -92,8 +94,21 @@ test("trimmed preview redirects video reports and stepping across cuts without r
   expect(screen.getByTestId("clock").textContent).toBe("3.4:false");
   fireEvent.click(screen.getByText("report-tail"));
   expect(screen.getByTestId("clock").textContent).toBe("4.9:false");
-  fireEvent.click(screen.getByRole("button", { name: "开始复核播放" }));
+  fireEvent.keyDown(window, { key: " " });
   expect(screen.getByTestId("clock").textContent).toBe("1.7:true");
+});
+
+test("original playback holds the final frame until Space explicitly restarts it", () => {
+  mount();
+  const slider = screen.getByLabelText("复核播放位置");
+  fireEvent.change(slider, { target: { value: "5.9" } });
+  expect(screen.getByTestId("clock").textContent).toBe("5.9:false");
+  fireEvent.keyDown(window, { key: " " });
+  expect(screen.getByTestId("clock").textContent).toBe("0:true");
+  fireEvent.keyDown(window, { key: " ", repeat: true });
+  expect(screen.getByTestId("clock").textContent).toBe("0:true");
+  fireEvent.keyDown(window, { key: " " });
+  expect(screen.getByTestId("clock").textContent).toBe("0:false");
 });
 
 test("leading zoom changes slider range before detection and seeks outside playhead into view", () => {
@@ -148,4 +163,43 @@ test("short episodes disable a zoom that would not change the range", () => {
     (screen.getByText("当前区间已覆盖整个 episode") as HTMLButtonElement)
       .disabled,
   ).toBe(true);
+});
+
+test.each(["start", "end"] as const)(
+  "%s review defaults to the full episode without saved cuts",
+  (edge) => {
+    render(
+      <TimeProvider duration={30}>
+        <Review unloaded edge={edge} savedCuts={[]} />
+      </TimeProvider>,
+    );
+    const slider = screen.getByLabelText("复核播放位置") as HTMLInputElement;
+    expect(slider.min).toBe("0");
+    expect(slider.max).toBe("30");
+    expect(screen.getByText(/时间轴范围/).textContent).toContain(
+      "（完整 episode）",
+    );
+    fireEvent.click(
+      screen.getByText(edge === "start" ? "放大开头区间" : "放大结尾区间"),
+    );
+    expect(slider.max).toBe(edge === "start" ? "5" : "30");
+    expect(slider.min).toBe(edge === "start" ? "0" : "25");
+  },
+);
+
+test("arrow shortcuts pause preview and repeatedly step across trimmed intervals", () => {
+  mount();
+  fireEvent.click(screen.getByText("裁剪后预览"));
+  fireEvent.keyDown(window, { key: "ArrowLeft" });
+  expect(screen.getByTestId("clock").textContent).toBe("1.7:false");
+  fireEvent.keyDown(window, { key: "ArrowRight" });
+  expect(screen.getByTestId("clock").textContent).toBe("1.8:false");
+  fireEvent.click(screen.getByText("report-cut"));
+  fireEvent.keyDown(window, { key: "ArrowLeft", repeat: true });
+  expect(screen.getByTestId("clock").textContent).toBe("2.9:false");
+  fireEvent.keyDown(window, { key: "ArrowRight", repeat: true });
+  expect(screen.getByTestId("clock").textContent).toBe("3.4:false");
+  fireEvent.click(screen.getByText("preview"));
+  fireEvent.keyDown(window, { key: "ArrowRight" });
+  expect(screen.getByTestId("clock").textContent).toBe("1.1:false");
 });

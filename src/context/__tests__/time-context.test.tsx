@@ -81,3 +81,55 @@ test("speed survives navigation when browser storage is unavailable", () => {
   rerender(<Episode key="second" />);
   expect((screen.getByLabelText("rate") as HTMLInputElement).value).toBe("2");
 });
+
+function Timeline({ initialSeek = false }: { initialSeek?: boolean }) {
+  const { currentTime, duration, isPlaying, seek, setIsPlaying } = useTime();
+  const initialized = React.useRef(false);
+  React.useEffect(() => {
+    if (initialSeek && !initialized.current) {
+      initialized.current = true;
+      seek(9);
+    }
+  }, [initialSeek, seek]);
+  return (
+    <>
+      <button
+        onClick={() => {
+          seek(8);
+          setIsPlaying(true);
+        }}
+      >
+        jump
+      </button>
+      <div data-testid="timeline">
+        {currentTime}:{duration}:{String(isPlaying)}
+      </div>
+    </>
+  );
+}
+
+test("changing episode resets time and playback without remounting its children", () => {
+  const ui = (episodeKey: string) => (
+    <TimeProvider duration={10} episodeKey={episodeKey}>
+      <Timeline />
+    </TimeProvider>
+  );
+  const result = render(ui("first"));
+  const button = screen.getByText("jump");
+  fireEvent.click(button);
+  expect(screen.getByTestId("timeline").textContent).toBe("8:10:true");
+  result.rerender(ui("second"));
+  expect(screen.getByText("jump")).toBe(button);
+  expect(screen.getByTestId("timeline").textContent).toBe("0:10:false");
+});
+
+test("StrictMode does not erase an initial deep-link seek", () => {
+  render(
+    <React.StrictMode>
+      <TimeProvider duration={10} episodeKey="first">
+        <Timeline initialSeek />
+      </TimeProvider>
+    </React.StrictMode>,
+  );
+  expect(screen.getByTestId("timeline").textContent).toBe("9:10:false");
+});

@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import { useTime } from "@/context/time-context";
+import { useFrameShortcuts, useFrameStep } from "@/lib/playback-shortcuts";
 import {
   channelActivity,
   nearestFrame,
@@ -29,6 +30,8 @@ type Props = {
   media?: React.ReactNode;
   edge?: "start" | "end";
   frames: SignalFrame[];
+  frameTimestamps?: number[];
+  fps?: number;
   profile: InitialIdleProfile | null;
   candidate: InitialIdleResult["candidate"];
   endFrame: number;
@@ -48,6 +51,8 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
       media,
       edge = "start",
       frames,
+      frameTimestamps,
+      fps,
       profile,
       candidate,
       endFrame,
@@ -72,7 +77,7 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
     } = useTime();
     const [mode, setMode] = useState<"original" | "trimmed">("original");
     const [loop, setLoop] = useState(false);
-    const [zoom, setZoom] = useState(true);
+    const [zoom, setZoom] = useState(false);
     const [label, setLabel] = useState("原始播放");
     const segment = useRef<{
       start: number;
@@ -80,8 +85,22 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
       boundary: boolean;
     } | null>(null);
     const tail = edge === "end";
-    const lastFrame = frames.at(-1)?.timestamp ?? duration;
-    const frameIndex = nearestFrame(frames, currentTime);
+    const lastFrame =
+      frames.at(-1)?.timestamp ?? frameTimestamps?.at(-1) ?? duration;
+    const timestamps = useMemo(
+      () =>
+        frames.length
+          ? frames.map((frame) => frame.timestamp)
+          : frameTimestamps,
+      [frames, frameTimestamps],
+    );
+    const { frameIndex, frameCount, step } = useFrameStep({
+      timestamps,
+      fps,
+      cuts: mode === "trimmed" ? cuts : [],
+      beforeStep: stop,
+    });
+    useFrameShortcuts(step, play);
     const valid =
       !!candidate &&
       Number.isInteger(endFrame) &&
@@ -283,19 +302,6 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
       if (next !== currentTime) seek(next);
       setIsPlaying(true);
     }
-    function step(direction: number) {
-      stop();
-      let i = Math.max(0, Math.min(frames.length - 1, frameIndex + direction));
-      while (
-        mode === "trimmed" &&
-        i >= 0 &&
-        i < frames.length &&
-        cuts.some((c) => i >= c.start && i <= c.end)
-      )
-        i += direction;
-      if (i >= 0 && i < frames.length) seek(frames[i].timestamp);
-    }
-
     return (
       <div className="idle-review-media">
         <div className="idle-review-cameras">{media}</div>
@@ -310,14 +316,18 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
             </button>
             <button
               className={btn}
-              disabled={!frames.length || frameIndex === 0}
+              title="前一帧（←，长按连续后退）"
+              aria-keyshortcuts="ArrowLeft"
+              disabled={frameIndex === 0}
               onClick={() => step(-1)}
             >
               前一帧
             </button>
             <button
               className={btn}
-              disabled={!frames.length || frameIndex === frames.length - 1}
+              title="后一帧（→，长按连续前进）"
+              aria-keyshortcuts="ArrowRight"
+              disabled={frameIndex === frameCount - 1}
               onClick={() => step(1)}
             >
               后一帧
@@ -348,6 +358,10 @@ export const IdleReviewPlayer = forwardRef<IdlePlayerHandle, Props>(
               {currentTime.toFixed(2)} 秒 · 原始第 {frameIndex} 帧
             </span>
           </div>
+          <p className="text-xs text-slate-400">
+            ← / → 逐帧（长按连续） · ↑ / ↓ 或 PageUp / PageDown 切换 episode ·
+            空格播放/暂停
+          </p>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <button
               className={btn}

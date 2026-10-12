@@ -5,6 +5,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useLayoutEffect,
 } from "react";
 import { usePlaybackRate } from "@/lib/playback-rate";
 
@@ -20,6 +21,8 @@ type TimeUpdateSource = "external" | "video";
 
 type TimeContextType = {
   currentTime: number;
+  // Read the authoritative clock even before a throttled render or subscription.
+  getCurrentTime: () => number;
   // Returns the resulting time, including any synchronous review redirect.
   seek: (t: number, source?: TimeUpdateSource) => number;
   // Monotonically increasing counter that bumps on every `external` seek.
@@ -49,7 +52,8 @@ const TIME_RENDER_THROTTLE_MS = 80;
 export const TimeProvider: React.FC<{
   children: React.ReactNode;
   duration: number;
-}> = ({ children, duration: initialDuration }) => {
+  episodeKey?: string;
+}> = ({ children, duration: initialDuration, episodeKey }) => {
   const [currentTime, setCurrentTimeState] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration);
@@ -62,6 +66,8 @@ export const TimeProvider: React.FC<{
   const timeRef = useRef(0);
   const rafId = useRef<number | null>(null);
   const lastRenderTime = useRef(0);
+  const appliedEpisode = useRef({ episodeKey, duration: initialDuration });
+  const getCurrentTime = useCallback(() => timeRef.current, []);
 
   const updateTime = useCallback(
     (t: number, source: TimeUpdateSource = "external") => {
@@ -115,10 +121,25 @@ export const TimeProvider: React.FC<{
     return () => listeners.current.delete(cb);
   }, []);
 
+  useLayoutEffect(() => {
+    if (
+      appliedEpisode.current.episodeKey === episodeKey &&
+      appliedEpisode.current.duration === initialDuration
+    )
+      return;
+    appliedEpisode.current = { episodeKey, duration: initialDuration };
+    if (rafId.current !== null) cancelAnimationFrame(rafId.current);
+    rafId.current = null;
+    setIsPlaying(false);
+    setDuration(initialDuration);
+    updateTime(0);
+  }, [episodeKey, initialDuration, updateTime]);
+
   return (
     <TimeContext.Provider
       value={{
         currentTime,
+        getCurrentTime,
         seek: updateTime,
         externalSeekVersion,
         subscribe,

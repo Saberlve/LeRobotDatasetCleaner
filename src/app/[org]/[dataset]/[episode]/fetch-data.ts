@@ -3,6 +3,7 @@ import {
   fetchParquetFile,
   formatStringWithVars,
   readParquetAsObjects,
+  getParquetColumnNames,
 } from "@/utils/parquetUtils";
 import { pick } from "@/utils/pick";
 import {
@@ -27,6 +28,12 @@ import {
   depthEncodingFromFeature,
 } from "@/utils/colormaps";
 import type { VideoInfo, AdjacentEpisodeVideos } from "@/types";
+import { captureTimeMapping } from "@/lib/video-time";
+import { createAsyncCache } from "@/lib/async-cache";
+
+const cachedEpisodeData = createAsyncCache<EpisodeData>(8);
+const cachedMetadataRows = createAsyncCache<Record<string, unknown>[]>(32);
+const cachedProgressRows = createAsyncCache<Record<string, unknown>[]>(16);
 
 const SERIES_NAME_DELIMITER = CHART_CONFIG.SERIES_NAME_DELIMITER;
 
@@ -253,8 +260,14 @@ async function loadEpisodeProgressGroup(
   for (const progressPath of PROGRESS_PARQUET_CANDIDATES) {
     const progressUrl = buildVersionedUrl(repoId, version, progressPath);
     try {
-      const progressBuffer = await fetchParquetFile(progressUrl);
-      const progressRows = await readParquetAsObjects(progressBuffer, []);
+      const progressRows = await cachedProgressRows(progressUrl, async () => {
+        try {
+          const progressBuffer = await fetchParquetFile(progressUrl);
+          return await readParquetAsObjects(progressBuffer, []);
+        } catch {
+          return [];
+        }
+      });
       if (progressRows.length === 0) continue;
 
       const hasEpisodeIndex = progressRows.some(
@@ -318,6 +331,16 @@ function buildSampledEpisodeSet(
 }
 
 export async function getEpisodeData(
+  org: string,
+  dataset: string,
+  episodeId: number,
+): Promise<EpisodeData> {
+  return cachedEpisodeData(`${org}/${dataset}:${episodeId}`, () =>
+    loadEpisodeData(org, dataset, episodeId),
+  );
+}
+
+async function loadEpisodeData(
   org: string,
   dataset: string,
   episodeId: number,
@@ -403,7 +426,7 @@ export async function getEpisodeData(
   }
 }
 
-/** Resolve one episode's camera segments without loading chart data. */
+/** Native analysis uses the same capture mapping as the visible player. */
 export async function getEpisodeVideosInfo(
   repoId: string,
   episodeId: number,
@@ -416,6 +439,21 @@ export async function getEpisodeVideosInfo(
     episodeId >= info.total_episodes
   )
     throw new Error("Invalid episode id");
+  if (
+    version === "v3.0" &&
+    Object.keys(info.features).some((key) =>
+      /\.(tactile_range|mesh3dflow_range)$/.test(key),
+    )
+  ) {
+    const slash = repoId.indexOf("/");
+    return (
+      await getEpisodeData(
+        repoId.slice(0, slash),
+        repoId.slice(slash + 1),
+        episodeId,
+      )
+    ).videosInfo;
+  }
   let videosInfo: VideoInfo[] = [];
 
   if (version === "v3.0") {
@@ -792,6 +830,41 @@ async function getEpisodeDataV3(
     episodeMetadata,
   );
 
+  // Start all timing reads alongside the chart read. These sidecars contain
+  // small scalar columns; image/mesh payloads are never downloaded here.
+  const nativeVideos = videosInfo.filter((v) => {
+    const camera = v.filename.replace(/^observation\.images\./, "");
+    return (
+      `observation.${camera}.tactile_range` in info.features ||
+      `observation.${camera}.mesh3dflow_range` in info.features
+    );
+  });
+  const base = `episode_${episodeId.toString().padStart(6, "0")}`;
+  const timingReads = nativeVideos.length
+    ? Promise.allSettled([
+        fetchParquetFile(
+          buildVersionedUrl(repoId, version, `timestamps/${base}.parquet`),
+        ).then((file) =>
+          readParquetAsObjects(file, ["frame_index", "action_send_start_ns"]),
+        ),
+        ...nativeVideos.map((v) => {
+          const camera = v.filename.replace(/^observation\.images\./, "");
+          return fetchParquetFile(
+            buildVersionedUrl(
+              repoId,
+              version,
+              `tactile_streams/${camera}/${base}/samples.parquet`,
+            ),
+          ).then((file) =>
+            readParquetAsObjects(file, [
+              "capture_monotonic_ns",
+              "video_timestamp_s",
+            ]),
+          );
+        }),
+      ])
+    : Promise.resolve([]);
+
   // Load episode data for charts
   const {
     chartDataGroups,
@@ -800,7 +873,55 @@ async function getEpisodeDataV3(
     task,
     languageAtoms,
     frameTimestamps,
+    nativeRanges,
   } = await loadEpisodeDataV3(repoId, version, info, episodeMetadata);
+
+  const timing = await timingReads;
+  for (let i = 0; i < nativeVideos.length; i++) {
+    const video = nativeVideos[i];
+    const clocks = timing[0];
+    const samples = timing[i + 1];
+    if (
+      clocks?.status === "fulfilled" &&
+      samples?.status === "fulfilled" &&
+      frameTimestamps
+    ) {
+      video.timeMapping = captureTimeMapping(
+        clocks.value,
+        samples.value,
+        frameTimestamps,
+      );
+    }
+    // Older native exports may omit capture sidecars. Their per-action range
+    // still gives an authoritative representative instead of assuming 60*t.
+    if (!video.timeMapping && frameTimestamps && nativeRanges) {
+      const camera = video.filename.replace(/^observation\.images\./, "");
+      const ranges =
+        nativeRanges[`observation.${camera}.tactile_range`] ??
+        nativeRanges[`observation.${camera}.mesh3dflow_range`];
+      const videoFps = Number(
+        info.features[video.filename].info?.["video.fps"],
+      );
+      if (
+        ranges?.length === frameTimestamps.length &&
+        videoFps > 0 &&
+        ranges.every(
+          (pair) =>
+            pair.length === 2 &&
+            pair.every((n) => Number.isSafeInteger(n) && n >= 0) &&
+            pair[1] >= pair[0],
+        )
+      ) {
+        video.timeMapping = {
+          episodeTimestamps: frameTimestamps,
+          videoTimestamps: ranges.map(
+            (pair) =>
+              (video.segmentStart ?? 0) + Math.max(0, pair[1] - 1) / videoFps,
+          ),
+        };
+      }
+    }
+  }
 
   const duration = episodeMetadata.length
     ? episodeMetadata.length / info.fps
@@ -834,6 +955,7 @@ async function loadEpisodeDataV3(
   task?: string;
   languageAtoms?: import("@/types/language.types").LanguageAtom[];
   frameTimestamps?: number[];
+  nativeRanges?: Record<string, number[][]>;
 }> {
   // Build data file path using chunk and file indices
   const dataChunkIndex = bigIntToNumber(episodeMetadata.data_chunk_index, 0);
@@ -927,6 +1049,17 @@ async function loadEpisodeDataV3(
       })
       .filter((t) => Number.isFinite(t))
       .sort((a, b) => a - b);
+
+    const nativeRanges = Object.fromEntries(
+      Object.keys(info.features)
+        .filter((key) => /\.(tactile_range|mesh3dflow_range)$/.test(key))
+        .map((key) => [
+          key,
+          episodeRows.map((row) =>
+            Array.isArray(row[key]) ? (row[key] as unknown[]).map(Number) : [],
+          ),
+        ]),
+    );
 
     const episodeData = evenlySampleArray(episodeRows, MAX_EPISODE_POINTS);
 
@@ -1027,6 +1160,7 @@ async function loadEpisodeDataV3(
       task,
       languageAtoms: extractLanguageAtoms(episodeRows),
       frameTimestamps,
+      nativeRanges,
     };
   } catch {
     return {
@@ -1402,8 +1536,13 @@ export async function* iterateEpisodeMetadataFilesV3(
     const url = buildVersionedUrl(repoId, version, path);
     let rows: Record<string, unknown>[];
     try {
-      const buf = await fetchParquetFile(url);
-      rows = await readParquetAsObjects(buf, []);
+      rows = await cachedMetadataRows(url, async () => {
+        const buf = await fetchParquetFile(url);
+        const columns = (await getParquetColumnNames(buf)).filter(
+          (key) => !key.startsWith("stats/"),
+        );
+        return readParquetAsObjects(buf, columns);
+      });
     } catch {
       if (fileIndex === 0) return;
       chunkIndex++;

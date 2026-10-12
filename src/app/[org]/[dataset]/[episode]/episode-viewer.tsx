@@ -1,10 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  lazy,
+  Suspense,
+} from "react";
+import { createPortal } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import { postParentMessageWithParams } from "@/utils/postParentMessage";
 import { SimpleVideosPlayer } from "@/components/simple-videos-player";
 import PlaybackBar from "@/components/playback-bar";
+import { FramePlaybackShortcuts } from "@/components/frame-playback-shortcuts";
+import { useEpisodeShortcuts, usePlayShortcut } from "@/lib/playback-shortcuts";
 import { ClipControls } from "@/components/clip-controls";
 import { IdleBoundaryControls } from "@/components/initial-idle-controls";
 import { ClipDraftsProvider } from "@/context/clip-drafts-context";
@@ -24,7 +34,6 @@ import LocalDoctorPanel from "@/components/local-doctor-panel";
 import HfAuthButton from "@/components/hf-auth-button";
 import { hasURDFSupport } from "@/lib/so101-robot";
 import {
-  getAdjacentEpisodesVideoInfo,
   computeColumnMinMax,
   getEpisodeDataSafe,
   loadAllEpisodeLengthsV3,
@@ -50,20 +59,17 @@ const FilteringPanel = lazy(() => import("@/components/filtering-panel"));
 // videos start downloading in parallel with the chart bundle.
 const DataRecharts = lazy(() => import("@/components/data-recharts"));
 
-/** Skip global playback / navigation shortcuts while typing in a field. */
-function isKeyboardFocusInsideTextEntry(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable || target.closest('[contenteditable="true"]')) {
-    return true;
-  }
-  const tag = target.tagName;
-  return (
-    tag === "TEXTAREA" ||
-    tag === "SELECT" ||
-    tag === "INPUT" ||
-    tag === "BUTTON" ||
-    (tag === "A" && target.hasAttribute("href"))
-  );
+/** The video subtree belongs to the viewer, so changing a keyed review panel
+ * moves its DOM host while preserving the browser's loaded media/decoders. */
+function VideoMount({ host }: { host: HTMLDivElement }) {
+  const mount = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    mount.current?.appendChild(host);
+    return () => {
+      host.remove();
+    };
+  }, [host]);
+  return <div ref={mount} />;
 }
 
 type ActiveTab =
@@ -80,16 +86,28 @@ type ActiveTab =
 // in a leaf component means the throttled time ticks (~12.5/s during
 // playback) only re-render this no-op sub-tree, not the entire 700-line
 // EpisodeViewerInner. Vercel rule: rerender-defer-reads.
-function UrlTimeSync() {
+function UrlTimeSync({
+  episodeId,
+  disabled,
+}: {
+  episodeId: number;
+  disabled: boolean;
+}) {
   const { currentTime, isPlaying } = useTime();
   const searchParams = useSearchParams();
   const lastUrlSecondRef = useRef<number>(-1);
+  const lastEpisodeRef = useRef(episodeId);
 
   // Only update the URL ?t= param when the integer second changes, and
   // only while paused — replacing state every frame during playback would
   // spam the browser's history.
   useEffect(() => {
-    if (isPlaying) return;
+    if (lastEpisodeRef.current !== episodeId) {
+      lastEpisodeRef.current = episodeId;
+      lastUrlSecondRef.current = -1;
+      return;
+    }
+    if (isPlaying || disabled) return;
     const currentSec = Math.floor(currentTime);
     if (currentTime > 0 && lastUrlSecondRef.current !== currentSec) {
       lastUrlSecondRef.current = currentSec;
@@ -104,7 +122,7 @@ function UrlTimeSync() {
         params.set("path", window.location.pathname + window.location.search);
       });
     }
-  }, [isPlaying, currentTime, searchParams]);
+  }, [isPlaying, currentTime, searchParams, disabled, episodeId]);
 
   return null;
 }
@@ -156,19 +174,44 @@ export default function EpisodeViewer({
   const [data, setData] = useState<EpisodeData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const [selectedEpisode, setSelectedEpisode] = useState(episodeId);
+
+  useEffect(() => setSelectedEpisode(episodeId), [org, dataset, episodeId]);
+  useEffect(() => {
+    const onPopState = () => {
+      const prefix = `/${org}/${dataset}/episode_`;
+      if (window.location.pathname.startsWith(prefix)) {
+        const value = Number(window.location.pathname.slice(prefix.length));
+        if (Number.isSafeInteger(value) && value >= 0)
+          setSelectedEpisode(value);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [org, dataset]);
+  const selectEpisode = (next: number) => {
+    if (next === selectedEpisode || !Number.isSafeInteger(next) || next < 0)
+      return;
+    // Navigating the dynamic Next segment remounts the whole viewer. Native
+    // history keeps this viewer and its shared MP4 decoders alive; reloads and
+    // back/forward still resolve the normal episode URL.
+    window.history.pushState(null, "", `/${org}/${dataset}/episode_${next}`);
+    document.title = `${org}/${dataset} | episode episode_${next}`;
+    setSelectedEpisode(next);
+  };
 
   useEffect(() => {
-    if (Number.isNaN(episodeId)) {
+    if (!Number.isSafeInteger(selectedEpisode) || selectedEpisode < 0) {
       setError("Invalid episode id.");
       setData(null);
       return;
     }
     const requestId = ++requestIdRef.current;
+    let cancelled = false;
     setError(null);
-    setData(null);
-    getEpisodeDataSafe(org, dataset, episodeId)
+    getEpisodeDataSafe(org, dataset, selectedEpisode)
       .then(({ data: loaded, error: loadError }) => {
-        if (requestIdRef.current !== requestId) return;
+        if (cancelled || requestIdRef.current !== requestId) return;
         if (loadError) {
           setError(loadError);
           setData(null);
@@ -177,12 +220,15 @@ export default function EpisodeViewer({
         setData(loaded ?? null);
       })
       .catch((err) => {
-        if (requestIdRef.current !== requestId) return;
+        if (cancelled || requestIdRef.current !== requestId) return;
         const message = err instanceof Error ? err.message : String(err);
         setError(message || "Unknown error");
         setData(null);
       });
-  }, [org, dataset, episodeId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [org, dataset, selectedEpisode]);
 
   if (error) {
     return (
@@ -206,12 +252,25 @@ export default function EpisodeViewer({
   }
 
   return (
-    <TimeProvider duration={data!.duration}>
+    <TimeProvider
+      key={data.datasetInfo.repoId}
+      duration={data.duration}
+      episodeKey={`${data.datasetInfo.repoId}:${data.episodeId}`}
+    >
       <FlaggedEpisodesProvider>
         <ClipDraftsProvider repoId={data!.datasetInfo.repoId}>
           <AnnotationsProvider>
             <EpisodeBootstrap data={data!} />
-            <EpisodeViewerInner data={data!} org={org} dataset={dataset} />
+            <EpisodeViewerInner
+              data={data!}
+              org={org}
+              dataset={dataset}
+              switching={
+                data.episodeId !== selectedEpisode ||
+                data.datasetInfo.repoId !== `${org}/${dataset}`
+              }
+              onEpisodeSelect={selectEpisode}
+            />
           </AnnotationsProvider>
         </ClipDraftsProvider>
       </FlaggedEpisodesProvider>
@@ -243,10 +302,14 @@ function EpisodeViewerInner({
   data,
   org,
   dataset,
+  switching = false,
+  onEpisodeSelect,
 }: {
   data: EpisodeData;
   org?: string;
   dataset?: string;
+  switching?: boolean;
+  onEpisodeSelect: (episodeId: number) => void;
 }) {
   const {
     datasetInfo,
@@ -257,13 +320,16 @@ function EpisodeViewerInner({
     task,
   } = data;
 
-  const [videosReady, setVideosReady] = useState(!videosInfo.length);
-  const [chartsReady, setChartsReady] = useState(false);
+  const [readyVideos, setReadyVideos] = useState<typeof videosInfo | null>(
+    null,
+  );
+  const videosReady = !videosInfo.length || readyVideos === videosInfo;
+  const [chartsExpanded, setChartsExpanded] = useState(false);
+  const [videoHost] = useState(() => document.createElement("div"));
   const isLocalDataset = isLocalDatasetRepoId(datasetInfo.repoId);
 
   const loadStartRef = useRef(performance.now());
 
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Tab state & lazy stats — read sessionStorage in the initializer so the
@@ -289,15 +355,19 @@ function EpisodeViewerInner({
     }
     return "episodes";
   });
-  const isLoading = activeTab === "episodes" && (!videosReady || !chartsReady);
+  const isLoading = switching || (activeTab === "episodes" && !videosReady);
+
+  useLayoutEffect(() => {
+    loadStartRef.current = performance.now();
+  }, [episodeId, videosInfo]);
 
   useEffect(() => {
     if (!isLoading) {
       console.log(
-        `[perf] Loading complete in ${(performance.now() - loadStartRef.current).toFixed(0)}ms (videos: ${videosReady ? "✓" : "…"}, charts: ${chartsReady ? "✓" : "…"})`,
+        `[perf] Loading complete in ${(performance.now() - loadStartRef.current).toFixed(0)}ms (videos: ${videosReady ? "✓" : "…"})`,
       );
     }
-  }, [isLoading, videosReady, chartsReady]);
+  }, [isLoading, videosReady]);
   const [, setColumnMinMax] = useState<ColumnMinMax[] | null>(null);
   const [episodeLengthStats, setEpisodeLengthStats] =
     useState<EpisodeLengthStats | null>(null);
@@ -474,6 +544,9 @@ function EpisodeViewerInner({
   // `seek` and `setIsPlaying` are stable references from useCallback /
   // useState — they don't drive renders.
   const { seek, setIsPlaying } = useTime();
+  useEffect(() => {
+    if (switching) setIsPlaying(false);
+  }, [switching, setIsPlaying]);
 
   // URDFViewer episode changer and play toggle — populated by URDFViewer on mount
   const urdfChangerRef = useRef<((ep: number) => void) | undefined>(undefined);
@@ -490,40 +563,36 @@ function EpisodeViewerInner({
     currentPage * pageSize,
   );
 
-  // Preload adjacent episodes' videos via <link rel="preload"> tags
+  // Video preloads repeat the same v3 shared MP4 URLs and don't warm episode
+  // data. Warm the two neighboring episodes after visible media is ready.
   useEffect(() => {
-    if (!org || !dataset) return;
-    const links: HTMLLinkElement[] = [];
-
-    getAdjacentEpisodesVideoInfo(org, dataset, episodeId, 2)
-      .then((adjacentVideos) => {
-        for (const ep of adjacentVideos) {
-          for (const v of ep.videosInfo) {
-            const link = document.createElement("link");
-            link.rel = "preload";
-            link.as = "video";
-            link.href = v.url;
-            document.head.appendChild(link);
-            links.push(link);
-          }
+    if (!org || !dataset || !videosReady || switching) return;
+    const timer = setTimeout(() => {
+      for (const next of [episodeId + 1, episodeId - 1]) {
+        if (next >= 0 && next < datasetInfo.total_episodes) {
+          void getEpisodeDataSafe(org, dataset, next);
         }
-      })
-      .catch(() => {});
-
-    return () => {
-      links.forEach((l) => l.remove());
-    };
-  }, [org, dataset, episodeId]);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [
+    org,
+    dataset,
+    episodeId,
+    videosReady,
+    switching,
+    datasetInfo.total_episodes,
+  ]);
 
   // Initialize based on URL time parameter — run ONCE on mount. This effect
   // must not re-run on later searchParams changes: UrlTimeSync writes ?t=
   // via window.history.replaceState on every pause, Next.js reflects that
   // into useSearchParams, and re-seeking here would snap the videos back to
   // the floored second instead of pausing in place.
-  const didInitSeekRef = useRef(false);
+  const didInitSeekRef = useRef<number | null>(null);
   useEffect(() => {
-    if (didInitSeekRef.current) return;
-    didInitSeekRef.current = true;
+    if (didInitSeekRef.current === episodeId || switching) return;
+    didInitSeekRef.current = episodeId;
     const timeParam = searchParams.get("t");
     if (timeParam) {
       const timeValue = parseFloat(timeParam);
@@ -531,7 +600,7 @@ function EpisodeViewerInner({
         seek(timeValue);
       }
     }
-  }, [searchParams, seek]);
+  }, [searchParams, seek, episodeId, switching]);
 
   // sync with parent window hf.co/spaces
   useEffect(() => {
@@ -540,8 +609,7 @@ function EpisodeViewerInner({
     });
   }, []);
 
-  // Initialize page based on the current episode. Splitting this out from
-  // the keyboard listener effect lets the listener attach exactly once.
+  // Initialize the sidebar page based on the current episode.
   useEffect(() => {
     const episodeIndex = episodes.indexOf(episodeId);
     if (episodeIndex !== -1) {
@@ -549,60 +617,24 @@ function EpisodeViewerInner({
     }
   }, [episodes, episodeId, pageSize]);
 
-  // Mirror the values the keydown handler needs into a ref. Without this,
-  // `useCallback` would produce a new handler whenever `activeTab` /
-  // `episodeId` / `urdfEpisode` changed, and the keydown effect would
-  // detach + reattach the listener each time. Now the listener attaches
-  // once and reads the latest state via the ref.
-  // Vercel rule: advanced-event-handler-refs.
-  const keyStateRef = useRef({ activeTab, episodeId, episodes, urdfEpisode });
-  keyStateRef.current = { activeTab, episodeId, episodes, urdfEpisode };
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const { key } = e;
-      const s = keyStateRef.current;
-      const inTextEntry = isKeyboardFocusInsideTextEntry(e.target);
-
-      if (key === " ") {
-        if (inTextEntry) return;
-        e.preventDefault();
-        if (s.activeTab === "urdf") {
-          urdfPlayToggleRef.current?.();
-        } else {
-          setIsPlaying((prev: boolean) => !prev);
-        }
-      } else if (key === "ArrowDown" || key === "ArrowUp") {
-        if (inTextEntry) return;
-        e.preventDefault();
-        if (s.activeTab === "urdf") {
-          const nextEp =
-            key === "ArrowDown" ? s.urdfEpisode + 1 : s.urdfEpisode - 1;
-          const lowest = s.episodes[0];
-          const highest = s.episodes[s.episodes.length - 1];
-          if (nextEp >= lowest && nextEp <= highest) {
-            setUrdfEpisode(nextEp);
-            urdfChangerRef.current?.(nextEp);
-          }
-        } else {
-          const nextEpisodeId =
-            key === "ArrowDown" ? s.episodeId + 1 : s.episodeId - 1;
-          const lowestEpisodeId = s.episodes[0];
-          const highestEpisodeId = s.episodes[s.episodes.length - 1];
-          if (
-            nextEpisodeId >= lowestEpisodeId &&
-            nextEpisodeId <= highestEpisodeId
-          ) {
-            router.push(`./episode_${nextEpisodeId}`);
-          }
-        }
+  useEpisodeShortcuts({
+    episodes,
+    episodeId: activeTab === "urdf" ? urdfEpisode : episodeId,
+    onSelect(nextEp) {
+      if (activeTab === "urdf") {
+        setUrdfEpisode(nextEp);
+        urdfChangerRef.current?.(nextEp);
+      } else {
+        setIsPlaying(false);
+        onEpisodeSelect(nextEp);
       }
-    };
+    },
+  });
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // router / setIsPlaying are stable; the rest is read via keyStateRef.
-  }, [router, setIsPlaying]);
+  // Episodes and annotations own their restart/preview behavior locally.
+  usePlayShortcut(
+    activeTab === "urdf" ? () => urdfPlayToggleRef.current?.() : undefined,
+  );
 
   // Pagination functions
   const nextPage = () => {
@@ -628,7 +660,22 @@ function EpisodeViewerInner({
 
   return (
     <div className="flex flex-col h-screen max-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
-      <UrlTimeSync />
+      {activeTab === "episodes" &&
+        createPortal(
+          videosInfo.length > 0 ? (
+            <SimpleVideosPlayer
+              compact
+              videosInfo={videosInfo}
+              frameTimestamps={data.frameTimestamps}
+              fps={datasetInfo.fps}
+              onVideosReady={() => setReadyVideos(videosInfo)}
+            />
+          ) : (
+            <p>此 episode 没有视频，请结合曲线复核。</p>
+          ),
+          videoHost,
+        )}
+      <UrlTimeSync episodeId={episodeId} disabled={switching || !videosReady} />
       {/* Top tab bar */}
       <div className="flex items-center border-b border-white/5 bg-[var(--surface-0)] shrink-0">
         {renderTab("episodes", "Episodes")}
@@ -676,9 +723,10 @@ function EpisodeViewerInner({
                     setUrdfEpisode(ep);
                     urdfChangerRef.current?.(ep);
                   }
-                : activeTab === "annotations"
-                  ? (ep) => router.push(`./episode_${ep}`)
-                  : undefined
+                : (ep) => {
+                    setIsPlaying(false);
+                    onEpisodeSelect(ep);
+                  }
             }
           />
         )}
@@ -723,24 +771,17 @@ function EpisodeViewerInner({
 
               <IdleBoundaryControls
                 key={`${datasetInfo.repoId}:${episodeId}`}
+                onEpisodeSelect={onEpisodeSelect}
                 episodes={episodes}
                 repoId={datasetInfo.repoId}
                 videos={videosInfo}
+                frameTimestamps={data.frameTimestamps}
+                fps={datasetInfo.fps}
                 episodeId={episodeId}
                 enabled={
                   isLocalDataset && datasetInfo.codebase_version === "v3.0"
                 }
-                media={
-                  videosInfo.length > 0 ? (
-                    <SimpleVideosPlayer
-                      compact
-                      videosInfo={videosInfo}
-                      onVideosReady={() => setVideosReady(true)}
-                    />
-                  ) : (
-                    <p>此 episode 没有视频，请结合曲线复核。</p>
-                  )
-                }
+                media={<VideoMount host={videoHost} />}
                 manualControls={
                   <ClipControls
                     key={`${datasetInfo.repoId}:${episodeId}`}
@@ -754,15 +795,17 @@ function EpisodeViewerInner({
                 }
               />
               {task && <p className="text-sm text-slate-400">任务：{task}</p>}
-              <details className="panel p-3">
+              <details
+                className="panel p-3"
+                onToggle={(event) =>
+                  setChartsExpanded(event.currentTarget.open)
+                }
+              >
                 <summary className="cursor-pointer text-sm">
                   展开完整轨迹曲线
                 </summary>
                 <Suspense fallback={null}>
-                  <DataRecharts
-                    data={chartDataGroups}
-                    onChartsReady={() => setChartsReady(true)}
-                  />
+                  {chartsExpanded && <DataRecharts data={chartDataGroups} />}
                 </Suspense>
               </details>
             </>
@@ -770,6 +813,10 @@ function EpisodeViewerInner({
 
           {activeTab === "annotations" && (
             <div className="annotations-skin flex flex-col gap-4">
+              <FramePlaybackShortcuts
+                timestamps={data.frameTimestamps}
+                fps={datasetInfo.fps}
+              />
               <div className="flex items-center gap-3">
                 <p className="text-base font-medium text-slate-200 truncate">
                   {datasetInfo.repoId}
@@ -781,7 +828,9 @@ function EpisodeViewerInner({
               {videosInfo.length > 0 && (
                 <SimpleVideosPlayer
                   videosInfo={videosInfo}
-                  onVideosReady={() => setVideosReady(true)}
+                  frameTimestamps={data.frameTimestamps}
+                  fps={datasetInfo.fps}
+                  onVideosReady={() => setReadyVideos(videosInfo)}
                 />
               )}
               <div className="grounding-intro">
