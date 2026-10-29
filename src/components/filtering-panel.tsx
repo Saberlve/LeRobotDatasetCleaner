@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { readExportResponse } from "@/utils/exportResponse";
 import { useFlaggedEpisodes } from "@/context/flagged-episodes-context";
 import { useClipDrafts } from "@/context/clip-drafts-context";
 import type {
@@ -400,24 +401,7 @@ function FlaggedExportCard({
           removedFrameIntervals: applyClips ? drafts : {},
         }),
       });
-      const payload = (await response.json()) as {
-        error?: string;
-        entryRoute?: string;
-        repoId?: string;
-        totalEpisodes?: number;
-        path?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Dataset export failed.");
-      }
-
-      setResult({
-        entryRoute: payload.entryRoute ?? "",
-        repoId: payload.repoId ?? "",
-        totalEpisodes: payload.totalEpisodes ?? 0,
-        path: payload.path ?? "",
-      });
+      setResult(await readExportResponse(response));
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
